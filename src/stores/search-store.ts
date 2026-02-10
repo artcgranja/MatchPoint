@@ -9,11 +9,13 @@ interface SearchState {
   pipelineStages: PipelineStage[];
   pipelineStatus: PipelineStatus;
   isSearching: boolean;
+  searchId: string | null;
 
   setPainPoint: (painPoint: string) => void;
   setFilters: (filters: Partial<SearchFilters>) => void;
   resetFilters: () => void;
   startPipeline: () => void;
+  setSearchId: (id: string) => void;
   updateStage: (stageId: string, updates: Partial<PipelineStage>) => void;
   completePipeline: () => void;
   resetPipeline: () => void;
@@ -36,6 +38,7 @@ export const useSearchStore = create<SearchState>()(
       pipelineStages: getPipelineStages(),
       pipelineStatus: "idle",
       isSearching: false,
+      searchId: null,
 
       setPainPoint: (painPoint) => set({ painPoint }),
 
@@ -53,6 +56,8 @@ export const useSearchStore = create<SearchState>()(
           isSearching: true,
         }),
 
+      setSearchId: (searchId) => set({ searchId }),
+
       updateStage: (stageId, updates) =>
         set((state) => ({
           pipelineStages: state.pipelineStages.map((stage) =>
@@ -68,6 +73,7 @@ export const useSearchStore = create<SearchState>()(
           pipelineStages: getPipelineStages(),
           pipelineStatus: "idle",
           isSearching: false,
+          searchId: null,
         }),
     }),
     {

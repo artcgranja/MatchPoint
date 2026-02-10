@@ -9,13 +9,30 @@ import { SuggestionChips } from "@/components/search/suggestion-chips";
 import { FilterPanel } from "@/components/search/filter-panel";
 import { AgentPipelineVisualizer } from "@/components/search/agent-pipeline-visualizer";
 import { useSearchStore } from "@/stores/search-store";
+import { apiPost } from "@/lib/api/client";
+
+const USE_API = process.env.NEXT_PUBLIC_USE_API === "true";
 
 export default function SearchPage() {
-  const { painPoint, isSearching, startPipeline } = useSearchStore();
+  const { painPoint, filters, isSearching, startPipeline, setSearchId } =
+    useSearchStore();
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     if (!painPoint.trim() || isSearching) return;
+
     startPipeline();
+
+    if (USE_API) {
+      try {
+        const { id } = await apiPost<{ id: string }>("/searches", {
+          painPoint,
+          filters,
+        });
+        setSearchId(id);
+      } catch (error) {
+        console.error("Failed to create search:", error);
+      }
+    }
   };
 
   return (

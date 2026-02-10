@@ -1,12 +1,16 @@
 import { mockStartups } from "./startups";
 import { mockSearches } from "./searches";
 import { defaultPipelineStages } from "./pipeline";
+import { apiGet } from "@/lib/api/client";
 import type {
   Startup,
   SearchQuery,
   PipelineStage,
   SearchFilters,
 } from "@/types";
+
+// When true, uses real API; when false, uses mock data
+const USE_API = typeof window !== "undefined" && process.env.NEXT_PUBLIC_USE_API === "true";
 
 function delay(ms: number = 800): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -15,6 +19,18 @@ function delay(ms: number = 800): Promise<void> {
 export async function getStartups(
   filters?: Partial<SearchFilters>
 ): Promise<Startup[]> {
+  if (USE_API) {
+    const params = new URLSearchParams();
+    if (filters?.industries?.length) params.set("industries", filters.industries.join(","));
+    if (filters?.fundingStages?.length) params.set("fundingStages", filters.fundingStages.join(","));
+    if (filters?.locations?.length) params.set("locations", filters.locations.join(","));
+    if (filters?.technologies?.length) params.set("technologies", filters.technologies.join(","));
+    if (filters?.minMatchScore) params.set("minMatchScore", String(filters.minMatchScore));
+    if (filters?.maxEmployeeCount) params.set("maxEmployeeCount", String(filters.maxEmployeeCount));
+    const qs = params.toString();
+    return apiGet<Startup[]>(`/startups${qs ? `?${qs}` : ""}`);
+  }
+
   await delay();
   let results = [...mockStartups];
 
@@ -52,11 +68,23 @@ export async function getStartups(
 export async function getStartupById(
   id: string
 ): Promise<Startup | undefined> {
+  if (USE_API) {
+    try {
+      return await apiGet<Startup>(`/startups/${id}`);
+    } catch {
+      return undefined;
+    }
+  }
+
   await delay(500);
   return mockStartups.find((s) => s.id === id);
 }
 
 export async function getSearches(): Promise<SearchQuery[]> {
+  if (USE_API) {
+    return apiGet<SearchQuery[]>("/searches");
+  }
+
   await delay(600);
   return [...mockSearches].sort(
     (a, b) =>
@@ -67,6 +95,14 @@ export async function getSearches(): Promise<SearchQuery[]> {
 export async function getSearchById(
   id: string
 ): Promise<SearchQuery | undefined> {
+  if (USE_API) {
+    try {
+      return await apiGet<SearchQuery>(`/searches/${id}`);
+    } catch {
+      return undefined;
+    }
+  }
+
   await delay(400);
   return mockSearches.find((s) => s.id === id);
 }

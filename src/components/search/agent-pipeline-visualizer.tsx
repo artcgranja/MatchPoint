@@ -15,7 +15,10 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Progress } from "@/components/ui/progress";
 import { useSearchStore } from "@/stores/search-store";
+import { usePipelineStream } from "@/hooks/use-pipeline-stream";
 import type { PipelineStatus } from "@/types";
+
+const USE_API = process.env.NEXT_PUBLIC_USE_API === "true";
 
 const iconMap: Record<string, React.ElementType> = {
   compass: Compass,
@@ -59,11 +62,16 @@ export function AgentPipelineVisualizer() {
     pipelineStages,
     pipelineStatus,
     isSearching,
+    searchId,
     updateStage,
     completePipeline,
   } = useSearchStore();
 
-  const runPipeline = useCallback(() => {
+  // SSE connection for real API pipeline
+  usePipelineStream(USE_API ? searchId : null);
+
+  // Mock pipeline for non-API mode
+  const runMockPipeline = useCallback(() => {
     let totalDelay = 0;
 
     pipelineStages.forEach((stage, index) => {
@@ -113,14 +121,22 @@ export function AgentPipelineVisualizer() {
     });
   }, [pipelineStages, updateStage, completePipeline, router]);
 
+  // Navigate when API pipeline completes
   useEffect(() => {
-    if (isSearching && pipelineStatus === "running") {
+    if (USE_API && pipelineStatus === "complete") {
+      router.push("/results");
+    }
+  }, [pipelineStatus, router]);
+
+  // Start mock pipeline when not using API
+  useEffect(() => {
+    if (!USE_API && isSearching && pipelineStatus === "running") {
       const allIdle = pipelineStages.every((s) => s.status === "idle");
       if (allIdle) {
-        runPipeline();
+        runMockPipeline();
       }
     }
-  }, [isSearching, pipelineStatus, pipelineStages, runPipeline]);
+  }, [isSearching, pipelineStatus, pipelineStages, runMockPipeline]);
 
   if (pipelineStatus === "idle") return null;
 
