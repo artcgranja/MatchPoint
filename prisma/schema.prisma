@@ -1,0 +1,155 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PipelineStatus {
+  idle
+  running
+  complete
+  error
+}
+
+enum ScopePhase {
+  situation
+  challenge
+  objectives
+  parameters
+  evaluation
+  complete
+}
+
+model User {
+  id                String              @id @default(uuid())
+  email             String              @unique
+  hashedPassword    String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  settings          Json?
+  searchExecutions  SearchExecution[]
+  discoverySessions DiscoverySession[]
+}
+
+model Startup {
+  id            String          @id @default(uuid())
+  name          String
+  logo          String
+  tagline       String
+  description   String
+  website       String
+  founded       Int
+  employees     Int
+  location      String
+  industries    String[]
+  technologies  String[]
+  fundingStage  String
+  totalFunding  Float
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  teamMembers   TeamMember[]
+  metrics       StartupMetrics?
+  searchResults SearchResult[]
+}
+
+model TeamMember {
+  id        String  @id @default(uuid())
+  name      String
+  role      String
+  avatar    String
+  linkedin  String?
+  startupId String
+  startup   Startup @relation(fields: [startupId], references: [id], onDelete: Cascade)
+}
+
+model StartupMetrics {
+  id            String  @id @default(uuid())
+  revenue       Float
+  revenueGrowth Float
+  customers     Int
+  nps           Int
+  burnRate      Float
+  runway        Int
+  startupId     String  @unique
+  startup       Startup @relation(fields: [startupId], references: [id], onDelete: Cascade)
+}
+
+model DiscoverySession {
+  id           String             @id @default(uuid())
+  userId       String
+  user         User               @relation(fields: [userId], references: [id])
+  currentPhase ScopePhase         @default(situation)
+  bizPlan      Json?
+  isComplete   Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  messages     DiscoveryMessage[]
+  searches     SearchExecution[]
+}
+
+model DiscoveryMessage {
+  id        String           @id @default(uuid())
+  sessionId String
+  session   DiscoverySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  phase     ScopePhase
+  metadata  Json?
+  createdAt DateTime         @default(now())
+}
+
+model SearchExecution {
+  id                 String            @id @default(uuid())
+  userId             String
+  user               User              @relation(fields: [userId], references: [id])
+  discoverySessionId String?
+  discoverySession   DiscoverySession? @relation(fields: [discoverySessionId], references: [id])
+  painPoint          String
+  filters            Json
+  bizPlan            Json?
+  status             PipelineStatus    @default(idle)
+  resultCount        Int               @default(0)
+  totalTokensUsed    Int               @default(0)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  stageLogs          PipelineStageLog[]
+  results            SearchResult[]
+}
+
+model PipelineStageLog {
+  id                String          @id @default(uuid())
+  searchExecutionId String
+  searchExecution   SearchExecution @relation(fields: [searchExecutionId], references: [id], onDelete: Cascade)
+  agentName         String
+  status            PipelineStatus
+  progress          Int             @default(0)
+  message           String          @default("")
+  inputData         Json?
+  outputData        Json?
+  tokensUsed        Int             @default(0)
+  durationMs        Int?
+  createdAt         DateTime        @default(now())
+}
+
+model SearchResult {
+  id                String          @id @default(uuid())
+  searchExecutionId String
+  searchExecution   SearchExecution @relation(fields: [searchExecutionId], references: [id], onDelete: Cascade)
+  startupId         String
+  startup           Startup         @relation(fields: [startupId], references: [id])
+  matchScore        Float
+  confidence        Float
+  aiAnalysis        Json
+  rank              Int
+  createdAt         DateTime        @default(now())
+}
+
+model Report {
+  id            String   @id @default(uuid())
+  title         String
+  searchQueryId String
+  sections      Json
+  createdAt     DateTime @default(now())
+}

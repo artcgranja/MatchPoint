@@ -1,0 +1,311 @@
+import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import "dotenv/config";
+
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL!,
+});
+const prisma = new PrismaClient({ adapter });
+
+const startups = [
+  {
+    name: "NeuralShift AI",
+    logo: "NS",
+    tagline: "Enterprise AI that actually understands your business",
+    description: "NeuralShift AI builds adaptive machine learning platforms that learn from enterprise workflows to automate complex decision-making. Their proprietary neural architecture reduces model training time by 80% while maintaining state-of-the-art accuracy across NLP, computer vision, and predictive analytics tasks.",
+    website: "https://neuralshift.ai",
+    founded: 2021,
+    employees: 85,
+    location: "San Francisco, CA",
+    industries: ["AI/ML", "Enterprise Software"],
+    technologies: ["Python", "PyTorch", "Kubernetes", "React", "GraphQL"],
+    fundingStage: "Series B",
+    totalFunding: 42_000_000,
+    team: [
+      { name: "Dr. Sarah Chen", role: "CEO & Co-Founder", avatar: "SC", linkedin: "https://linkedin.com/in/sarahchen" },
+      { name: "Marcus Williams", role: "CTO & Co-Founder", avatar: "MW", linkedin: "https://linkedin.com/in/marcuswilliams" },
+      { name: "Priya Patel", role: "VP Engineering", avatar: "PP" },
+    ],
+    metrics: { revenue: 8_500_000, revenueGrowth: 185, customers: 45, nps: 72, burnRate: 850_000, runway: 18 },
+  },
+  {
+    name: "QuantumLedger",
+    logo: "QL",
+    tagline: "Next-gen blockchain infrastructure for enterprise finance",
+    description: "QuantumLedger provides quantum-resistant blockchain infrastructure for financial institutions. Their layer-2 solution processes 50,000+ TPS while maintaining full regulatory compliance with SOC 2 and ISO 27001 certifications.",
+    website: "https://quantumledger.io",
+    founded: 2020,
+    employees: 120,
+    location: "New York, NY",
+    industries: ["FinTech", "Blockchain"],
+    technologies: ["Rust", "Solidity", "Go", "React", "PostgreSQL"],
+    fundingStage: "Series B",
+    totalFunding: 55_000_000,
+    team: [
+      { name: "James Park", role: "CEO & Founder", avatar: "JP", linkedin: "https://linkedin.com/in/jamespark" },
+      { name: "Dr. Elena Kozlov", role: "CTO", avatar: "EK" },
+      { name: "David Okonkwo", role: "Head of Compliance", avatar: "DO" },
+    ],
+    metrics: { revenue: 12_000_000, revenueGrowth: 140, customers: 28, nps: 68, burnRate: 1_200_000, runway: 15 },
+  },
+  {
+    name: "MedVault",
+    logo: "MV",
+    tagline: "AI-powered health data platform saving lives through insights",
+    description: "MedVault aggregates and analyzes health data from EHRs, wearables, and genomic databases to provide predictive patient outcomes. Their FDA-cleared algorithms have demonstrated 40% improvement in early disease detection across partner hospital networks.",
+    website: "https://medvault.health",
+    founded: 2019,
+    employees: 150,
+    location: "Boston, MA",
+    industries: ["HealthTech", "AI/ML"],
+    technologies: ["Python", "TensorFlow", "FHIR", "AWS", "React Native"],
+    fundingStage: "Series C",
+    totalFunding: 78_000_000,
+    team: [
+      { name: "Dr. Amanda Torres", role: "CEO & Co-Founder", avatar: "AT", linkedin: "https://linkedin.com/in/amandatorres" },
+      { name: "Dr. Raj Mehta", role: "Chief Medical Officer", avatar: "RM" },
+      { name: "Lisa Chang", role: "CTO", avatar: "LC" },
+    ],
+    metrics: { revenue: 18_000_000, revenueGrowth: 95, customers: 32, nps: 78, burnRate: 1_500_000, runway: 22 },
+  },
+  {
+    name: "GreenGrid Solutions",
+    logo: "GG",
+    tagline: "Smart energy management for a carbon-neutral future",
+    description: "GreenGrid Solutions provides AI-driven energy management systems for commercial and industrial buildings. Their platform optimizes energy consumption in real-time, reducing costs by 25-40% while tracking and reporting carbon emissions for ESG compliance.",
+    website: "https://greengrid.solutions",
+    founded: 2020,
+    employees: 65,
+    location: "Austin, TX",
+    industries: ["CleanTech", "IoT"],
+    technologies: ["Python", "TensorFlow", "IoT", "React", "TimescaleDB"],
+    fundingStage: "Series A",
+    totalFunding: 18_000_000,
+    team: [
+      { name: "Michael Torres", role: "CEO & Founder", avatar: "MT", linkedin: "https://linkedin.com/in/michaeltorres" },
+      { name: "Dr. Kim Yoon", role: "Chief Scientist", avatar: "KY" },
+    ],
+    metrics: { revenue: 4_200_000, revenueGrowth: 120, customers: 78, nps: 65, burnRate: 450_000, runway: 14 },
+  },
+  {
+    name: "CyberSentinel",
+    logo: "CS",
+    tagline: "AI-first threat detection for the modern enterprise",
+    description: "CyberSentinel provides autonomous threat detection and response using behavioral AI that learns normal network patterns and identifies anomalies in real-time. Their platform processes 10B+ events daily and has prevented $2.3B in potential breaches across their customer base.",
+    website: "https://cybersentinel.io",
+    founded: 2019,
+    employees: 200,
+    location: "Washington, DC",
+    industries: ["Cybersecurity", "AI/ML"],
+    technologies: ["Go", "Python", "Kafka", "Elasticsearch", "React"],
+    fundingStage: "Series C",
+    totalFunding: 95_000_000,
+    team: [
+      { name: "Col. (Ret.) Robert Hayes", role: "CEO", avatar: "RH", linkedin: "https://linkedin.com/in/roberthayes" },
+      { name: "Dr. Natasha Volkov", role: "CTO", avatar: "NV" },
+      { name: "Tom Richardson", role: "VP Sales", avatar: "TR" },
+    ],
+    metrics: { revenue: 28_000_000, revenueGrowth: 110, customers: 95, nps: 74, burnRate: 2_000_000, runway: 20 },
+  },
+  {
+    name: "EduSpark",
+    logo: "ES",
+    tagline: "Personalized learning at scale with AI tutoring",
+    description: "EduSpark provides an AI-powered adaptive learning platform that personalizes educational content for corporate training and higher education. Their system uses cognitive science principles to optimize knowledge retention, achieving 3x faster skill acquisition compared to traditional methods.",
+    website: "https://eduspark.io",
+    founded: 2021,
+    employees: 45,
+    location: "London, UK",
+    industries: ["EdTech", "AI/ML"],
+    technologies: ["TypeScript", "Next.js", "Python", "OpenAI", "PostgreSQL"],
+    fundingStage: "Series A",
+    totalFunding: 12_000_000,
+    team: [
+      { name: "Dr. Emily Watson", role: "CEO & Co-Founder", avatar: "EW", linkedin: "https://linkedin.com/in/emilywatson" },
+      { name: "Amir Hassan", role: "CTO & Co-Founder", avatar: "AH" },
+    ],
+    metrics: { revenue: 2_800_000, revenueGrowth: 90, customers: 120, nps: 71, burnRate: 350_000, runway: 12 },
+  },
+  {
+    name: "DataWeave",
+    logo: "DW",
+    tagline: "Real-time data fabric for the modern enterprise",
+    description: "DataWeave provides a real-time data integration and analytics platform that creates a unified data fabric across cloud, on-premise, and edge environments. Their zero-copy architecture eliminates data duplication while providing sub-second query performance across petabyte-scale datasets.",
+    website: "https://dataweave.tech",
+    founded: 2020,
+    employees: 110,
+    location: "Seattle, WA",
+    industries: ["Data Analytics", "Enterprise Software"],
+    technologies: ["Rust", "Apache Arrow", "Kubernetes", "React", "gRPC"],
+    fundingStage: "Series B",
+    totalFunding: 48_000_000,
+    team: [
+      { name: "Alex Rivera", role: "CEO & Co-Founder", avatar: "AR", linkedin: "https://linkedin.com/in/alexrivera" },
+      { name: "Dr. Yuki Tanaka", role: "CTO & Co-Founder", avatar: "YT" },
+      { name: "Jennifer Liu", role: "VP Product", avatar: "JL" },
+    ],
+    metrics: { revenue: 14_000_000, revenueGrowth: 160, customers: 52, nps: 76, burnRate: 1_100_000, runway: 16 },
+  },
+  {
+    name: "AeroLogic",
+    logo: "AL",
+    tagline: "AI-powered logistics optimization for global supply chains",
+    description: "AeroLogic uses machine learning to optimize last-mile delivery, warehouse operations, and supply chain routing. Their platform reduces logistics costs by 30% and delivery times by 25% through real-time demand forecasting and dynamic route optimization.",
+    website: "https://aerologic.co",
+    founded: 2020,
+    employees: 90,
+    location: "Chicago, IL",
+    industries: ["Logistics", "AI/ML"],
+    technologies: ["Python", "Java", "Kafka", "React", "MongoDB"],
+    fundingStage: "Series A",
+    totalFunding: 22_000_000,
+    team: [
+      { name: "Carlos Mendez", role: "CEO & Founder", avatar: "CM", linkedin: "https://linkedin.com/in/carlosmendez" },
+      { name: "Dr. Wei Zhang", role: "Chief AI Officer", avatar: "WZ" },
+      { name: "Sarah O'Brien", role: "COO", avatar: "SO" },
+    ],
+    metrics: { revenue: 6_500_000, revenueGrowth: 130, customers: 35, nps: 69, burnRate: 600_000, runway: 13 },
+  },
+  {
+    name: "BioSync",
+    logo: "BS",
+    tagline: "Computational biology platform accelerating drug discovery",
+    description: "BioSync uses AI-driven computational biology to accelerate drug discovery timelines from years to months. Their molecular simulation platform has identified 3 promising drug candidates currently in pre-clinical trials for rare diseases.",
+    website: "https://biosync.bio",
+    founded: 2019,
+    employees: 55,
+    location: "Cambridge, MA",
+    industries: ["Biotech", "AI/ML"],
+    technologies: ["Python", "JAX", "CUDA", "React", "Neo4j"],
+    fundingStage: "Series A",
+    totalFunding: 25_000_000,
+    team: [
+      { name: "Dr. Rachel Kim", role: "CEO & Co-Founder", avatar: "RK", linkedin: "https://linkedin.com/in/rachelkim" },
+      { name: "Dr. Thomas Berg", role: "CSO & Co-Founder", avatar: "TB" },
+    ],
+    metrics: { revenue: 1_500_000, revenueGrowth: 45, customers: 8, nps: 82, burnRate: 700_000, runway: 16 },
+  },
+  {
+    name: "CloudNest",
+    logo: "CN",
+    tagline: "Multi-cloud infrastructure management made simple",
+    description: "CloudNest provides a unified control plane for managing multi-cloud infrastructure across AWS, Azure, GCP, and private clouds. Their platform automates cost optimization, security compliance, and infrastructure scaling, saving enterprise customers an average of 35% on cloud spend.",
+    website: "https://cloudnest.dev",
+    founded: 2020,
+    employees: 130,
+    location: "Berlin, Germany",
+    industries: ["Cloud Infrastructure", "DevOps"],
+    technologies: ["Go", "Terraform", "Kubernetes", "React", "ClickHouse"],
+    fundingStage: "Series B",
+    totalFunding: 52_000_000,
+    team: [
+      { name: "Friedrich Mueller", role: "CEO & Co-Founder", avatar: "FM", linkedin: "https://linkedin.com/in/friedrichmueller" },
+      { name: "Anna Kowalski", role: "CTO & Co-Founder", avatar: "AK" },
+      { name: "Ben Thompson", role: "VP Sales", avatar: "BT" },
+    ],
+    metrics: { revenue: 16_000_000, revenueGrowth: 150, customers: 68, nps: 73, burnRate: 1_300_000, runway: 17 },
+  },
+  {
+    name: "RetailPulse",
+    logo: "RP",
+    tagline: "In-store analytics powered by computer vision",
+    description: "RetailPulse uses computer vision and IoT sensors to provide real-time in-store analytics for brick-and-mortar retailers. Their platform tracks foot traffic, dwell times, and conversion rates, helping retailers optimize store layouts and staffing.",
+    website: "https://retailpulse.ai",
+    founded: 2022,
+    employees: 30,
+    location: "Atlanta, GA",
+    industries: ["RetailTech", "AI/ML"],
+    technologies: ["Python", "OpenCV", "Edge Computing", "React", "Redis"],
+    fundingStage: "Seed",
+    totalFunding: 5_500_000,
+    team: [
+      { name: "Diana Foster", role: "CEO & Founder", avatar: "DF", linkedin: "https://linkedin.com/in/dianafoster" },
+      { name: "Kevin Park", role: "CTO", avatar: "KP" },
+    ],
+    metrics: { revenue: 900_000, revenueGrowth: 75, customers: 42, nps: 62, burnRate: 250_000, runway: 8 },
+  },
+  {
+    name: "AgriSense",
+    logo: "AS",
+    tagline: "Precision agriculture powered by satellite AI",
+    description: "AgriSense uses satellite imagery and machine learning to provide precision agriculture insights to farmers and agribusiness companies. Their platform monitors crop health, predicts yields, and optimizes irrigation and fertilization schedules across 2M+ acres.",
+    website: "https://agrisense.farm",
+    founded: 2021,
+    employees: 35,
+    location: "Des Moines, IA",
+    industries: ["AgriTech", "AI/ML"],
+    technologies: ["Python", "Satellite Imaging", "TensorFlow", "GIS", "React"],
+    fundingStage: "Seed",
+    totalFunding: 4_500_000,
+    team: [
+      { name: "Jake Morrison", role: "CEO & Co-Founder", avatar: "JM", linkedin: "https://linkedin.com/in/jakemorrison" },
+      { name: "Dr. Mei Chen", role: "Chief Data Scientist", avatar: "MC" },
+      { name: "Tom Bergstrom", role: "Head of Sales", avatar: "TB" },
+    ],
+    metrics: { revenue: 800_000, revenueGrowth: 60, customers: 85, nps: 58, burnRate: 200_000, runway: 8 },
+  },
+];
+
+async function seed() {
+  console.log("Seeding database...");
+
+  // Clear existing data
+  await prisma.searchResult.deleteMany();
+  await prisma.pipelineStageLog.deleteMany();
+  await prisma.searchExecution.deleteMany();
+  await prisma.discoveryMessage.deleteMany();
+  await prisma.discoverySession.deleteMany();
+  await prisma.report.deleteMany();
+  await prisma.teamMember.deleteMany();
+  await prisma.startupMetrics.deleteMany();
+  await prisma.startup.deleteMany();
+  await prisma.user.deleteMany();
+
+  for (const s of startups) {
+    await prisma.startup.create({
+      data: {
+        name: s.name,
+        logo: s.logo,
+        tagline: s.tagline,
+        description: s.description,
+        website: s.website,
+        founded: s.founded,
+        employees: s.employees,
+        location: s.location,
+        industries: s.industries,
+        technologies: s.technologies,
+        fundingStage: s.fundingStage,
+        totalFunding: s.totalFunding,
+        teamMembers: {
+          create: s.team.map((t) => ({
+            name: t.name,
+            role: t.role,
+            avatar: t.avatar,
+            linkedin: t.linkedin,
+          })),
+        },
+        metrics: {
+          create: {
+            revenue: s.metrics.revenue,
+            revenueGrowth: s.metrics.revenueGrowth,
+            customers: s.metrics.customers,
+            nps: s.metrics.nps,
+            burnRate: s.metrics.burnRate,
+            runway: s.metrics.runway,
+          },
+        },
+      },
+    });
+    console.log(`  Created startup: ${s.name}`);
+  }
+
+  console.log(`Seeded ${startups.length} startups`);
+}
+
+seed()
+  .then(() => prisma.$disconnect())
+  .catch((e) => {
+    console.error(e);
+    prisma.$disconnect();
+    process.exit(1);
+  });
