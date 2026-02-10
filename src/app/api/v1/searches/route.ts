@@ -28,7 +28,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { painPoint, filters } = body;
+  const { painPoint, filters, discoverySessionId } = body;
 
   if (!painPoint || typeof painPoint !== "string") {
     return NextResponse.json({ error: "painPoint is required" }, { status: 400 });
@@ -61,12 +61,26 @@ export async function POST(req: Request) {
     technologies: [],
   };
 
+  // If linked to a discovery session, fetch its bizPlan
+  let bizPlan = undefined;
+  if (discoverySessionId) {
+    const session = await prisma.discoverySession.findUnique({
+      where: { id: discoverySessionId },
+      select: { bizPlan: true },
+    });
+    if (session?.bizPlan) {
+      bizPlan = session.bizPlan;
+    }
+  }
+
   const search = await prisma.searchExecution.create({
     data: {
       userId,
       painPoint,
       filters: filters ?? defaultFilters,
       status: "idle",
+      ...(discoverySessionId && { discoverySessionId }),
+      ...(bizPlan && { bizPlan }),
     },
   });
 

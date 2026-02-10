@@ -12,8 +12,20 @@ const suggestions = [
   "Deploy AI-powered employee training and upskilling",
 ];
 
-export function SuggestionChips() {
+interface SuggestionChipsProps {
+  onSelect?: (suggestion: string) => void;
+}
+
+export function SuggestionChips({ onSelect }: SuggestionChipsProps) {
   const { setPainPoint } = useSearchStore();
+
+  const handleClick = (suggestion: string) => {
+    if (onSelect) {
+      onSelect(suggestion);
+    } else {
+      setPainPoint(suggestion);
+    }
+  };
 
   return (
     <div className="space-y-2">
@@ -23,7 +35,7 @@ export function SuggestionChips() {
           {suggestions.map((suggestion) => (
             <button
               key={suggestion}
-              onClick={() => setPainPoint(suggestion)}
+              onClick={() => handleClick(suggestion)}
               className="inline-flex shrink-0 items-center rounded-full border border-border bg-background-secondary/50 px-3 py-1.5 text-xs text-foreground-muted hover:bg-highlight/10 hover:text-highlight hover:border-highlight/20 transition-colors"
             >
               {suggestion}

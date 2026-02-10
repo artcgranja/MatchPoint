@@ -128,3 +128,29 @@ export interface UserSettings {
   notificationsEnabled: boolean;
   compactView: boolean;
 }
+
+// Discovery / SCOPE conversation types
+
+export type ScopePhase =
+  | "situation"
+  | "challenge"
+  | "objectives"
+  | "parameters"
+  | "evaluation"
+  | "complete";
+
+export interface DiscoveryMessage {
+  id?: string;
+  role: "user" | "assistant";
+  content: string;
+  phase?: ScopePhase;
+  createdAt?: string;
+}
+
+export interface DiscoverySession {
+  id: string;
+  currentPhase: ScopePhase;
+  isComplete: boolean;
+  bizPlan?: Record<string, unknown>;
+  messages: DiscoveryMessage[];
+}

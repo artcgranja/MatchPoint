@@ -1,28 +1,84 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
+import { useDiscoveryStore } from "@/stores/discovery-store";
+import { apiPost, apiGet } from "@/lib/api/client";
+import type { DiscoverySession, ScopePhase } from "@/types";
 
-interface Message {
-  role: "user" | "assistant";
-  content: string;
-}
+export function useDiscoverySession() {
+  const {
+    sessionId,
+    discoveryState,
+    currentPhase,
+    messages,
+    isComplete,
+    isStreaming,
+    setSessionId,
+    setDiscoveryState,
+    setCurrentPhase,
+    addMessage,
+    updateLastAssistantMessage,
+    setComplete,
+    setIsStreaming,
+    setMessages,
+    reset,
+  } = useDiscoveryStore();
 
-export function useDiscoverySession(sessionId: string) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [phase, setPhase] = useState("situation");
-  const [isStreaming, setIsStreaming] = useState(false);
+  const initSession = useCallback(async () => {
+    const { id, currentPhase: phase } = await apiPost<{
+      id: string;
+      currentPhase: ScopePhase;
+    }>("/discovery");
+    setSessionId(id);
+    setCurrentPhase(phase);
+    setDiscoveryState("chatting");
+    return id;
+  }, [setSessionId, setCurrentPhase, setDiscoveryState]);
+
+  const loadSession = useCallback(
+    async (id: string) => {
+      const session = await apiGet<DiscoverySession>(`/discovery/${id}`);
+      setSessionId(session.id);
+      setCurrentPhase(session.currentPhase);
+      setComplete(session.isComplete);
+      setMessages(
+        session.messages.map((m) => ({
+          id: m.id,
+          role: m.role,
+          content: m.content,
+          phase: m.phase,
+          createdAt: m.createdAt,
+        }))
+      );
+      if (session.isComplete) {
+        setDiscoveryState("completing");
+      } else if (session.messages.length > 0) {
+        setDiscoveryState("chatting");
+      } else {
+        setDiscoveryState("idle");
+      }
+      return session;
+    },
+    [setSessionId, setCurrentPhase, setComplete, setMessages, setDiscoveryState]
+  );
 
   const sendMessage = useCallback(
-    async (text: string) => {
-      setMessages((prev) => [...prev, { role: "user", content: text }]);
+    async (text: string, sid?: string) => {
+      const activeSessionId = sid ?? sessionId;
+      if (!activeSessionId) return;
+
+      addMessage({ role: "user", content: text });
       setIsStreaming(true);
 
       try {
-        const res = await fetch(`/api/v1/discovery/${sessionId}/message`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text }),
-        });
+        const res = await fetch(
+          `/api/v1/discovery/${activeSessionId}/message`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text }),
+          }
+        );
 
         if (!res.body) {
           setIsStreaming(false);
@@ -45,22 +101,17 @@ export function useDiscoverySession(sessionId: string) {
                 const data = JSON.parse(line.slice(6));
                 if (data.text) {
                   assistantMsg += data.text;
-                  setMessages((prev) => {
-                    const last = prev[prev.length - 1];
-                    if (last?.role === "assistant") {
-                      return [
-                        ...prev.slice(0, -1),
-                        { role: "assistant" as const, content: assistantMsg },
-                      ];
-                    }
-                    return [
-                      ...prev,
-                      { role: "assistant" as const, content: assistantMsg },
-                    ];
-                  });
+                  updateLastAssistantMessage(assistantMsg);
                 }
                 if (data.phase) {
-                  setPhase(data.phase);
+                  setCurrentPhase(data.phase as ScopePhase);
+                  if (data.phase === "complete") {
+                    setComplete(true);
+                    setDiscoveryState("completing");
+                  }
+                }
+                if (data.error) {
+                  console.error("Discovery SSE error:", data.error);
                 }
               } catch {
                 // Skip malformed SSE data lines
@@ -74,8 +125,28 @@ export function useDiscoverySession(sessionId: string) {
         setIsStreaming(false);
       }
     },
-    [sessionId]
+    [
+      sessionId,
+      addMessage,
+      updateLastAssistantMessage,
+      setIsStreaming,
+      setCurrentPhase,
+      setComplete,
+      setDiscoveryState,
+    ]
   );
 
-  return { messages, phase, isStreaming, sendMessage };
+  return {
+    sessionId,
+    discoveryState,
+    currentPhase,
+    messages,
+    isComplete,
+    isStreaming,
+    initSession,
+    loadSession,
+    sendMessage,
+    reset,
+    setDiscoveryState,
+  };
 }
