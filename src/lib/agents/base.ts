@@ -78,4 +78,31 @@ export abstract class BaseAgent {
       }
     }
   }
+
+  async *streamWithThinking(
+    systemPrompt: string,
+    messages: Array<{ role: "user" | "assistant"; content: string }>,
+    options?: { effort?: "high" | "medium" | "low" }
+  ): AsyncGenerator<{ type: "thinking" | "text"; text: string }> {
+    const stream = this.client.messages.stream({
+      model: this.model,
+      max_tokens: 16384,
+      thinking: { type: "adaptive" },
+      output_config: { effort: options?.effort ?? "high" },
+      system: [
+        { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
+      ],
+      messages,
+    });
+
+    for await (const event of stream) {
+      if (event.type === "content_block_delta") {
+        if (event.delta.type === "thinking_delta") {
+          yield { type: "thinking", text: event.delta.thinking };
+        } else if (event.delta.type === "text_delta") {
+          yield { type: "text", text: event.delta.text };
+        }
+      }
+    }
+  }
 }

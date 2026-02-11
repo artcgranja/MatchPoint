@@ -84,6 +84,8 @@ export interface DiscoverySession {
   messages: DiscoveryMessage[];
 }
 
+export type BizDevPlanStatus = "idle" | "thinking" | "writing" | "complete" | "confirmed";
+
 export interface UserSettings {
   theme: "light" | "dark" | "system";
   notificationsEnabled: boolean;

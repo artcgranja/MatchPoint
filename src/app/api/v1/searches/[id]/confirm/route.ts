@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { runAnalysis } from "@/lib/agents/orchestrator";
+import { runScout } from "@/lib/agents/orchestrator";
 
-export async function GET(
+export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -11,6 +11,10 @@ export async function GET(
   const search = await prisma.searchExecution.findUnique({ where: { id } });
   if (!search) {
     return NextResponse.json({ error: "Search not found" }, { status: 404 });
+  }
+
+  if (!search.bizPlan) {
+    return NextResponse.json({ error: "No BizDev plan found for this search" }, { status: 400 });
   }
 
   const encoder = new TextEncoder();
@@ -22,11 +26,11 @@ export async function GET(
       };
 
       try {
-        for await (const event of runAnalysis(id)) {
+        for await (const event of runScout(id)) {
           send(event.eventType, event);
         }
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Pipeline failed";
+        const message = error instanceof Error ? error.message : "Scout failed";
         send("error", { message });
       } finally {
         controller.close();

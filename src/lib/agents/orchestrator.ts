@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
-import { AnalysisAgent } from "./analyst";
+import { BizDevAgent } from "./bizdev";
 import { ScoutAgent } from "./scout";
-import type { NeedSummary, StartupCard } from "./schemas";
+import type { NeedSummary, BizDevPlan, StartupCard } from "./schemas";
 
 export interface PipelineEvent {
   eventType: string;
@@ -36,7 +36,10 @@ async function logStage(
   });
 }
 
-export async function* runPipeline(searchId: string): AsyncGenerator<PipelineEvent> {
+// ═══════════════════════════════════════════
+// Phase 1: BizDev Analysis (streaming with thinking)
+// ═══════════════════════════════════════════
+export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEvent> {
   const search = await prisma.searchExecution.findUniqueOrThrow({
     where: { id: searchId },
   });
@@ -47,7 +50,6 @@ export async function* runPipeline(searchId: string): AsyncGenerator<PipelineEve
   });
 
   try {
-    // Get NeedSummary from the linked discovery session or the search's bizPlan field
     let needSummary: NeedSummary;
     if (search.bizPlan) {
       needSummary = search.bizPlan as unknown as NeedSummary;
@@ -55,50 +57,125 @@ export async function* runPipeline(searchId: string): AsyncGenerator<PipelineEve
       throw new Error("No NeedSummary available for this search");
     }
 
-    // ═══════════════════════════════════════════
-    // Stage 1: Analysis (Opus) — Define search criteria
-    // ═══════════════════════════════════════════
     yield {
       eventType: "stage_update",
       stageId: "stage-1",
       agentName: "Analysis",
       status: "running",
       progress: 0,
-      message: "Analisando suas necessidades...",
+      message: "Preparando plano BizDev...",
     };
-    await logStage(searchId, "Analysis", "running", 0, "Analyzing business needs...");
+    await logStage(searchId, "Analysis", "running", 0, "Starting BizDev analysis...");
 
     const startAnalysis = Date.now();
-    const analysisAgent = new AnalysisAgent();
+    const bizDevAgent = new BizDevAgent();
+    let fullPlanText = "";
 
-    yield {
-      eventType: "stage_update",
-      stageId: "stage-1",
-      agentName: "Analysis",
-      status: "running",
-      progress: 50,
-      message: "Definindo criterios de busca...",
-    };
+    // Stream thinking + text chunks
+    for await (const chunk of bizDevAgent.streamPlan(needSummary)) {
+      if (chunk.type === "thinking") {
+        yield {
+          eventType: "analysis_thinking",
+          stageId: "stage-1",
+          agentName: "Analysis",
+          status: "running",
+          progress: 25,
+          message: "",
+          data: { text: chunk.text },
+        };
+      } else {
+        fullPlanText += chunk.text;
+        yield {
+          eventType: "analysis_text",
+          stageId: "stage-1",
+          agentName: "Analysis",
+          status: "running",
+          progress: 50,
+          message: "",
+          data: { text: chunk.text },
+        };
+      }
+    }
 
-    const searchCriteria = await analysisAgent.analyze(needSummary);
+    // Extract structured BizDevPlan from the narrative
+    const bizDevPlan = await bizDevAgent.extractStructured(fullPlanText, needSummary);
 
-    await logStage(searchId, "Analysis", "complete", 100, "Search criteria defined", {
+    // Save BizDevPlan to SearchExecution
+    await prisma.searchExecution.update({
+      where: { id: searchId },
+      data: { bizPlan: JSON.parse(JSON.stringify(bizDevPlan)) },
+    });
+
+    await logStage(searchId, "Analysis", "complete", 100, "BizDev plan complete", {
       durationMs: Date.now() - startAnalysis,
-      output: searchCriteria,
+      output: bizDevPlan,
     });
 
     yield {
-      eventType: "stage_complete",
+      eventType: "analysis_complete",
       stageId: "stage-1",
       agentName: "Analysis",
       status: "complete",
       progress: 100,
-      message: "Criterios definidos",
+      message: "Plano BizDev concluido",
+      data: { plan: bizDevPlan as unknown as Record<string, unknown> },
     };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Analysis failed";
 
-    // ═══════════════════════════════════════════
-    // Stage 2: Scout (Haiku) — Find matching startups
-    // ═══════════════════════════════════════════
+    await prisma.searchExecution.update({
+      where: { id: searchId },
+      data: { status: "error" },
+    });
+
+    yield {
+      eventType: "error",
+      stageId: "stage-1",
+      agentName: "System",
+      status: "error",
+      progress: 0,
+      message,
+    };
+  }
+}
+
+// ═══════════════════════════════════════════
+// Phase 2: Scout (runs after user confirmation)
+// ═══════════════════════════════════════════
+export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent> {
+  const search = await prisma.searchExecution.findUniqueOrThrow({
+    where: { id: searchId },
+    include: { discoverySession: true },
+  });
+
+  try {
+    // Extract SearchCriteria from saved BizDevPlan
+    const bizDevPlan = search.bizPlan as unknown as BizDevPlan;
+    if (!bizDevPlan?.searchCriteria) {
+      throw new Error("No BizDevPlan with searchCriteria found");
+    }
+    const searchCriteria = bizDevPlan.searchCriteria;
+
+    // Get original NeedSummary from DiscoverySession
+    let needSummary: NeedSummary;
+    if (search.discoverySession?.bizPlan) {
+      needSummary = search.discoverySession.bizPlan as unknown as NeedSummary;
+    } else {
+      // Fallback: reconstruct from BizDevPlan fields
+      needSummary = {
+        companyContext: bizDevPlan.problemAnalysis,
+        coreProblem: bizDevPlan.problemAnalysis,
+        desiredOutcome: bizDevPlan.proposedSolution,
+        constraints: [],
+        preferences: [],
+      };
+    }
+
+    await prisma.searchExecution.update({
+      where: { id: searchId },
+      data: { status: "running" },
+    });
+
     yield {
       eventType: "stage_update",
       stageId: "stage-2",
@@ -137,9 +214,7 @@ export async function* runPipeline(searchId: string): AsyncGenerator<PipelineEve
       message: `${scoutResult.cards.length} startups encontradas`,
     };
 
-    // ═══════════════════════════════════════════
     // Save Results to Database
-    // ═══════════════════════════════════════════
     for (let i = 0; i < scoutResult.cards.length; i++) {
       const card = scoutResult.cards[i];
       await prisma.searchResult.create({
@@ -162,7 +237,6 @@ export async function* runPipeline(searchId: string): AsyncGenerator<PipelineEve
       },
     });
 
-    // Send cards data in pipeline_complete event
     const cards: StartupCard[] = scoutResult.cards;
 
     yield {
@@ -180,7 +254,7 @@ export async function* runPipeline(searchId: string): AsyncGenerator<PipelineEve
       },
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Pipeline failed";
+    const message = error instanceof Error ? error.message : "Scout failed";
 
     await prisma.searchExecution.update({
       where: { id: searchId },
@@ -189,7 +263,7 @@ export async function* runPipeline(searchId: string): AsyncGenerator<PipelineEve
 
     yield {
       eventType: "error",
-      stageId: "stage-1",
+      stageId: "stage-2",
       agentName: "System",
       status: "error",
       progress: 0,

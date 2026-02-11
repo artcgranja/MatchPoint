@@ -3,8 +3,10 @@
 import { useCallback } from "react";
 import { useDiscoveryStore } from "@/stores/discovery-store";
 import { useSearchStore } from "@/stores/search-store";
+import { useBizDevStore } from "@/stores/bizdev-store";
 import { apiPost, apiGet } from "@/lib/api/client";
 import type { DiscoverySession, SessionStage, StartupCard } from "@/types";
+import type { BizDevPlan } from "@/lib/agents/schemas";
 
 /** Parse an SSE stream correctly, handling cross-chunk boundaries. */
 function parseSseStream() {
@@ -49,11 +51,20 @@ export function useDiscoverySession() {
     updateLastAssistantMessage,
     setIsStreaming,
     setMessages,
-    reset,
+    reset: resetDiscovery,
   } = useDiscoveryStore();
 
-  const { setSearchId, startPipeline, completePipeline, errorPipeline } =
+  const { searchId, setSearchId, startPipeline, completePipeline, errorPipeline } =
     useSearchStore();
+
+  const {
+    setStatus: setBizDevStatus,
+    appendThinking,
+    appendPlanText,
+    setPlan,
+    setSidebarOpen,
+    reset: resetBizDev,
+  } = useBizDevStore();
 
   const initSession = useCallback(async () => {
     const { id } = await apiPost<{
@@ -91,12 +102,17 @@ export function useDiscoverySession() {
     [setSessionId, setCurrentStage, setMessages, setDiscoveryState]
   );
 
-  const runPipelineStream = useCallback(
-    async (searchId: string) => {
+  // ═══════════════════════════════════════════
+  // Phase 1: BizDev Analysis Stream
+  // ═══════════════════════════════════════════
+  const runAnalysisStream = useCallback(
+    async (sid: string) => {
       startPipeline();
+      setSidebarOpen(true);
+      setBizDevStatus("thinking");
 
       try {
-        const res = await fetch(`/api/v1/searches/${searchId}/stream`);
+        const res = await fetch(`/api/v1/searches/${sid}/stream`);
         if (!res.body) {
           errorPipeline();
           return;
@@ -117,56 +133,34 @@ export function useDiscoverySession() {
             try {
               const data = JSON.parse(sse.data);
 
-              if (sse.event === "stage_update" || sse.event === "stage_complete") {
-                const stageMap: Record<string, SessionStage> = {
-                  Analysis: "analysis",
-                  Scout: "scout",
-                };
-                const stage = stageMap[data.agentName];
-                if (stage && sse.event === "stage_update" && data.progress === 0) {
-                  setCurrentStage(stage);
-                  addMessage({
-                    role: "assistant",
-                    content: data.message,
-                    type: "stage-update",
-                  });
-                }
+              if (sse.event === "stage_update") {
+                // Initial analysis stage update
               }
 
-              if (sse.event === "pipeline_complete") {
-                // cards and summary live inside data.data (nested)
-                const payload = data.data as
-                  | { cards?: StartupCard[]; summary?: string }
-                  | undefined;
-                const cards = payload?.cards ?? [];
-                const summary = payload?.summary ?? "";
+              if (sse.event === "analysis_thinking") {
+                setBizDevStatus("thinking");
+                const text = data.data?.text ?? "";
+                if (text) appendThinking(text);
+              }
 
-                if (cards.length > 0) {
-                  addMessage({
-                    role: "assistant",
-                    content: summary,
-                    type: "cards",
-                    cards,
-                  });
-                } else {
-                  // No startups found — show the summary as a regular message
-                  addMessage({
-                    role: "assistant",
-                    content:
-                      summary ||
-                      "Nenhuma startup encontrada para os criterios definidos. Tente ajustar sua busca.",
-                  });
+              if (sse.event === "analysis_text") {
+                setBizDevStatus("writing");
+                const text = data.data?.text ?? "";
+                if (text) appendPlanText(text);
+              }
+
+              if (sse.event === "analysis_complete") {
+                const plan = data.data?.plan as BizDevPlan | undefined;
+                if (plan) {
+                  setPlan(plan);
                 }
-
-                setCurrentStage("complete");
-                setDiscoveryState("complete");
-                completePipeline();
+                // Do NOT proceed to Scout — wait for user confirmation
               }
 
               if (sse.event === "error") {
                 addMessage({
                   role: "assistant",
-                  content: `Erro no pipeline: ${data.message}`,
+                  content: `Erro na analise: ${data.message}`,
                   type: "stage-update",
                 });
                 setCurrentStage("complete");
@@ -179,10 +173,10 @@ export function useDiscoverySession() {
           }
         }
       } catch (error) {
-        console.error("Pipeline stream error:", error);
+        console.error("Analysis stream error:", error);
         addMessage({
           role: "assistant",
-          content: "Erro de conexao com o pipeline. Tente novamente.",
+          content: "Erro de conexao com a analise. Tente novamente.",
           type: "stage-update",
         });
         setCurrentStage("complete");
@@ -190,8 +184,131 @@ export function useDiscoverySession() {
         errorPipeline();
       }
     },
-    [startPipeline, completePipeline, errorPipeline, setCurrentStage, setDiscoveryState, addMessage]
+    [
+      startPipeline,
+      errorPipeline,
+      setSidebarOpen,
+      setBizDevStatus,
+      appendThinking,
+      appendPlanText,
+      setPlan,
+      addMessage,
+      setCurrentStage,
+      setDiscoveryState,
+    ]
   );
+
+  // ═══════════════════════════════════════════
+  // Phase 2: Confirm Plan → Run Scout
+  // ═══════════════════════════════════════════
+  const confirmPlan = useCallback(async () => {
+    const activeSearchId = searchId ?? useSearchStore.getState().searchId;
+    if (!activeSearchId) return;
+
+    useBizDevStore.getState().confirm();
+    setCurrentStage("scout");
+    addMessage({
+      role: "assistant",
+      content: "Plano confirmado! Buscando startups...",
+      type: "stage-update",
+    });
+
+    try {
+      const res = await fetch(`/api/v1/searches/${activeSearchId}/confirm`, {
+        method: "POST",
+      });
+      if (!res.body) {
+        errorPipeline();
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      const parser = parseSseStream();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const events = parser.feed(chunk);
+
+        for (const sse of events) {
+          try {
+            const data = JSON.parse(sse.data);
+
+            if (sse.event === "stage_update" || sse.event === "stage_complete") {
+              const stageMap: Record<string, SessionStage> = {
+                Scout: "scout",
+              };
+              const stage = stageMap[data.agentName];
+              if (stage && sse.event === "stage_update" && data.progress === 0) {
+                setCurrentStage(stage);
+              }
+            }
+
+            if (sse.event === "pipeline_complete") {
+              const payload = data.data as
+                | { cards?: StartupCard[]; summary?: string }
+                | undefined;
+              const cards = payload?.cards ?? [];
+              const summary = payload?.summary ?? "";
+
+              if (cards.length > 0) {
+                addMessage({
+                  role: "assistant",
+                  content: summary,
+                  type: "cards",
+                  cards,
+                });
+              } else {
+                addMessage({
+                  role: "assistant",
+                  content:
+                    summary ||
+                    "Nenhuma startup encontrada para os criterios definidos. Tente ajustar sua busca.",
+                });
+              }
+
+              setCurrentStage("complete");
+              setDiscoveryState("complete");
+              completePipeline();
+            }
+
+            if (sse.event === "error") {
+              addMessage({
+                role: "assistant",
+                content: `Erro no pipeline: ${data.message}`,
+                type: "stage-update",
+              });
+              setCurrentStage("complete");
+              setDiscoveryState("complete");
+              errorPipeline();
+            }
+          } catch {
+            // Skip malformed JSON
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Scout stream error:", error);
+      addMessage({
+        role: "assistant",
+        content: "Erro de conexao com o pipeline. Tente novamente.",
+        type: "stage-update",
+      });
+      setCurrentStage("complete");
+      setDiscoveryState("complete");
+      errorPipeline();
+    }
+  }, [
+    searchId,
+    completePipeline,
+    errorPipeline,
+    setCurrentStage,
+    setDiscoveryState,
+    addMessage,
+  ]);
 
   const sendMessage = useCallback(
     async (text: string, sid?: string) => {
@@ -250,14 +367,14 @@ export function useDiscoverySession() {
 
         setIsStreaming(false);
 
-        // If discovery is complete, trigger the pipeline
+        // If discovery is complete, trigger BizDev analysis
         if (discoveryDone) {
           setDiscoveryState("processing");
           setCurrentStage("analysis");
 
           addMessage({
             role: "assistant",
-            content: "Discovery concluida! Analisando suas necessidades...",
+            content: "Preparando seu plano BizDev...",
             type: "stage-update",
           });
 
@@ -266,12 +383,12 @@ export function useDiscoverySession() {
               discoverySessionId: activeSessionId,
             });
             setSearchId(id);
-            await runPipelineStream(id);
+            await runAnalysisStream(id);
           } catch (error) {
             console.error("Failed to create search from discovery:", error);
             addMessage({
               role: "assistant",
-              content: "Erro ao iniciar busca. Tente novamente.",
+              content: "Erro ao iniciar analise. Tente novamente.",
               type: "stage-update",
             });
             setDiscoveryState("complete");
@@ -291,9 +408,14 @@ export function useDiscoverySession() {
       setDiscoveryState,
       setCurrentStage,
       setSearchId,
-      runPipelineStream,
+      runAnalysisStream,
     ]
   );
+
+  const reset = useCallback(() => {
+    resetDiscovery();
+    resetBizDev();
+  }, [resetDiscovery, resetBizDev]);
 
   return {
     sessionId,
@@ -304,6 +426,7 @@ export function useDiscoverySession() {
     initSession,
     loadSession,
     sendMessage,
+    confirmPlan,
     reset,
   };
 }
