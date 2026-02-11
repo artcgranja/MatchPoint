@@ -25,7 +25,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDiscoveryStore } from "@/stores/discovery-store";
-import { useBizDevStore } from "@/stores/bizdev-store";
+import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { useState } from "react";
 
 export function AppSidebar() {
@@ -33,14 +33,14 @@ export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const { theme, setTheme } = useTheme();
   const resetDiscovery = useDiscoveryStore((s) => s.reset);
-  const resetBizDev = useBizDevStore((s) => s.reset);
+  const resetPanel = useAgentPanelStore((s) => s.reset);
 
   const isSearchActive =
     pathname === "/search" || pathname.startsWith("/search/");
 
   const handleNewChat = () => {
     resetDiscovery();
-    resetBizDev();
+    resetPanel();
   };
 
   return (

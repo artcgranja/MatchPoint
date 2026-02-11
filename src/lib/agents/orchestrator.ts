@@ -179,17 +179,67 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
     const startScout = Date.now();
     const scoutAgent = new ScoutAgent();
 
-    yield {
-      eventType: "stage_update",
-      stageId: "stage-2",
-      agentName: "Scout",
-      status: "running",
-      progress: 50,
-      message: "Avaliando candidatos...",
-    };
+    let scoutResult: { cards: StartupCard[]; summary: string } | null = null;
+    let toolCallCount = 0;
 
-    // Scout now receives the product document directly
-    const scoutResult = await scoutAgent.search(productDocument);
+    for await (const event of scoutAgent.searchWithEvents(productDocument)) {
+      if (event.type === "tool_call") {
+        toolCallCount++;
+        // Granular progress: roughly map tool calls to 10-80% range
+        const progress = Math.min(10 + toolCallCount * 15, 80);
+
+        yield {
+          eventType: "scout_tool_call",
+          stageId: "stage-2",
+          agentName: "Scout",
+          status: "running",
+          progress,
+          message: event.toolName === "search_startups"
+            ? "Pesquisando base de dados..."
+            : "Analisando detalhes...",
+          data: {
+            toolCallId: event.toolCallId,
+            toolName: event.toolName,
+            input: event.input as unknown as Record<string, unknown>,
+          },
+        };
+
+        yield {
+          eventType: "stage_update",
+          stageId: "stage-2",
+          agentName: "Scout",
+          status: "running",
+          progress,
+          message: event.toolName === "search_startups"
+            ? "Pesquisando base de dados..."
+            : "Analisando detalhes...",
+        };
+      }
+
+      if (event.type === "tool_result") {
+        yield {
+          eventType: "scout_tool_result",
+          stageId: "stage-2",
+          agentName: "Scout",
+          status: "running",
+          progress: Math.min(10 + toolCallCount * 15, 80),
+          message: event.resultSummary,
+          data: {
+            toolCallId: event.toolCallId,
+            toolName: event.toolName,
+            resultSummary: event.resultSummary,
+          },
+        };
+      }
+
+      if (event.type === "result") {
+        scoutResult = event.data;
+      }
+    }
+
+    if (!scoutResult) {
+      throw new Error("Scout search did not produce a result");
+    }
 
     await logStage(searchId, "Scout", "complete", 100, `Found ${scoutResult.cards.length} matches`, {
       durationMs: Date.now() - startScout,
@@ -225,6 +275,7 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
       data: {
         status: "complete",
         resultCount: scoutResult.cards.length,
+        scoutSummary: scoutResult.summary,
       },
     });
 

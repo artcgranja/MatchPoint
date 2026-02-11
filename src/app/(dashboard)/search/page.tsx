@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, useRef } from "react";
-import { Compass, Sparkles, RotateCcw, Brain } from "lucide-react";
+import { Compass, Sparkles, RotateCcw, Brain, Rocket } from "lucide-react";
 import { motion } from "motion/react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,9 @@ import { SuggestionChips } from "@/components/search/suggestion-chips";
 import { ChatMessageList } from "@/components/discovery/chat-message-list";
 import { ChatInput } from "@/components/discovery/chat-input";
 import { StageIndicator } from "@/components/discovery/phase-indicator";
-import { BizDevPlanSidebar } from "@/components/bizdev/bizdev-plan-sidebar";
+import { AgentWorkPanel } from "@/components/agent-panel/agent-work-panel";
 import { useDiscoverySession } from "@/hooks/use-discovery-session";
-import { useBizDevStore } from "@/stores/bizdev-store";
+import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { fadeIn, slideUp } from "@/lib/motion";
 
 export default function SearchPage() {
@@ -33,8 +33,14 @@ export default function SearchPage() {
     reset,
   } = useDiscoverySession();
 
-  const { sidebarOpen, setSidebarOpen, status: bizDevStatus } = useBizDevStore();
-  const bizDevPanelRef = useRef<PanelImperativeHandle>(null);
+  const {
+    panelOpen,
+    setPanelOpen,
+    analysisStatus,
+    scoutStatus,
+    cards,
+  } = useAgentPanelStore();
+  const agentPanelRef = useRef<PanelImperativeHandle>(null);
 
   useEffect(() => {
     if (sessionId && discoveryState === "idle" && messages.length === 0) {
@@ -47,19 +53,19 @@ export default function SearchPage() {
 
   // Sync panel collapse/expand with store
   useEffect(() => {
-    const panel = bizDevPanelRef.current;
+    const panel = agentPanelRef.current;
     if (!panel) return;
 
     try {
-      if (sidebarOpen && panel.isCollapsed()) {
+      if (panelOpen && panel.isCollapsed()) {
         panel.expand();
-      } else if (!sidebarOpen && panel.isExpanded()) {
+      } else if (!panelOpen && !panel.isCollapsed()) {
         panel.collapse();
       }
     } catch {
       // Panel not yet registered with group — ignore
     }
-  }, [sidebarOpen]);
+  }, [panelOpen]);
 
   const handleSendMessage = useCallback(
     async (text: string) => {
@@ -84,13 +90,22 @@ export default function SearchPage() {
     reset();
   }, [reset]);
 
-  const handleCloseBizDev = useCallback(() => {
-    setSidebarOpen(false);
-  }, [setSidebarOpen]);
+  const handleClosePanel = useCallback(() => {
+    setPanelOpen(false);
+  }, [setPanelOpen]);
 
   const isIdle = discoveryState === "idle";
-  const showBizDevPanel = bizDevStatus !== "idle" || sidebarOpen;
-  const showSidebarToggle = !sidebarOpen && bizDevStatus !== "idle";
+  const showPanel = panelOpen || analysisStatus !== "idle" || scoutStatus !== "idle";
+  const showPanelToggle = !panelOpen && (analysisStatus !== "idle" || scoutStatus !== "idle");
+
+  // Determine toggle button label
+  const toggleLabel = scoutStatus !== "idle" && cards.length > 0
+    ? `Resultados (${cards.length})`
+    : analysisStatus !== "idle"
+      ? "Analise"
+      : "Painel";
+
+  const ToggleIcon = scoutStatus !== "idle" && cards.length > 0 ? Rocket : Brain;
 
   return (
     <ResizablePanelGroup
@@ -105,15 +120,15 @@ export default function SearchPage() {
             <div className="flex items-center justify-between border-b border-border px-4 py-2">
               <StageIndicator currentStage={currentStage} />
               <div className="flex items-center gap-2">
-                {showSidebarToggle && (
+                {showPanelToggle && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setSidebarOpen(true)}
+                    onClick={() => setPanelOpen(true)}
                     className="gap-2 text-foreground-muted"
                   >
-                    <Brain className="h-3.5 w-3.5" />
-                    Analise
+                    <ToggleIcon className="h-3.5 w-3.5" />
+                    {toggleLabel}
                   </Button>
                 )}
                 <Button
@@ -192,25 +207,25 @@ export default function SearchPage() {
         </div>
       </ResizablePanel>
 
-      {/* Resize handle + BizDev panel — only when relevant */}
-      {showBizDevPanel && (
+      {/* Resize handle + Agent Work Panel — only when relevant */}
+      {showPanel && (
         <>
           <ResizableHandle withHandle />
           <ResizablePanel
-            panelRef={bizDevPanelRef}
+            panelRef={agentPanelRef}
             defaultSize={35}
             minSize={15}
             collapsible
             collapsedSize={0}
             onResize={(size) => {
               const collapsed = size.asPercentage === 0;
-              if (collapsed && sidebarOpen) setSidebarOpen(false);
-              if (!collapsed && !sidebarOpen) setSidebarOpen(true);
+              if (collapsed && panelOpen) setPanelOpen(false);
+              if (!collapsed && !panelOpen) setPanelOpen(true);
             }}
           >
-            <BizDevPlanSidebar
+            <AgentWorkPanel
               onConfirm={confirmPlan}
-              onClose={handleCloseBizDev}
+              onClose={handleClosePanel}
             />
           </ResizablePanel>
         </>

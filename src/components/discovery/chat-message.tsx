@@ -1,12 +1,12 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Info } from "lucide-react";
+import { Info, Rocket } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { code } from "@streamdown/code";
 import { cn } from "@/lib/utils";
 import { slideUp } from "@/lib/motion";
-import { StartupCard } from "./startup-card";
+import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import type { DiscoveryMessage } from "@/types";
 
 interface ChatMessageProps {
@@ -38,25 +38,25 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
     );
   }
 
-  // Cards messages
+  // Cards messages — show as "view in panel" link
   if (message.type === "cards" && message.cards?.length) {
     return (
       <motion.div
         variants={slideUp}
         initial="hidden"
         animate="visible"
-        className="space-y-3"
+        className="flex justify-center py-2"
       >
-        <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground/90 prose-p:leading-relaxed dark:prose-invert">
-          <Streamdown plugins={{ code }} isAnimating={false}>
-            {stripMarkers(message.content)}
-          </Streamdown>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          {message.cards.map((card) => (
-            <StartupCard key={card.id} card={card} />
-          ))}
-        </div>
+        <button
+          onClick={() => {
+            useAgentPanelStore.getState().setPanelOpen(true);
+            useAgentPanelStore.getState().setActiveTab("scout");
+          }}
+          className="flex items-center gap-2 rounded-full bg-background-secondary/60 px-4 py-1.5 text-xs text-foreground-muted hover:text-foreground transition-colors"
+        >
+          <Rocket className="h-3.5 w-3.5" />
+          {message.cards.length} startups encontradas — ver no painel →
+        </button>
       </motion.div>
     );
   }

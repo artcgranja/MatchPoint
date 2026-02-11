@@ -91,7 +91,11 @@ export abstract class BaseAgent {
     systemPrompt: string,
     messages: MessageParam[],
     tools: ToolDefinition[],
-    options?: { maxTurns?: number }
+    options?: {
+      maxTurns?: number;
+      onToolCall?: (toolName: string, input: Record<string, unknown>, id: string) => void;
+      onToolResult?: (id: string, result: unknown) => void;
+    }
   ): Promise<{ text: string; toolResults: unknown[] }> {
     const maxTurns = options?.maxTurns ?? 10;
     const anthropicTools: Anthropic.Messages.Tool[] = tools.map((t) => ({
@@ -135,8 +139,10 @@ export abstract class BaseAgent {
               return { id: block.id, result: null, error: `Unknown tool: ${block.name}` };
             }
             try {
+              options?.onToolCall?.(block.name, block.input as Record<string, unknown>, block.id);
               const result = await toolDef.handler(block.input as Record<string, unknown>);
               allToolResults.push(result);
+              options?.onToolResult?.(block.id, result);
               return { id: block.id, result, error: null };
             } catch (err) {
               const errorMsg = err instanceof Error ? err.message : "Tool execution failed";

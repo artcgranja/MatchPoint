@@ -45,7 +45,7 @@ export type PipelineStatus = "idle" | "running" | "complete" | "error";
 
 export type AgentName = "Analysis" | "Scout";
 
-export type SessionStage = "discovery" | "analysis" | "scout" | "complete";
+export type SessionStage = "discovery" | "analysis" | "scout" | "complete" | "advising";
 
 export interface PipelineStage {
   id: string;
@@ -85,6 +85,18 @@ export interface DiscoverySession {
 }
 
 export type BizDevPlanStatus = "idle" | "thinking" | "writing" | "complete" | "confirmed";
+
+export type AgentPanelTab = "analysis" | "scout";
+export type ScoutStatus = "idle" | "searching" | "complete" | "error";
+
+export interface ToolCallEvent {
+  id: string;
+  toolName: string;
+  input: Record<string, unknown>;
+  status: "running" | "complete" | "error";
+  resultSummary?: string;
+  timestamp: number;
+}
 
 export interface UserSettings {
   theme: "light" | "dark" | "system";

@@ -3,8 +3,8 @@
 import { useCallback } from "react";
 import { useDiscoveryStore } from "@/stores/discovery-store";
 import { useSearchStore } from "@/stores/search-store";
-import { useBizDevStore } from "@/stores/bizdev-store";
-import { apiPost, apiGet } from "@/lib/api/client";
+import { useAgentPanelStore } from "@/stores/agent-panel-store";
+import { apiGet, apiPost } from "@/lib/api/client";
 import type { DiscoverySession, SessionStage, StartupCard } from "@/types";
 
 /** Parse an SSE stream correctly, handling cross-chunk boundaries. */
@@ -57,18 +57,21 @@ export function useDiscoverySession() {
     useSearchStore();
 
   const {
-    setStatus: setBizDevStatus,
+    setPanelOpen,
+    setActiveTab,
+    setAnalysisStatus,
     appendThinking,
     appendPlanText,
-    setSidebarOpen,
-    reset: resetBizDev,
-  } = useBizDevStore();
+    setScoutStatus,
+    setScoutProgress,
+    addToolCall,
+    updateToolCall,
+    setCards,
+    reset: resetPanel,
+  } = useAgentPanelStore();
 
   const initSession = useCallback(async () => {
-    const { id } = await apiPost<{
-      id: string;
-      currentPhase: string;
-    }>("/discovery");
+    const { id } = await apiPost<{ id: string }>("/discovery");
     setSessionId(id);
     setCurrentStage("discovery");
     setDiscoveryState("chatting");
@@ -101,13 +104,14 @@ export function useDiscoverySession() {
   );
 
   // ═══════════════════════════════════════════
-  // Phase 1: BizDev Analysis Stream
+  // Analysis Stream (uses agent-panel-store)
   // ═══════════════════════════════════════════
   const runAnalysisStream = useCallback(
     async (sid: string) => {
       startPipeline();
-      setSidebarOpen(true);
-      setBizDevStatus("thinking");
+      setPanelOpen(true);
+      setActiveTab("analysis");
+      setAnalysisStatus("thinking");
 
       try {
         const res = await fetch(`/api/v1/searches/${sid}/stream`);
@@ -131,25 +135,20 @@ export function useDiscoverySession() {
             try {
               const data = JSON.parse(sse.data);
 
-              if (sse.event === "stage_update") {
-                // Initial analysis stage update
-              }
-
               if (sse.event === "analysis_thinking") {
-                setBizDevStatus("thinking");
+                setAnalysisStatus("thinking");
                 const text = data.data?.text ?? "";
                 if (text) appendThinking(text);
               }
 
               if (sse.event === "analysis_text") {
-                setBizDevStatus("writing");
+                setAnalysisStatus("writing");
                 const text = data.data?.text ?? "";
                 if (text) appendPlanText(text);
               }
 
               if (sse.event === "analysis_complete") {
-                setBizDevStatus("complete");
-                // Do NOT proceed to Scout — wait for user confirmation
+                setAnalysisStatus("complete");
               }
 
               if (sse.event === "error") {
@@ -182,8 +181,9 @@ export function useDiscoverySession() {
     [
       startPipeline,
       errorPipeline,
-      setSidebarOpen,
-      setBizDevStatus,
+      setPanelOpen,
+      setActiveTab,
+      setAnalysisStatus,
       appendThinking,
       appendPlanText,
       addMessage,
@@ -193,13 +193,130 @@ export function useDiscoverySession() {
   );
 
   // ═══════════════════════════════════════════
-  // Phase 2: Confirm Plan → Run Scout
+  // Process Scout events — cards go to panel
+  // ═══════════════════════════════════════════
+  const processScoutEvents = useCallback(
+    (parser: ReturnType<typeof parseSseStream>, chunk: string) => {
+      const events = parser.feed(chunk);
+
+      for (const sse of events) {
+        try {
+          const data = JSON.parse(sse.data);
+
+          if (sse.event === "stage_update" || sse.event === "stage_complete") {
+            const stageMap: Record<string, SessionStage> = {
+              Scout: "scout",
+            };
+            const stage = stageMap[data.agentName];
+            if (stage && sse.event === "stage_update") {
+              if (data.progress === 0) {
+                setCurrentStage(stage);
+                setActiveTab("scout");
+                setPanelOpen(true);
+                setScoutStatus("searching");
+              }
+              setScoutProgress(data.progress, data.message ?? "");
+            }
+          }
+
+          // Tool call events
+          if (sse.event === "scout_tool_call") {
+            addToolCall({
+              id: data.data?.toolCallId ?? data.data?.id ?? crypto.randomUUID(),
+              toolName: data.data?.toolName ?? "unknown",
+              input: data.data?.input ?? {},
+              status: "running",
+              timestamp: Date.now(),
+            });
+          }
+
+          if (sse.event === "scout_tool_result") {
+            const toolCallId = data.data?.toolCallId ?? data.data?.id;
+            if (toolCallId) {
+              updateToolCall(toolCallId, {
+                status: "complete",
+                resultSummary: data.data?.resultSummary,
+              });
+            }
+          }
+
+          if (sse.event === "pipeline_complete") {
+            const payload = data.data as
+              | { cards?: StartupCard[]; summary?: string }
+              | undefined;
+            const cards = payload?.cards ?? [];
+            const summary = payload?.summary ?? "";
+
+            // Cards go to the agent panel, not chat
+            setCards(cards, summary);
+            setScoutStatus("complete");
+            setScoutProgress(100, "Busca concluida");
+
+            if (cards.length > 0) {
+              addMessage({
+                role: "assistant",
+                content: `${cards.length} startups encontradas! Veja os resultados no painel.`,
+                type: "cards",
+                cards,
+              });
+            } else {
+              addMessage({
+                role: "assistant",
+                content:
+                  summary ||
+                  "Nenhuma startup encontrada para os criterios definidos. Tente ajustar sua busca.",
+              });
+            }
+
+            setCurrentStage("advising");
+            setDiscoveryState("advising");
+            completePipeline();
+          }
+
+          if (sse.event === "error") {
+            addMessage({
+              role: "assistant",
+              content: `Erro no pipeline: ${data.message}`,
+              type: "stage-update",
+            });
+            setScoutStatus("error");
+            setCurrentStage("complete");
+            setDiscoveryState("complete");
+            errorPipeline();
+          }
+        } catch {
+          // Skip malformed JSON
+        }
+      }
+    },
+    [
+      addMessage,
+      completePipeline,
+      errorPipeline,
+      setCurrentStage,
+      setDiscoveryState,
+      setActiveTab,
+      setPanelOpen,
+      setScoutStatus,
+      setScoutProgress,
+      addToolCall,
+      updateToolCall,
+      setCards,
+    ]
+  );
+
+  // ═══════════════════════════════════════════
+  // Confirm Plan → Run Scout via Conductor
   // ═══════════════════════════════════════════
   const confirmPlan = useCallback(async () => {
+    const activeSessionId = sessionId ?? useDiscoveryStore.getState().sessionId;
     const activeSearchId = searchId ?? useSearchStore.getState().searchId;
-    if (!activeSearchId) return;
+    if (!activeSessionId || !activeSearchId) return;
 
-    useBizDevStore.getState().confirm();
+    useAgentPanelStore.getState().confirmPlan();
+    setActiveTab("scout");
+    setScoutStatus("searching");
+    setScoutProgress(0, "Iniciando busca...");
     setCurrentStage("scout");
     addMessage({
       role: "assistant",
@@ -208,9 +325,15 @@ export function useDiscoverySession() {
     });
 
     try {
-      const res = await fetch(`/api/v1/searches/${activeSearchId}/confirm`, {
-        method: "POST",
-      });
+      const res = await fetch(
+        `/api/v1/sessions/${activeSessionId}/message`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: "Confirmo o plano. Buscar startups." }),
+        }
+      );
+
       if (!res.body) {
         errorPipeline();
         return;
@@ -225,62 +348,26 @@ export function useDiscoverySession() {
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        const events = parser.feed(chunk);
 
-        for (const sse of events) {
-          try {
-            const data = JSON.parse(sse.data);
+        // Scout events come as named SSE events
+        processScoutEvents(parser, chunk);
 
-            if (sse.event === "stage_update" || sse.event === "stage_complete") {
-              const stageMap: Record<string, SessionStage> = {
-                Scout: "scout",
-              };
-              const stage = stageMap[data.agentName];
-              if (stage && sse.event === "stage_update" && data.progress === 0) {
-                setCurrentStage(stage);
-              }
-            }
-
-            if (sse.event === "pipeline_complete") {
-              const payload = data.data as
-                | { cards?: StartupCard[]; summary?: string }
-                | undefined;
-              const cards = payload?.cards ?? [];
-              const summary = payload?.summary ?? "";
-
-              if (cards.length > 0) {
+        // Also check for plain data lines (status messages)
+        for (const line of chunk.split("\n")) {
+          if (line.startsWith("data: ")) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.error) {
                 addMessage({
                   role: "assistant",
-                  content: summary,
-                  type: "cards",
-                  cards,
+                  content: `Erro: ${data.error}`,
+                  type: "stage-update",
                 });
-              } else {
-                addMessage({
-                  role: "assistant",
-                  content:
-                    summary ||
-                    "Nenhuma startup encontrada para os criterios definidos. Tente ajustar sua busca.",
-                });
+                errorPipeline();
               }
-
-              setCurrentStage("complete");
-              setDiscoveryState("complete");
-              completePipeline();
+            } catch {
+              // Skip
             }
-
-            if (sse.event === "error") {
-              addMessage({
-                role: "assistant",
-                content: `Erro no pipeline: ${data.message}`,
-                type: "stage-update",
-              });
-              setCurrentStage("complete");
-              setDiscoveryState("complete");
-              errorPipeline();
-            }
-          } catch {
-            // Skip malformed JSON
           }
         }
       }
@@ -291,19 +378,27 @@ export function useDiscoverySession() {
         content: "Erro de conexao com o pipeline. Tente novamente.",
         type: "stage-update",
       });
+      setScoutStatus("error");
       setCurrentStage("complete");
       setDiscoveryState("complete");
       errorPipeline();
     }
   }, [
+    sessionId,
     searchId,
-    completePipeline,
     errorPipeline,
     setCurrentStage,
     setDiscoveryState,
+    setActiveTab,
+    setScoutStatus,
+    setScoutProgress,
     addMessage,
+    processScoutEvents,
   ]);
 
+  // ═══════════════════════════════════════════
+  // Unified sendMessage — routes through conductor
+  // ═══════════════════════════════════════════
   const sendMessage = useCallback(
     async (text: string, sid?: string) => {
       const activeSessionId = sid ?? sessionId;
@@ -314,7 +409,7 @@ export function useDiscoverySession() {
 
       try {
         const res = await fetch(
-          `/api/v1/discovery/${activeSessionId}/message`,
+          `/api/v1/sessions/${activeSessionId}/message`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -330,7 +425,6 @@ export function useDiscoverySession() {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let assistantMsg = "";
-        let discoveryDone = false;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -342,15 +436,42 @@ export function useDiscoverySession() {
             if (line.startsWith("data: ")) {
               try {
                 const data = JSON.parse(line.slice(6));
+
+                // Text chunks (discovery or advisor)
                 if (data.text) {
                   assistantMsg += data.text;
                   updateLastAssistantMessage(assistantMsg);
                 }
-                if (data.done) {
-                  discoveryDone = true;
+
+                // Status messages (pipeline in progress)
+                if (data.status) {
+                  addMessage({
+                    role: "assistant",
+                    content: data.status,
+                    type: "stage-update",
+                  });
                 }
+
+                // Done event
+                if (data.done) {
+                  if (data.transition === "analysis" && data.searchId) {
+                    // Discovery complete → trigger analysis
+                    setDiscoveryState("processing");
+                    setCurrentStage("analysis");
+                    setSearchId(data.searchId);
+
+                    addMessage({
+                      role: "assistant",
+                      content: "Analisando a solucao ideal...",
+                      type: "stage-update",
+                    });
+
+                    await runAnalysisStream(data.searchId);
+                  }
+                }
+
                 if (data.error) {
-                  console.error("Discovery SSE error:", data.error);
+                  console.error("Conductor SSE error:", data.error);
                 }
               } catch {
                 // Skip malformed SSE data lines
@@ -360,37 +481,8 @@ export function useDiscoverySession() {
         }
 
         setIsStreaming(false);
-
-        // If discovery is complete, trigger BizDev analysis
-        if (discoveryDone) {
-          setDiscoveryState("processing");
-          setCurrentStage("analysis");
-
-          addMessage({
-            role: "assistant",
-            content: "Analisando a solucao ideal...",
-            type: "stage-update",
-          });
-
-          try {
-            const { id } = await apiPost<{ id: string }>("/searches", {
-              discoverySessionId: activeSessionId,
-            });
-            setSearchId(id);
-            await runAnalysisStream(id);
-          } catch (error) {
-            console.error("Failed to create search from discovery:", error);
-            addMessage({
-              role: "assistant",
-              content: "Erro ao iniciar analise. Tente novamente.",
-              type: "stage-update",
-            });
-            setDiscoveryState("complete");
-            setCurrentStage("complete");
-          }
-        }
       } catch (error) {
-        console.error("Discovery session error:", error);
+        console.error("Session error:", error);
         setIsStreaming(false);
       }
     },
@@ -408,8 +500,8 @@ export function useDiscoverySession() {
 
   const reset = useCallback(() => {
     resetDiscovery();
-    resetBizDev();
-  }, [resetDiscovery, resetBizDev]);
+    resetPanel();
+  }, [resetDiscovery, resetPanel]);
 
   return {
     sessionId,
