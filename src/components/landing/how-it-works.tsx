@@ -1,78 +1,110 @@
 "use client";
 
-import { Compass, Search, BarChart3, Heart, FileText } from "lucide-react";
 import { motion } from "motion/react";
-import { GlassCard } from "@/components/ui/glass-card";
 import { slideUp, staggerContainer } from "@/lib/motion";
 
 const stages = [
   {
-    icon: Compass,
+    number: "01",
     name: "Navigator",
-    description: "Understands your business challenge and defines search parameters",
+    description:
+      "Understands your business challenge and defines precise search parameters for optimal matching.",
   },
   {
-    icon: Search,
-    name: "Scout",
-    description: "Searches databases to find potential startup matches",
+    number: "02",
+    name: "Scout & Analyst",
+    description:
+      "Searches startup databases and deep-dives into financials, metrics, and technology fit.",
   },
   {
-    icon: BarChart3,
-    name: "Analyst",
-    description: "Deep-dives into financials, metrics, and technology fit",
-  },
-  {
-    icon: Heart,
-    name: "Matchmaker",
-    description: "Scores and ranks startups based on multi-dimensional analysis",
-  },
-  {
-    icon: FileText,
-    name: "Reporter",
-    description: "Generates comprehensive reports with actionable recommendations",
+    number: "03",
+    name: "Matchmaker & Reporter",
+    description:
+      "Scores and ranks startups on multi-dimensional analysis, then generates comprehensive reports.",
   },
 ];
 
 export function HowItWorks() {
   return (
-    <section id="how-it-works" className="py-24 bg-background-secondary/50">
-      <div className="mx-auto max-w-7xl px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold sm:text-4xl">
-            How <span className="text-gradient">MatchPoint</span> Works
-          </h2>
-          <p className="mt-4 text-foreground-muted max-w-2xl mx-auto">
-            Five AI agents work in a coordinated pipeline to deliver
-            comprehensive startup analysis in minutes, not weeks.
-          </p>
-        </div>
-
+    <section
+      id="how-it-works"
+      className="py-16 md:py-24 w-full flex justify-center items-center px-4 md:px-6"
+    >
+      <div className="w-full max-w-7xl">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
-          className="relative flex flex-col gap-4 md:flex-row md:gap-6"
         >
-          {stages.map(({ icon: Icon, name, description }, index) => (
-            <motion.div key={name} variants={slideUp} className="flex-1 relative">
-              <GlassCard className="h-full text-center">
-                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-highlight/10">
-                  <Icon className="h-5 w-5 text-highlight" />
+          {/* Header */}
+          <div className="text-center mb-16">
+            <motion.span
+              variants={slideUp}
+              className="inline-block font-mono text-xs uppercase tracking-[0.3em] text-text-muted mb-6"
+            >
+              How It Works
+            </motion.span>
+
+            <motion.h2
+              variants={slideUp}
+              className="font-display text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight text-text"
+            >
+              Five AI Agents, One Pipeline
+            </motion.h2>
+          </div>
+
+          {/* Process Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {stages.map((step) => (
+              <motion.div
+                key={step.number}
+                variants={slideUp}
+                className="bg-void-light border border-border-base rounded-2xl p-8 relative overflow-hidden card-elevated"
+              >
+                {/* Large number background */}
+                <span className="absolute -top-4 -left-2 font-display text-[120px] font-bold text-decorative leading-none select-none">
+                  {step.number}
+                </span>
+
+                {/* Content */}
+                <div className="relative z-10">
+                  <span className="font-mono text-sm text-highlight mb-4 block">
+                    {step.number}
+                  </span>
+                  <h3 className="font-display text-xl font-bold text-text mb-4">
+                    {step.name}
+                  </h3>
+                  <p className="text-text-dim leading-relaxed">
+                    {step.description}
+                  </p>
                 </div>
-                <div className="mb-1 font-code text-xs text-highlight">
-                  Step {index + 1}
-                </div>
-                <h3 className="text-base font-semibold">{name}</h3>
-                <p className="mt-1 text-xs text-foreground-muted">
-                  {description}
-                </p>
-              </GlassCard>
-              {index < stages.length - 1 && (
-                <div className="hidden md:block absolute top-1/2 -right-3 z-10 h-px w-6 bg-highlight/30" />
-              )}
-            </motion.div>
-          ))}
+              </motion.div>
+            ))}
+          </div>
+
+          {/* CTA */}
+          <motion.div variants={slideUp} className="text-center mt-16 md:mt-12">
+            <a
+              href="#contact"
+              className="inline-flex items-center gap-3 font-display text-base font-medium px-8 py-4 rounded-full bg-text text-void hover:bg-text/90 transition-all duration-300 hover:scale-105 active:scale-95"
+            >
+              Start Matching Now
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M17 8l4 4m0 0l-4 4m4-4H3"
+                />
+              </svg>
+            </a>
+          </motion.div>
         </motion.div>
       </div>
     </section>

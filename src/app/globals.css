@@ -4,6 +4,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ============================================
+   ASTRO INTELLIGENCE - Unified Design System
+   Dark (Deep Space) / Light (Clean Slate)
+   ============================================ */
+
 :root {
   --radius: 0.625rem;
 
@@ -16,8 +21,58 @@
 
   --highlight: #3b82f6;
   --highlight-foreground: #ffffff;
+  --highlight-dim: #2563eb;
   --sage: #6B8E6B;
   --sage-foreground: #ffffff;
+  --sage-hover: #5A7D5A;
+
+  /* Astro semantic colors - Light */
+  --void: #FAFAF8;
+  --void-light: #ECEEE9;
+  --void-lighter: #DDE1D9;
+  --text: #0F172A;
+  --text-dim: #64748B;
+  --text-muted: #94A3B8;
+  --accent-steel: #64748B;
+  --accent-steel-hover: #475569;
+
+  /* Icon colors */
+  --icon: #1D4ED8;
+  --icon-bg: rgba(29, 78, 216, 0.06);
+  --icon-border: rgba(29, 78, 216, 0.12);
+
+  /* Semantic Borders (black-based for light mode) */
+  --border-base: rgba(0, 0, 0, 0.08);
+  --border-highlight: rgba(0, 0, 0, 0.12);
+  --border-hover: rgba(0, 0, 0, 0.16);
+  --border-focus: rgba(0, 0, 0, 0.24);
+  --border-strong: rgba(0, 0, 0, 0.12);
+  --border-prominent: rgba(0, 0, 0, 0.16);
+  --border-bold: rgba(0, 0, 0, 0.20);
+  --border-bolder: rgba(0, 0, 0, 0.24);
+
+  /* Semantic Surfaces */
+  --surface: rgba(0, 0, 0, 0.03);
+  --surface-hover: rgba(0, 0, 0, 0.05);
+  --surface-elevated: rgba(0, 0, 0, 0.06);
+  --surface-elevated-hover: rgba(0, 0, 0, 0.10);
+
+  /* Decorative & Dividers */
+  --decorative: rgba(0, 0, 0, 0.04);
+  --divider: rgba(0, 0, 0, 0.10);
+
+  /* Glass effect - light */
+  --glass-bg: rgba(255, 255, 255, 0.6);
+  --glass-strong-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(0, 0, 0, 0.06);
+  --glass-border-strong: rgba(0, 0, 0, 0.08);
+
+  /* Grid */
+  --grid-color: rgba(0, 0, 0, 0.04);
+
+  /* Scrollbar */
+  --scrollbar-thumb: #CBD5E1;
+  --scrollbar-thumb-hover: #94A3B8;
 
   /* shadcn tokens */
   --card: #FAFAF8;
@@ -53,14 +108,6 @@
   --sidebar-accent-foreground: #0F172A;
   --sidebar-border: rgba(0, 0, 0, 0.08);
   --sidebar-ring: #3b82f6;
-
-  /* Glass effect */
-  --glass-bg: rgba(255, 255, 255, 0.6);
-  --glass-border: rgba(0, 0, 0, 0.06);
-  --glass-blur: 12px;
-
-  /* Grid background */
-  --grid-color: rgba(0, 0, 0, 0.04);
 }
 
 .dark {
@@ -73,8 +120,58 @@
 
   --highlight: #3b82f6;
   --highlight-foreground: #ffffff;
+  --highlight-dim: #2563eb;
   --sage: #6B8E6B;
   --sage-foreground: #ffffff;
+  --sage-hover: #5A7D5A;
+
+  /* Astro semantic colors - Dark */
+  --void: #020810;
+  --void-light: #0a1420;
+  --void-lighter: #101c2c;
+  --text: #e8ecf0;
+  --text-dim: #8896a4;
+  --text-muted: #4a5568;
+  --accent-steel: #64748b;
+  --accent-steel-hover: #94a3b8;
+
+  /* Icon colors */
+  --icon: #2563eb;
+  --icon-bg: rgba(37, 99, 235, 0.08);
+  --icon-border: rgba(37, 99, 235, 0.15);
+
+  /* Semantic Borders (white-based for dark mode) */
+  --border-base: rgba(255, 255, 255, 0.04);
+  --border-highlight: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.10);
+  --border-prominent: rgba(255, 255, 255, 0.15);
+  --border-bold: rgba(255, 255, 255, 0.20);
+  --border-bolder: rgba(255, 255, 255, 0.25);
+
+  /* Semantic Surfaces */
+  --surface: rgba(255, 255, 255, 0.03);
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --surface-elevated: rgba(255, 255, 255, 0.10);
+  --surface-elevated-hover: rgba(255, 255, 255, 0.15);
+
+  /* Decorative & Dividers */
+  --decorative: rgba(255, 255, 255, 0.03);
+  --divider: rgba(255, 255, 255, 0.10);
+
+  /* Glass effect - dark */
+  --glass-bg: rgba(10, 20, 32, 0.6);
+  --glass-strong-bg: rgba(10, 20, 32, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.04);
+  --glass-border-strong: rgba(255, 255, 255, 0.06);
+
+  /* Grid */
+  --grid-color: rgba(255, 255, 255, 0.03);
+
+  /* Scrollbar */
+  --scrollbar-thumb: #4a5568;
+  --scrollbar-thumb-hover: #64748b;
 
   /* shadcn tokens */
   --card: #0a1420;
@@ -110,17 +207,10 @@
   --sidebar-accent-foreground: #e8ecf0;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: #3b82f6;
-
-  /* Glass effect */
-  --glass-bg: rgba(10, 20, 32, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.06);
-  --glass-blur: 12px;
-
-  /* Grid background */
-  --grid-color: rgba(255, 255, 255, 0.03);
 }
 
 @theme inline {
+  /* Existing shadcn tokens */
   --color-background: var(--background);
   --color-background-secondary: var(--background-secondary);
   --color-background-tertiary: var(--background-tertiary);
@@ -129,8 +219,10 @@
 
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
+  --color-highlight-dim: var(--highlight-dim);
   --color-sage: var(--sage);
   --color-sage-foreground: var(--sage-foreground);
+  --color-sage-hover: var(--sage-hover);
 
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
@@ -164,21 +256,89 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --font-heading: var(--font-space-grotesk);
-  --font-body: var(--font-space-grotesk);
-  --font-code: var(--font-fira-code);
+  /* Astro semantic colors */
+  --color-void: var(--void);
+  --color-void-light: var(--void-light);
+  --color-void-lighter: var(--void-lighter);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-text-muted: var(--text-muted);
+  --color-accent-steel: var(--accent-steel);
+  --color-accent-steel-hover: var(--accent-steel-hover);
 
+  /* Icon */
+  --color-icon: var(--icon);
+  --color-icon-bg: var(--icon-bg);
+  --color-icon-border: var(--icon-border);
+
+  /* Semantic Borders */
+  --color-border-base: var(--border-base);
+  --color-border-highlight: var(--border-highlight);
+  --color-border-hover: var(--border-hover);
+  --color-border-focus: var(--border-focus);
+  --color-border-strong: var(--border-strong);
+  --color-border-prominent: var(--border-prominent);
+  --color-border-bold: var(--border-bold);
+  --color-border-bolder: var(--border-bolder);
+
+  /* Semantic Surfaces */
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-elevated-hover: var(--surface-elevated-hover);
+
+  /* Decorative */
+  --color-decorative: var(--decorative);
+  --color-divider: var(--divider);
+
+  /* Fonts */
+  --font-display: var(--font-space-grotesk), system-ui, sans-serif;
+  --font-heading: var(--font-space-grotesk);
+  --font-body: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-code: var(--font-fira-code);
+  --font-mono: var(--font-fira-code), 'JetBrains Mono', monospace;
+
+  /* Radius */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Animations */
+  --animate-slide-up: slide-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-fade-in: fade-in 0.6s ease forwards;
+  --animate-scale-in: scale-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* Keyframes */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Utilities */
 @utility glass {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+@utility glass-strong {
+  background: var(--glass-strong-bg);
+  border: 1px solid var(--glass-border-strong);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
 }
 
 @utility grid-bg {
@@ -194,6 +354,160 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* Base Styles */
+html {
+  scroll-behavior: smooth;
+}
+
+section[id] {
+  scroll-margin-top: 100px;
+}
+
+@media (max-width: 640px) {
+  a, button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+::selection {
+  background-color: var(--highlight);
+  color: white;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--void);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* Glass Card - strong variant */
+.glass-card-strong {
+  background: var(--glass-strong-bg);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid var(--glass-border-strong);
+}
+
+/* Noise/Grain Texture */
+.grain::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.015;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Force dark theme on specific containers */
+.force-dark {
+  --void: #020810;
+  --void-light: #0a1420;
+  --void-lighter: #101c2c;
+  --text: #e8ecf0;
+  --text-dim: #8896a4;
+  --text-muted: #4a5568;
+  --accent-steel: #64748b;
+  --accent-steel-hover: #94a3b8;
+  --highlight: #3b82f6;
+  --highlight-dim: #2563eb;
+  --sage: #6B8E6B;
+  --sage-hover: #5A7D5A;
+  --icon: #2563eb;
+  --icon-bg: rgba(37, 99, 235, 0.08);
+  --icon-border: rgba(37, 99, 235, 0.15);
+  --border-base: rgba(255, 255, 255, 0.04);
+  --border-highlight: rgba(255, 255, 255, 0.06);
+  --border-hover: rgba(255, 255, 255, 0.08);
+  --border-focus: rgba(255, 255, 255, 0.12);
+  --border-strong: rgba(255, 255, 255, 0.10);
+  --border-prominent: rgba(255, 255, 255, 0.15);
+  --border-bold: rgba(255, 255, 255, 0.20);
+  --border-bolder: rgba(255, 255, 255, 0.25);
+  --surface: rgba(255, 255, 255, 0.03);
+  --surface-hover: rgba(255, 255, 255, 0.05);
+  --surface-elevated: rgba(255, 255, 255, 0.10);
+  --surface-elevated-hover: rgba(255, 255, 255, 0.15);
+  --decorative: rgba(255, 255, 255, 0.03);
+  --divider: rgba(255, 255, 255, 0.10);
+  --grid-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Light mode enhancements */
+:root {
+  .logo-adaptive {
+    filter: brightness(0) saturate(100%);
+  }
+}
+
+.dark .logo-adaptive {
+  filter: none;
+}
+
+/* Card shadows for depth in light mode */
+:root .card-elevated {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 4px 16px rgba(0, 0, 0, 0.03);
+}
+
+.dark .card-elevated {
+  box-shadow: none;
+}
+
+/* Grain texture more visible in light mode */
+:root .grain::before {
+  opacity: 0.05;
+}
+
+/* Ambient glow effects */
+.ambient-glow-blue {
+  position: relative;
+}
+
+:root .ambient-glow-blue::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 25% 40%, rgba(37, 99, 235, 0.05) 0%, transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ambient-glow-sage {
+  position: relative;
+}
+
+:root .ambient-glow-sage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 75% 40%, rgba(107, 142, 107, 0.06) 0%, transparent 55%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Stagger Animations */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+.stagger-6 { animation-delay: 0.6s; }
 
 @layer base {
   * {

@@ -4,10 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Search,
-  BarChart3,
-  GitCompareArrows,
-  FileText,
-  History,
   Settings,
   PanelLeftClose,
   PanelLeft,
@@ -19,11 +15,7 @@ import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { useState } from "react";
 
 const navItems = [
-  { href: "/search", label: "Search", icon: Search },
-  { href: "/results", label: "Results", icon: BarChart3 },
-  { href: "/compare", label: "Compare", icon: GitCompareArrows },
-  { href: "/reports", label: "Reports", icon: FileText },
-  { href: "/history", label: "History", icon: History },
+  { href: "/search", label: "Discovery", icon: Search },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -58,7 +50,7 @@ export function AppSidebar() {
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                   isActive
                     ? "bg-highlight/10 text-highlight"
-                    : "text-foreground-muted hover:bg-accent hover:text-foreground"
+                    : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
                 )}
               >
                 <Icon className="h-4 w-4 shrink-0" />

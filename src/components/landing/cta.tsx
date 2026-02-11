@@ -3,35 +3,54 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { motion } from "motion/react";
-import { Button } from "@/components/ui/button";
-import { slideUp } from "@/lib/motion";
+import { slideUp, staggerContainer } from "@/lib/motion";
 
 export function CTA() {
   return (
-    <section className="py-24">
-      <div className="mx-auto max-w-7xl px-6">
+    <section id="contact" className="relative py-32 overflow-hidden ambient-glow-sage">
+      <div className="absolute inset-0 bg-void" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-divider to-transparent" />
+
+      <div className="relative z-10 max-w-3xl mx-auto px-6">
         <motion.div
-          variants={slideUp}
+          variants={staggerContainer}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="text-center"
         >
-          <h2 className="text-3xl font-bold sm:text-4xl">
-            Ready to find your match?
-          </h2>
-          <p className="mt-4 text-foreground-muted max-w-lg mx-auto">
-            Start by describing your business challenge and let our AI agents
-            do the rest.
-          </p>
-          <div className="mt-8 relative inline-block">
-            <div className="absolute -inset-1 rounded-lg bg-highlight/20 blur-lg" />
-            <Button asChild size="lg" className="relative gap-2">
-              <Link href="/search">
+          <div className="text-center">
+            <motion.span
+              variants={slideUp}
+              className="inline-block font-mono text-xs tracking-[0.3em] text-text-muted mb-4 uppercase"
+            >
+              Get Started
+            </motion.span>
+
+            <motion.h2
+              variants={slideUp}
+              className="font-display font-bold text-4xl sm:text-5xl md:text-6xl tracking-tight mb-6"
+            >
+              <span className="text-text">Ready to find </span>
+              <span className="text-text-dim">your match?</span>
+            </motion.h2>
+
+            <motion.p
+              variants={slideUp}
+              className="max-w-xl mx-auto text-text-dim text-lg mb-10"
+            >
+              Start by describing your business challenge and let our AI agents
+              do the rest.
+            </motion.p>
+
+            <motion.div variants={slideUp}>
+              <Link
+                href="/search"
+                className="group inline-flex items-center gap-3 font-display text-base font-medium px-10 h-14 rounded-full bg-text text-void hover:bg-text/90 transition-all duration-300 hover:scale-105 active:scale-95 hover:ring-4 hover:ring-text/20"
+              >
                 Get Started Now
-                <ArrowRight className="h-4 w-4" />
+                <ArrowRight className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
               </Link>
-            </Button>
+            </motion.div>
           </div>
         </motion.div>
       </div>
