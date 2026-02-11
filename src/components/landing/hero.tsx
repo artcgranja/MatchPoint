@@ -87,14 +87,22 @@ export function Hero() {
               {previewScores.map((item) => (
                 <div
                   key={item.name}
-                  className="flex items-center gap-3 px-4 py-3 bg-surface border border-border-base rounded-xl transition-all duration-300 hover:border-border-hover"
+                  className="flex items-center gap-4 px-5 py-4 bg-surface border border-border-base rounded-xl transition-all duration-300 hover:border-highlight/20 hover:scale-[1.02]"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-icon-bg border border-icon-border font-mono text-sm font-bold text-icon">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-icon-bg border border-icon-border font-mono text-base font-bold text-icon">
                     {item.score}
                   </div>
-                  <div className="text-left">
+                  <div className="text-left min-w-[120px]">
                     <p className="text-sm font-medium text-text">{item.name}</p>
-                    <p className="text-xs text-text-muted">{item.label}</p>
+                    <p className="text-xs text-text-muted mb-2">{item.label}</p>
+                    <div className="h-1 w-full rounded-full bg-highlight/20">
+                      <motion.div
+                        className="h-full rounded-full bg-highlight"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${item.score}%` }}
+                        transition={{ duration: 1.2, delay: 0.5, ease: "easeOut" }}
+                      />
+                    </div>
                   </div>
                 </div>
               ))}
