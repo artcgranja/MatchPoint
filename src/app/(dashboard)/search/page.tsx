@@ -59,7 +59,7 @@ export default function SearchPage() {
   const isIdle = discoveryState === "idle";
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col overflow-hidden">
       {/* Header — only when active */}
       {!isIdle && (
         <div className="mb-4 flex items-center justify-between">

@@ -6,6 +6,35 @@ import { useSearchStore } from "@/stores/search-store";
 import { apiPost, apiGet } from "@/lib/api/client";
 import type { DiscoverySession, SessionStage, StartupCard } from "@/types";
 
+/** Parse an SSE stream correctly, handling cross-chunk boundaries. */
+function parseSseStream() {
+  let currentEvent = "";
+  let currentData = "";
+
+  return {
+    /** Feed raw text and get back fully-parsed events. */
+    feed(chunk: string): Array<{ event: string; data: string }> {
+      const events: Array<{ event: string; data: string }> = [];
+      const lines = chunk.split("\n");
+
+      for (const line of lines) {
+        if (line.startsWith("event: ")) {
+          currentEvent = line.slice(7).trim();
+        } else if (line.startsWith("data: ")) {
+          currentData = line.slice(6);
+        } else if (line === "" && currentEvent) {
+          // Empty line = end of SSE event
+          events.push({ event: currentEvent, data: currentData });
+          currentEvent = "";
+          currentData = "";
+        }
+      }
+
+      return events;
+    },
+  };
+}
+
 export function useDiscoverySession() {
   const {
     sessionId,
@@ -68,81 +97,96 @@ export function useDiscoverySession() {
 
       try {
         const res = await fetch(`/api/v1/searches/${searchId}/stream`);
-        if (!res.body) return;
+        if (!res.body) {
+          errorPipeline();
+          return;
+        }
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let buffer = "";
+        const parser = parseSseStream();
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
+          const chunk = decoder.decode(value, { stream: true });
+          const events = parser.feed(chunk);
 
-          for (const line of lines) {
-            if (line.startsWith("event: ")) {
-              const eventType = line.slice(7).trim();
-              // Next line should be data
-              const dataLine = lines[lines.indexOf(line) + 1];
-              if (dataLine?.startsWith("data: ")) {
-                try {
-                  const data = JSON.parse(dataLine.slice(6));
+          for (const sse of events) {
+            try {
+              const data = JSON.parse(sse.data);
 
-                  if (eventType === "stage_update" || eventType === "stage_complete") {
-                    // Update stage in chat
-                    const stageMap: Record<string, SessionStage> = {
-                      Analysis: "analysis",
-                      Scout: "scout",
-                    };
-                    const stage = stageMap[data.agentName];
-                    if (stage && eventType === "stage_update" && data.progress === 0) {
-                      setCurrentStage(stage);
-                      addMessage({
-                        role: "assistant",
-                        content: data.message,
-                        type: "stage-update",
-                      });
-                    }
-                  }
-
-                  if (eventType === "pipeline_complete") {
-                    const cards = (data.cards ?? []) as StartupCard[];
-                    const summary = (data.summary ?? "") as string;
-
-                    if (cards.length > 0) {
-                      addMessage({
-                        role: "assistant",
-                        content: summary,
-                        type: "cards",
-                        cards,
-                      });
-                    }
-
-                    setCurrentStage("complete");
-                    setDiscoveryState("complete");
-                    completePipeline();
-                  }
-
-                  if (eventType === "error") {
-                    addMessage({
-                      role: "assistant",
-                      content: `Erro no pipeline: ${data.message}`,
-                      type: "stage-update",
-                    });
-                    errorPipeline();
-                  }
-                } catch {
-                  // Skip malformed data
+              if (sse.event === "stage_update" || sse.event === "stage_complete") {
+                const stageMap: Record<string, SessionStage> = {
+                  Analysis: "analysis",
+                  Scout: "scout",
+                };
+                const stage = stageMap[data.agentName];
+                if (stage && sse.event === "stage_update" && data.progress === 0) {
+                  setCurrentStage(stage);
+                  addMessage({
+                    role: "assistant",
+                    content: data.message,
+                    type: "stage-update",
+                  });
                 }
               }
+
+              if (sse.event === "pipeline_complete") {
+                // cards and summary live inside data.data (nested)
+                const payload = data.data as
+                  | { cards?: StartupCard[]; summary?: string }
+                  | undefined;
+                const cards = payload?.cards ?? [];
+                const summary = payload?.summary ?? "";
+
+                if (cards.length > 0) {
+                  addMessage({
+                    role: "assistant",
+                    content: summary,
+                    type: "cards",
+                    cards,
+                  });
+                } else {
+                  // No startups found — show the summary as a regular message
+                  addMessage({
+                    role: "assistant",
+                    content:
+                      summary ||
+                      "Nenhuma startup encontrada para os criterios definidos. Tente ajustar sua busca.",
+                  });
+                }
+
+                setCurrentStage("complete");
+                setDiscoveryState("complete");
+                completePipeline();
+              }
+
+              if (sse.event === "error") {
+                addMessage({
+                  role: "assistant",
+                  content: `Erro no pipeline: ${data.message}`,
+                  type: "stage-update",
+                });
+                setCurrentStage("complete");
+                setDiscoveryState("complete");
+                errorPipeline();
+              }
+            } catch {
+              // Skip malformed JSON
             }
           }
         }
       } catch (error) {
         console.error("Pipeline stream error:", error);
+        addMessage({
+          role: "assistant",
+          content: "Erro de conexao com o pipeline. Tente novamente.",
+          type: "stage-update",
+        });
+        setCurrentStage("complete");
+        setDiscoveryState("complete");
         errorPipeline();
       }
     },
@@ -230,6 +274,8 @@ export function useDiscoverySession() {
               content: "Erro ao iniciar busca. Tente novamente.",
               type: "stage-update",
             });
+            setDiscoveryState("complete");
+            setCurrentStage("complete");
           }
         }
       } catch (error) {

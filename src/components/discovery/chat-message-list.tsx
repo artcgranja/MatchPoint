@@ -59,7 +59,7 @@ export function ChatMessageList({
   }
 
   return (
-    <ScrollArea className="flex-1 px-1">
+    <ScrollArea className="h-0 min-h-0 flex-1 px-1">
       <div className="space-y-4 py-4">
         {messages.map((message, index) => {
           const isLast =
