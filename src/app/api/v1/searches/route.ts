@@ -26,14 +26,14 @@ export async function POST(req: Request) {
     userId = defaultUser.id;
   }
 
-  // Fetch NeedSummary from discovery session
+  // Verify discovery session exists and is complete
   const session = await prisma.discoverySession.findUnique({
     where: { id: discoverySessionId },
-    select: { bizPlan: true },
+    select: { isComplete: true },
   });
 
-  if (!session?.bizPlan) {
-    return NextResponse.json({ error: "Discovery session has no NeedSummary" }, { status: 400 });
+  if (!session) {
+    return NextResponse.json({ error: "Discovery session not found" }, { status: 400 });
   }
 
   const firstUserMsg = await prisma.discoveryMessage.findFirst({
@@ -48,7 +48,6 @@ export async function POST(req: Request) {
       filters: {},
       status: "idle",
       discoverySessionId,
-      bizPlan: session.bizPlan,
     },
   });
 

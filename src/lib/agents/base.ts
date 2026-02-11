@@ -1,7 +1,15 @@
 import type { ZodType } from "zod";
 import { toJSONSchema } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
+import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import { anthropic, MODELS } from "@/lib/anthropic";
+
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  input_schema: Anthropic.Messages.Tool.InputSchema;
+  handler: (input: Record<string, unknown>) => Promise<unknown>;
+}
 
 export abstract class BaseAgent {
   protected client = anthropic;
@@ -77,6 +85,92 @@ export abstract class BaseAgent {
         yield event.delta.text;
       }
     }
+  }
+
+  async invokeWithTools(
+    systemPrompt: string,
+    messages: MessageParam[],
+    tools: ToolDefinition[],
+    options?: { maxTurns?: number }
+  ): Promise<{ text: string; toolResults: unknown[] }> {
+    const maxTurns = options?.maxTurns ?? 10;
+    const anthropicTools: Anthropic.Messages.Tool[] = tools.map((t) => ({
+      name: t.name,
+      description: t.description,
+      input_schema: t.input_schema,
+    }));
+
+    const allToolResults: unknown[] = [];
+    const conversationMessages: MessageParam[] = [...messages];
+
+    for (let turn = 0; turn < maxTurns; turn++) {
+      const response = await this.client.messages.create({
+        model: this.model,
+        max_tokens: 8192,
+        system: [
+          { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
+        ],
+        messages: conversationMessages,
+        tools: anthropicTools,
+      });
+
+      if (response.stop_reason === "end_turn") {
+        const textBlock = response.content.find((b) => b.type === "text");
+        return {
+          text: textBlock?.type === "text" ? textBlock.text : "",
+          toolResults: allToolResults,
+        };
+      }
+
+      if (response.stop_reason === "tool_use") {
+        const toolUseBlocks = response.content.filter(
+          (b): b is Anthropic.Messages.ToolUseBlock => b.type === "tool_use"
+        );
+
+        // Execute all tool calls in parallel
+        const results = await Promise.all(
+          toolUseBlocks.map(async (block) => {
+            const toolDef = tools.find((t) => t.name === block.name);
+            if (!toolDef) {
+              return { id: block.id, result: null, error: `Unknown tool: ${block.name}` };
+            }
+            try {
+              const result = await toolDef.handler(block.input as Record<string, unknown>);
+              allToolResults.push(result);
+              return { id: block.id, result, error: null };
+            } catch (err) {
+              const errorMsg = err instanceof Error ? err.message : "Tool execution failed";
+              return { id: block.id, result: null, error: errorMsg };
+            }
+          })
+        );
+
+        // Append assistant message + tool results
+        conversationMessages.push({ role: "assistant", content: response.content });
+        conversationMessages.push({
+          role: "user",
+          content: results.map((r) => ({
+            type: "tool_result" as const,
+            tool_use_id: r.id,
+            content: r.error
+              ? JSON.stringify({ error: r.error })
+              : JSON.stringify(r.result),
+          })),
+        });
+
+        continue;
+      }
+
+      // Any other stop_reason: extract text and return
+      const textBlock = response.content.find((b) => b.type === "text");
+      return {
+        text: textBlock?.type === "text" ? textBlock.text : "",
+        toolResults: allToolResults,
+      };
+    }
+
+    // Max turns reached — extract whatever text we have from last turn
+    return { text: "", toolResults: allToolResults };
   }
 
   async *streamWithThinking(

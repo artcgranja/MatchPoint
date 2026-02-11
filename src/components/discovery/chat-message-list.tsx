@@ -45,7 +45,7 @@ export function ChatMessageList({
 
   if (messages.length === 0 && isStreaming) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
+      <div className="flex flex-1 items-center justify-center p-8">
         <div className="flex items-center gap-3 text-foreground-muted">
           <div className="flex gap-1">
             <span className="h-2 w-2 animate-bounce rounded-full bg-highlight [animation-delay:0ms]" />
@@ -59,11 +59,14 @@ export function ChatMessageList({
   }
 
   return (
-    <ScrollArea className="h-0 min-h-0 flex-1 px-1">
-      <div className="space-y-4 py-4">
+    <ScrollArea className="h-0 min-h-0 flex-1">
+      <div className="mx-auto max-w-3xl space-y-5 px-4 py-6">
         {messages.map((message, index) => {
           const isLast =
-            index === messages.length - 1 && message.role === "assistant" && message.type !== "cards" && message.type !== "stage-update";
+            index === messages.length - 1 &&
+            message.role === "assistant" &&
+            message.type !== "cards" &&
+            message.type !== "stage-update";
           return (
             <ChatMessage
               key={message.id ?? index}

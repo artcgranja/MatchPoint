@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { SendHorizontal } from "lucide-react";
+import { ArrowUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { SessionStage } from "@/types";
 
@@ -29,7 +29,7 @@ export function ChatInput({ onSend, disabled, currentStage }: ChatInputProps) {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = "auto";
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 128)}px`;
+      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
     }
   }, []);
 
@@ -52,7 +52,7 @@ export function ChatInput({ onSend, disabled, currentStage }: ChatInputProps) {
   };
 
   return (
-    <div className="flex items-end gap-2 border-t border-border pt-4">
+    <div className="relative rounded-2xl border border-border bg-background-secondary/40 shadow-sm transition-colors focus-within:border-highlight/30 focus-within:shadow-[0_0_0_1px_rgba(59,130,246,0.1)]">
       <textarea
         ref={textareaRef}
         value={value}
@@ -61,16 +61,18 @@ export function ChatInput({ onSend, disabled, currentStage }: ChatInputProps) {
         placeholder={STAGE_PLACEHOLDERS[currentStage]}
         disabled={isDisabled}
         rows={1}
-        className="flex-1 resize-none rounded-xl border border-border bg-background-secondary/50 px-4 py-3 text-sm placeholder:text-foreground-muted/50 focus:border-highlight/30 focus:outline-none focus:ring-1 focus:ring-highlight/20 disabled:opacity-50"
+        className="w-full resize-none bg-transparent px-4 pt-3 pb-12 text-sm placeholder:text-foreground-muted/50 focus:outline-none disabled:opacity-50"
       />
-      <Button
-        onClick={handleSend}
-        disabled={!value.trim() || isDisabled}
-        size="icon"
-        className="h-10 w-10 shrink-0 rounded-xl"
-      >
-        <SendHorizontal className="h-4 w-4" />
-      </Button>
+      <div className="absolute right-2 bottom-2">
+        <Button
+          onClick={handleSend}
+          disabled={!value.trim() || isDisabled}
+          size="icon"
+          className="h-8 w-8 rounded-lg"
+        >
+          <ArrowUp className="h-4 w-4" />
+        </Button>
+      </div>
     </div>
   );
 }

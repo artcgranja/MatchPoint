@@ -6,7 +6,6 @@ import { useSearchStore } from "@/stores/search-store";
 import { useBizDevStore } from "@/stores/bizdev-store";
 import { apiPost, apiGet } from "@/lib/api/client";
 import type { DiscoverySession, SessionStage, StartupCard } from "@/types";
-import type { BizDevPlan } from "@/lib/agents/schemas";
 
 /** Parse an SSE stream correctly, handling cross-chunk boundaries. */
 function parseSseStream() {
@@ -61,7 +60,6 @@ export function useDiscoverySession() {
     setStatus: setBizDevStatus,
     appendThinking,
     appendPlanText,
-    setPlan,
     setSidebarOpen,
     reset: resetBizDev,
   } = useBizDevStore();
@@ -150,10 +148,7 @@ export function useDiscoverySession() {
               }
 
               if (sse.event === "analysis_complete") {
-                const plan = data.data?.plan as BizDevPlan | undefined;
-                if (plan) {
-                  setPlan(plan);
-                }
+                setBizDevStatus("complete");
                 // Do NOT proceed to Scout — wait for user confirmation
               }
 
@@ -191,7 +186,6 @@ export function useDiscoverySession() {
       setBizDevStatus,
       appendThinking,
       appendPlanText,
-      setPlan,
       addMessage,
       setCurrentStage,
       setDiscoveryState,
@@ -374,7 +368,7 @@ export function useDiscoverySession() {
 
           addMessage({
             role: "assistant",
-            content: "Preparando seu plano BizDev...",
+            content: "Analisando a solucao ideal...",
             type: "stage-update",
           });
 

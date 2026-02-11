@@ -1,7 +1,9 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Compass, User, Info } from "lucide-react";
+import { Info } from "lucide-react";
+import { Streamdown } from "streamdown";
+import { code } from "@streamdown/code";
 import { cn } from "@/lib/utils";
 import { slideUp } from "@/lib/motion";
 import { StartupCard } from "./startup-card";
@@ -45,15 +47,12 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
         animate="visible"
         className="space-y-3"
       >
-        <div className="flex gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground-muted/10 text-foreground-muted">
-            <Compass className="h-4 w-4" />
-          </div>
-          <div className="max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed glass border border-border">
-            <p className="whitespace-pre-wrap">{stripMarkers(message.content)}</p>
-          </div>
+        <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground/90 prose-p:leading-relaxed dark:prose-invert">
+          <Streamdown plugins={{ code }} isAnimating={false}>
+            {stripMarkers(message.content)}
+          </Streamdown>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 pl-11">
+        <div className="grid gap-3 sm:grid-cols-2">
           {message.cards.map((card) => (
             <StartupCard key={card.id} card={card} />
           ))}
@@ -65,41 +64,39 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
   // Regular text messages
   const displayContent = stripMarkers(message.content);
 
+  if (isUser) {
+    return (
+      <motion.div
+        variants={slideUp}
+        initial="hidden"
+        animate="visible"
+        className="flex justify-end"
+      >
+        <div className="max-w-[80%] rounded-2xl bg-highlight px-4 py-3 text-sm leading-relaxed text-highlight-foreground">
+          <p className="whitespace-pre-wrap">{displayContent}</p>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Assistant text message — clean, no background
   return (
     <motion.div
       variants={slideUp}
       initial="hidden"
       animate="visible"
-      className={cn("flex gap-3", isUser && "flex-row-reverse")}
+      className={cn(
+        "prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground/90 prose-p:leading-relaxed prose-li:text-foreground/90 prose-strong:text-foreground dark:prose-invert",
+        isStreaming && "[&_.sd-caret]:inline-block"
+      )}
     >
-      <div
-        className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-          isUser
-            ? "bg-highlight/10 text-highlight"
-            : "bg-foreground-muted/10 text-foreground-muted"
-        )}
+      <Streamdown
+        plugins={{ code }}
+        isAnimating={!!isStreaming}
+        caret={isStreaming ? "block" : undefined}
       >
-        {isUser ? (
-          <User className="h-4 w-4" />
-        ) : (
-          <Compass className="h-4 w-4" />
-        )}
-      </div>
-
-      <div
-        className={cn(
-          "max-w-[80%] rounded-2xl px-4 py-3 text-sm leading-relaxed",
-          isUser
-            ? "bg-highlight text-highlight-foreground"
-            : "glass border border-border"
-        )}
-      >
-        <p className="whitespace-pre-wrap">{displayContent}</p>
-        {isStreaming && !isUser && (
-          <span className="ml-1 inline-block h-4 w-1.5 animate-pulse rounded-full bg-highlight" />
-        )}
-      </div>
+        {displayContent}
+      </Streamdown>
     </motion.div>
   );
 }

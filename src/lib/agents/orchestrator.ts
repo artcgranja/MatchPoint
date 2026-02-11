@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { BizDevAgent } from "./bizdev";
 import { ScoutAgent } from "./scout";
-import type { NeedSummary, BizDevPlan, StartupCard } from "./schemas";
+import type { StartupCard } from "./schemas";
 
 export interface PipelineEvent {
   eventType: string;
@@ -42,6 +42,13 @@ async function logStage(
 export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEvent> {
   const search = await prisma.searchExecution.findUniqueOrThrow({
     where: { id: searchId },
+    include: {
+      discoverySession: {
+        include: {
+          messages: { orderBy: { createdAt: "asc" } },
+        },
+      },
+    },
   });
 
   await prisma.searchExecution.update({
@@ -50,12 +57,14 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
   });
 
   try {
-    let needSummary: NeedSummary;
-    if (search.bizPlan) {
-      needSummary = search.bizPlan as unknown as NeedSummary;
-    } else {
-      throw new Error("No NeedSummary available for this search");
+    if (!search.discoverySession?.messages?.length) {
+      throw new Error("No discovery conversation found for this search");
     }
+
+    // Build conversation transcript from discovery messages
+    const conversationTranscript = search.discoverySession.messages
+      .map((m) => `${m.role}: ${m.content}`)
+      .join("\n\n");
 
     yield {
       eventType: "stage_update",
@@ -71,8 +80,8 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
     const bizDevAgent = new BizDevAgent();
     let fullPlanText = "";
 
-    // Stream thinking + text chunks
-    for await (const chunk of bizDevAgent.streamPlan(needSummary)) {
+    // Stream thinking + text chunks — BizDev now receives the conversation transcript
+    for await (const chunk of bizDevAgent.streamPlan(conversationTranscript)) {
       if (chunk.type === "thinking") {
         yield {
           eventType: "analysis_thinking",
@@ -97,18 +106,15 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
       }
     }
 
-    // Extract structured BizDevPlan from the narrative
-    const bizDevPlan = await bizDevAgent.extractStructured(fullPlanText, needSummary);
-
-    // Save BizDevPlan to SearchExecution
+    // Save product document text directly to SearchExecution (no structured extraction)
     await prisma.searchExecution.update({
       where: { id: searchId },
-      data: { bizPlan: JSON.parse(JSON.stringify(bizDevPlan)) },
+      data: { bizPlan: JSON.parse(JSON.stringify({ productDocument: fullPlanText })) },
     });
 
     await logStage(searchId, "Analysis", "complete", 100, "BizDev plan complete", {
       durationMs: Date.now() - startAnalysis,
-      output: bizDevPlan,
+      output: { productDocument: fullPlanText },
     });
 
     yield {
@@ -118,7 +124,7 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
       status: "complete",
       progress: 100,
       message: "Plano BizDev concluido",
-      data: { plan: bizDevPlan as unknown as Record<string, unknown> },
+      data: { productDocument: fullPlanText },
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Analysis failed";
@@ -145,31 +151,15 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
 export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent> {
   const search = await prisma.searchExecution.findUniqueOrThrow({
     where: { id: searchId },
-    include: { discoverySession: true },
   });
 
   try {
-    // Extract SearchCriteria from saved BizDevPlan
-    const bizDevPlan = search.bizPlan as unknown as BizDevPlan;
-    if (!bizDevPlan?.searchCriteria) {
-      throw new Error("No BizDevPlan with searchCriteria found");
+    // Read product document from saved bizPlan
+    const bizPlan = search.bizPlan as unknown as { productDocument?: string } | null;
+    if (!bizPlan?.productDocument) {
+      throw new Error("No product document found for this search");
     }
-    const searchCriteria = bizDevPlan.searchCriteria;
-
-    // Get original NeedSummary from DiscoverySession
-    let needSummary: NeedSummary;
-    if (search.discoverySession?.bizPlan) {
-      needSummary = search.discoverySession.bizPlan as unknown as NeedSummary;
-    } else {
-      // Fallback: reconstruct from BizDevPlan fields
-      needSummary = {
-        companyContext: bizDevPlan.problemAnalysis,
-        coreProblem: bizDevPlan.problemAnalysis,
-        desiredOutcome: bizDevPlan.proposedSolution,
-        constraints: [],
-        preferences: [],
-      };
-    }
+    const productDocument = bizPlan.productDocument;
 
     await prisma.searchExecution.update({
       where: { id: searchId },
@@ -198,7 +188,8 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
       message: "Avaliando candidatos...",
     };
 
-    const scoutResult = await scoutAgent.search(searchCriteria, needSummary);
+    // Scout now receives the product document directly
+    const scoutResult = await scoutAgent.search(productDocument);
 
     await logStage(searchId, "Scout", "complete", 100, `Found ${scoutResult.cards.length} matches`, {
       durationMs: Date.now() - startScout,

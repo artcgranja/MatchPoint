@@ -1,48 +1,95 @@
-import { BaseAgent } from "./base";
-import { ScoutResultSchema, type ScoutResult, type SearchCriteria, type NeedSummary } from "./schemas";
+import { z } from "zod";
+import { toJSONSchema } from "zod";
+import type Anthropic from "@anthropic-ai/sdk";
+import { BaseAgent, type ToolDefinition } from "./base";
+import { ScoutResultSchema, type ScoutResult } from "./schemas";
 import { SCOUT_SYSTEM } from "./prompts/scout";
-import { prisma } from "@/lib/db";
+import { searchStartups, getStartupDetails } from "./tools";
 
 export class ScoutAgent extends BaseAgent {
   constructor() {
     super("scout");
   }
 
-  async search(criteria: SearchCriteria, needSummary: NeedSummary): Promise<ScoutResult> {
-    const startups = await prisma.startup.findMany({
-      include: { metrics: true },
-    });
+  async search(productDocument: string): Promise<ScoutResult> {
+    const tools: ToolDefinition[] = [
+      {
+        name: "search_startups",
+        description:
+          "Search the startup database with optional filters. Returns a list of matching startups with basic info. Use multiple searches with different filter combinations for better coverage.",
+        input_schema: toJSONSchema(
+          z.object({
+            industries: z
+              .array(z.string())
+              .optional()
+              .describe("Filter by industries (e.g. ['Logistics', 'FinTech'])"),
+            technologies: z
+              .array(z.string())
+              .optional()
+              .describe("Filter by technologies (e.g. ['Machine Learning', 'IoT'])"),
+            fundingStages: z
+              .array(z.string())
+              .optional()
+              .describe("Filter by funding stages (e.g. ['Seed', 'Series A'])"),
+            maxEmployees: z
+              .number()
+              .optional()
+              .describe("Maximum number of employees"),
+          })
+        ) as Anthropic.Messages.Tool.InputSchema,
+        handler: async (input) => {
+          return searchStartups({
+            industries: input.industries as string[] | undefined,
+            technologies: input.technologies as string[] | undefined,
+            fundingStages: input.fundingStages as string[] | undefined,
+            maxEmployees: input.maxEmployees as number | undefined,
+          });
+        },
+      },
+      {
+        name: "get_startup_details",
+        description:
+          "Get detailed information about a specific startup by ID, including team members, full metrics, and complete description.",
+        input_schema: toJSONSchema(
+          z.object({
+            startupId: z
+              .string()
+              .describe("The database ID of the startup to inspect"),
+          })
+        ) as Anthropic.Messages.Tool.InputSchema,
+        handler: async (input) => {
+          return getStartupDetails(input.startupId as string);
+        },
+      },
+    ];
 
-    const startupSummaries = startups.map((s) => ({
-      id: s.id,
-      name: s.name,
-      tagline: s.tagline,
-      description: s.description,
-      industries: s.industries,
-      technologies: s.technologies,
-      fundingStage: s.fundingStage,
-      employees: s.employees,
-      location: s.location,
-      totalFunding: s.totalFunding,
-      revenue: s.metrics?.revenue ?? 0,
-      revenueGrowth: s.metrics?.revenueGrowth ?? 0,
-      customers: s.metrics?.customers ?? 0,
-    }));
+    const userMessage = `<product_document>
+${productDocument}
+</product_document>
 
-    const userMessage = `## SearchCriteria
+Using your tools, search for startups that match this product document. Follow the search strategy described in your instructions: broad sweep, narrow focus, deep dive, then rank and select.`;
 
-${JSON.stringify(criteria, null, 2)}
+    const { text } = await this.invokeWithTools(
+      SCOUT_SYSTEM,
+      [{ role: "user", content: userMessage }],
+      tools,
+      { maxTurns: 15 }
+    );
 
-## NeedSummary
+    // Extract JSON from the response text
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)```/);
+    const jsonStr = jsonMatch ? jsonMatch[1].trim() : text;
 
-${JSON.stringify(needSummary, null, 2)}
-
-## Available Startups (${startups.length} total)
-
-${JSON.stringify(startupSummaries, null, 2)}
-
-Based on the SearchCriteria and NeedSummary, select the most relevant startups and return them as cards with whyRelevant explanations.`;
-
-    return this.invokeStructured(SCOUT_SYSTEM, userMessage, ScoutResultSchema);
+    try {
+      const parsed = JSON.parse(jsonStr);
+      return ScoutResultSchema.parse(parsed);
+    } catch {
+      // Fallback: use invokeStructured to extract from the text
+      return this.invokeStructured(
+        "Extract the startup search results from this text into the required structured format.",
+        text,
+        ScoutResultSchema
+      );
+    }
   }
 }

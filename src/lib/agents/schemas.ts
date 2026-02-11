@@ -66,19 +66,3 @@ export const ScoutResultSchema = z.object({
 
 export type ScoutResult = z.infer<typeof ScoutResultSchema>;
 
-export const BizDevPlanSchema = z.object({
-  problemAnalysis: z
-    .string()
-    .describe("Deep analysis of the business problem, root causes, market context, and implications if left unaddressed"),
-  structureAssessment: z
-    .string()
-    .describe("Assessment of infrastructure, resources, team capabilities, and organizational changes needed"),
-  proposedSolution: z
-    .string()
-    .describe("Recommended strategy with rationale, expected timeline, key milestones, and success metrics"),
-  searchCriteria: SearchCriteriaSchema.describe(
-    "Structured criteria for finding matching startups based on the analysis"
-  ),
-});
-
-export type BizDevPlan = z.infer<typeof BizDevPlanSchema>;
