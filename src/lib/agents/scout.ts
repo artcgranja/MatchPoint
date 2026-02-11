@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { toJSONSchema } from "zod";
-import type Anthropic from "@anthropic-ai/sdk";
-import { BaseAgent, type ToolDefinition } from "./base";
+import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { BaseAgent } from "./base";
 import { ScoutResultSchema, type ScoutResult } from "./schemas";
 import { SCOUT_SYSTEM } from "./prompts/scout";
 import { searchStartups, getStartupDetails } from "./tools";
@@ -16,56 +15,46 @@ export class ScoutAgent extends BaseAgent {
     super("scout");
   }
 
-  private buildTools(): ToolDefinition[] {
+  private buildTools() {
     return [
-      {
+      betaZodTool({
         name: "search_startups",
         description:
           "Search the startup database with optional filters. Returns a list of matching startups with basic info. Use multiple searches with different filter combinations for better coverage.",
-        input_schema: toJSONSchema(
-          z.object({
-            industries: z
-              .array(z.string())
-              .optional()
-              .describe("Filter by industries (e.g. ['Logistics', 'FinTech'])"),
-            technologies: z
-              .array(z.string())
-              .optional()
-              .describe("Filter by technologies (e.g. ['Machine Learning', 'IoT'])"),
-            fundingStages: z
-              .array(z.string())
-              .optional()
-              .describe("Filter by funding stages (e.g. ['Seed', 'Series A'])"),
-            maxEmployees: z
-              .number()
-              .optional()
-              .describe("Maximum number of employees"),
-          })
-        ) as Anthropic.Messages.Tool.InputSchema,
-        handler: async (input) => {
-          return searchStartups({
-            industries: input.industries as string[] | undefined,
-            technologies: input.technologies as string[] | undefined,
-            fundingStages: input.fundingStages as string[] | undefined,
-            maxEmployees: input.maxEmployees as number | undefined,
-          });
-        },
-      },
-      {
+        inputSchema: z.object({
+          industries: z
+            .array(z.string())
+            .optional()
+            .describe("Filter by industries (e.g. ['Logistics', 'FinTech'])"),
+          technologies: z
+            .array(z.string())
+            .optional()
+            .describe("Filter by technologies (e.g. ['Machine Learning', 'IoT'])"),
+          fundingStages: z
+            .array(z.string())
+            .optional()
+            .describe("Filter by funding stages (e.g. ['Seed', 'Series A'])"),
+          maxEmployees: z
+            .number()
+            .optional()
+            .describe("Maximum number of employees"),
+        }),
+        run: async (input) => JSON.stringify(await searchStartups(input)),
+      }),
+      betaZodTool({
         name: "get_startup_details",
         description:
           "Get detailed information about a specific startup by ID, including team members, full metrics, and complete description.",
-        input_schema: toJSONSchema(
-          z.object({
-            startupId: z
-              .string()
-              .describe("The database ID of the startup to inspect"),
-          })
-        ) as Anthropic.Messages.Tool.InputSchema,
-        handler: async (input) => {
-          return getStartupDetails(input.startupId as string);
+        inputSchema: z.object({
+          startupId: z
+            .string()
+            .describe("The database ID of the startup to inspect"),
+        }),
+        run: async (input) => {
+          const result = await getStartupDetails(input.startupId);
+          return JSON.stringify(result ?? { error: "Startup not found" });
         },
-      },
+      }),
     ];
   }
 
@@ -90,50 +79,42 @@ Using your tools, search for startups that match this product document. Follow t
 
   async *searchWithEvents(productDocument: string): AsyncGenerator<ScoutEvent> {
     const tools = this.buildTools();
-    const events: ScoutEvent[] = [];
+    const messages = [{ role: "user" as const, content: this.buildUserMessage(productDocument) }];
 
-    const { text } = await this.invokeWithTools(
-      SCOUT_SYSTEM,
-      [{ role: "user", content: this.buildUserMessage(productDocument) }],
-      tools,
-      {
-        maxTurns: 15,
-        onToolCall: (toolName, input, id) => {
-          const event: ScoutEvent = { type: "tool_call", toolCallId: id, toolName, input };
-          events.push(event);
-        },
-        onToolResult: (id, result) => {
-          const resultArray = Array.isArray(result) ? result : [];
-          const summary = resultArray.length > 0
-            ? `${resultArray.length} resultados encontrados`
-            : typeof result === "object" && result !== null
-              ? "Detalhes obtidos"
-              : "Concluido";
-          // Find the matching tool_call to get the toolName
-          const callEvent = events.find(
-            (e) => e.type === "tool_call" && e.toolCallId === id
-          );
-          const toolName = callEvent && callEvent.type === "tool_call"
-            ? callEvent.toolName
-            : "unknown";
-          events.push({ type: "tool_result", toolCallId: id, toolName, resultSummary: summary });
-        },
+    let fullText = "";
+    const toolCallNames = new Map<string, string>();
+
+    for await (const event of this.streamWithToolEvents(SCOUT_SYSTEM, messages, tools, { maxIterations: 15 })) {
+      if (event.type === "text") {
+        fullText += event.text;
       }
-    );
-
-    // Yield all collected events
-    for (const event of events) {
-      yield event;
+      if (event.type === "tool_call") {
+        toolCallNames.set(event.id, event.name);
+        yield { type: "tool_call", toolCallId: event.id, toolName: event.name, input: event.input };
+      }
+      if (event.type === "tool_result") {
+        const toolName = toolCallNames.get(event.id) ?? "unknown";
+        let summary = "Concluido";
+        try {
+          const content = typeof event.result === "string" ? event.result : JSON.stringify(event.result);
+          const parsed = JSON.parse(content);
+          if (Array.isArray(parsed)) {
+            summary = `${parsed.length} resultados encontrados`;
+          } else if (typeof parsed === "object" && parsed !== null) {
+            summary = "Detalhes obtidos";
+          }
+        } catch { /* use default summary */ }
+        yield { type: "tool_result", toolCallId: event.id, toolName, resultSummary: summary };
+      }
     }
 
-    // Parse result
-    const parsed = this.parseResult(text);
+    const parsed = this.parseResult(fullText);
     if (parsed) {
       yield { type: "result", data: parsed };
     } else {
       const fallback = await this.invokeStructured(
         "Extract the startup search results from this text into the required structured format.",
-        text,
+        fullText,
         ScoutResultSchema
       );
       yield { type: "result", data: fallback };

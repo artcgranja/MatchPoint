@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { DiscoveryAgent } from "./navigator";
 import { AdvisorAgent } from "./advisor";
-import { runScout, type PipelineEvent } from "./orchestrator";
+import { runAnalysis, runScout, type PipelineEvent } from "./orchestrator";
 import { assembleSessionContext } from "./context";
 
 // ═══════════════════════════════════════════
@@ -23,7 +23,10 @@ interface SessionState {
 
 export type ConductorEvent =
   | { type: "text"; text: string }
-  | { type: "done"; transition?: "analysis"; searchId?: string }
+  | { type: "done"; transition?: "awaiting_confirmation"; searchId?: string }
+  | { type: "analysis_thinking"; text: string }
+  | { type: "analysis_text"; text: string }
+  | { type: "analysis_complete"; data: { productDocument: string } }
   | { type: "scout_event"; event: PipelineEvent }
   | { type: "advisor_text"; text: string }
   | { type: "advisor_done" }
@@ -126,7 +129,7 @@ export async function* handleMessage(
 }
 
 // ═══════════════════════════════════════════
-// Discovery Handler
+// Discovery Handler (runs analysis inline)
 // ═══════════════════════════════════════════
 
 async function* handleDiscoveryMessage(
@@ -186,9 +189,42 @@ async function* handleDiscoveryMessage(
       },
     });
 
+    yield { type: "status", message: "Descoberta completa! Iniciando analise..." };
+
+    // Run analysis inline — same SSE stream
+    for await (const event of runAnalysis(search.id)) {
+      switch (event.eventType) {
+        case "analysis_thinking":
+          yield {
+            type: "analysis_thinking",
+            text: (event.data as { text: string } | undefined)?.text ?? "",
+          };
+          break;
+        case "analysis_text":
+          yield {
+            type: "analysis_text",
+            text: (event.data as { text: string } | undefined)?.text ?? "",
+          };
+          break;
+        case "analysis_complete":
+          yield {
+            type: "analysis_complete",
+            data: {
+              productDocument:
+                (event.data as { productDocument: string } | undefined)?.productDocument ?? "",
+            },
+          };
+          break;
+        case "error":
+          yield { type: "error", message: event.message };
+          return;
+      }
+    }
+
+    // Analysis done → awaiting user confirmation
     yield {
       type: "done",
-      transition: "analysis",
+      transition: "awaiting_confirmation",
       searchId: search.id,
     };
   } else {
@@ -214,7 +250,6 @@ async function* handleConfirmation(
   });
 
   // Any message in awaiting_confirmation state triggers Scout
-  // Future: could use LLM to detect "modify" vs "confirm" intent
   for await (const event of runScout(searchId)) {
     yield { type: "scout_event", event };
   }
@@ -239,17 +274,23 @@ async function* handleAdvisorMessage(
 
   const context = await assembleSessionContext(searchId);
   const advisor = new AdvisorAgent();
-  const { text } = await advisor.chat(context, message);
+  let fullText = "";
+
+  for await (const chunk of advisor.chat(context, message)) {
+    if (chunk.text) {
+      fullText += chunk.text;
+      yield { type: "advisor_text", text: chunk.text };
+    }
+  }
 
   // Save assistant message
   await prisma.orchestratorMessage.create({
     data: {
       searchExecutionId: searchId,
       role: "assistant",
-      content: text,
+      content: fullText,
     },
   });
 
-  yield { type: "advisor_text", text };
   yield { type: "advisor_done" };
 }

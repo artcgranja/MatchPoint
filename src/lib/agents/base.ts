@@ -1,15 +1,15 @@
 import type { ZodType } from "zod";
-import { toJSONSchema } from "zod";
 import Anthropic from "@anthropic-ai/sdk";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
+import type { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta";
+import type { BetaRunnableTool } from "@anthropic-ai/sdk/lib/tools/BetaRunnableTool";
+import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { anthropic, MODELS } from "@/lib/anthropic";
 
-export interface ToolDefinition {
-  name: string;
-  description: string;
-  input_schema: Anthropic.Messages.Tool.InputSchema;
-  handler: (input: Record<string, unknown>) => Promise<unknown>;
-}
+export type ToolStreamEvent =
+  | { type: "text"; text: string }
+  | { type: "tool_call"; id: string; name: string; input: Record<string, unknown> }
+  | { type: "tool_result"; id: string; name: string; result: unknown; error?: string };
 
 export abstract class BaseAgent {
   protected client = anthropic;
@@ -38,8 +38,6 @@ export abstract class BaseAgent {
     userMessage: string,
     schema: ZodType<T>
   ): Promise<T> {
-    const jsonSchema = toJSONSchema(schema);
-
     const response = await this.client.messages.create({
       model: this.model,
       max_tokens: 4096,
@@ -47,21 +45,14 @@ export abstract class BaseAgent {
         { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
       ],
       messages: [{ role: "user", content: userMessage }],
-      tools: [
-        {
-          name: "structured_output",
-          description: "Return the structured result",
-          input_schema: jsonSchema as Anthropic.Messages.Tool.InputSchema,
-        },
-      ],
-      tool_choice: { type: "tool", name: "structured_output" },
+      output_config: { format: zodOutputFormat(schema) },
     });
 
-    const toolBlock = response.content.find((b) => b.type === "tool_use");
-    if (!toolBlock || toolBlock.type !== "tool_use") {
-      throw new Error("No tool_use block in response");
+    const textBlock = response.content.find((b) => b.type === "text");
+    if (!textBlock || textBlock.type !== "text") {
+      throw new Error("No text block in structured response");
     }
-    return schema.parse(toolBlock.input);
+    return schema.parse(JSON.parse(textBlock.text));
   }
 
   async *stream(
@@ -87,96 +78,98 @@ export abstract class BaseAgent {
     }
   }
 
-  async invokeWithTools(
+  async runWithTools(
     systemPrompt: string,
-    messages: MessageParam[],
-    tools: ToolDefinition[],
-    options?: {
-      maxTurns?: number;
-      onToolCall?: (toolName: string, input: Record<string, unknown>, id: string) => void;
-      onToolResult?: (id: string, result: unknown) => void;
-    }
-  ): Promise<{ text: string; toolResults: unknown[] }> {
-    const maxTurns = options?.maxTurns ?? 10;
-    const anthropicTools: Anthropic.Messages.Tool[] = tools.map((t) => ({
-      name: t.name,
-      description: t.description,
-      input_schema: t.input_schema,
-    }));
+    messages: BetaMessageParam[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tools: BetaRunnableTool<any>[],
+    options?: { maxIterations?: number }
+  ): Promise<{ text: string }> {
+    const runner = this.client.beta.messages.toolRunner({
+      model: this.model,
+      max_tokens: 8192,
+      system: [
+        { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
+      ],
+      messages,
+      tools,
+      max_iterations: options?.maxIterations ?? 15,
+    });
 
-    const allToolResults: unknown[] = [];
-    const conversationMessages: MessageParam[] = [...messages];
+    const finalMessage = await runner.runUntilDone();
+    const textBlock = finalMessage.content.find((b) => b.type === "text");
+    return { text: textBlock?.type === "text" ? textBlock.text : "" };
+  }
 
-    for (let turn = 0; turn < maxTurns; turn++) {
-      const response = await this.client.messages.create({
-        model: this.model,
-        max_tokens: 8192,
-        system: [
-          { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
-        ],
-        messages: conversationMessages,
-        tools: anthropicTools,
-      });
+  async *streamWithToolEvents(
+    systemPrompt: string,
+    messages: BetaMessageParam[],
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    tools: BetaRunnableTool<any>[],
+    options?: { maxIterations?: number }
+  ): AsyncGenerator<ToolStreamEvent> {
+    const runner = this.client.beta.messages.toolRunner({
+      model: this.model,
+      max_tokens: 8192,
+      system: [
+        { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
+      ],
+      messages,
+      tools,
+      stream: true,
+      max_iterations: options?.maxIterations ?? 15,
+    });
 
-      if (response.stop_reason === "end_turn") {
-        const textBlock = response.content.find((b) => b.type === "text");
-        return {
-          text: textBlock?.type === "text" ? textBlock.text : "",
-          toolResults: allToolResults,
-        };
+    // Track tool_use blocks by index as they stream in
+    const toolUseBlocks = new Map<number, { id: string; name: string; partialJson: string }>();
+
+    for await (const stream of runner) {
+      for await (const event of stream) {
+        if (event.type === "content_block_start" && event.content_block.type === "tool_use") {
+          toolUseBlocks.set(event.index, {
+            id: event.content_block.id,
+            name: event.content_block.name,
+            partialJson: "",
+          });
+        }
+
+        if (event.type === "content_block_delta") {
+          if (event.delta.type === "text_delta") {
+            yield { type: "text", text: event.delta.text };
+          }
+          if (event.delta.type === "input_json_delta") {
+            const block = toolUseBlocks.get(event.index);
+            if (block) block.partialJson += event.delta.partial_json;
+          }
+        }
+
+        if (event.type === "content_block_stop") {
+          const block = toolUseBlocks.get(event.index);
+          if (block) {
+            let input: Record<string, unknown> = {};
+            try { input = JSON.parse(block.partialJson); } catch { /* empty input */ }
+            yield { type: "tool_call", id: block.id, name: block.name, input };
+            toolUseBlocks.delete(event.index);
+          }
+        }
       }
 
-      if (response.stop_reason === "tool_use") {
-        const toolUseBlocks = response.content.filter(
-          (b): b is Anthropic.Messages.ToolUseBlock => b.type === "tool_use"
-        );
-
-        // Execute all tool calls in parallel
-        const results = await Promise.all(
-          toolUseBlocks.map(async (block) => {
-            const toolDef = tools.find((t) => t.name === block.name);
-            if (!toolDef) {
-              return { id: block.id, result: null, error: `Unknown tool: ${block.name}` };
-            }
-            try {
-              options?.onToolCall?.(block.name, block.input as Record<string, unknown>, block.id);
-              const result = await toolDef.handler(block.input as Record<string, unknown>);
-              allToolResults.push(result);
-              options?.onToolResult?.(block.id, result);
-              return { id: block.id, result, error: null };
-            } catch (err) {
-              const errorMsg = err instanceof Error ? err.message : "Tool execution failed";
-              return { id: block.id, result: null, error: errorMsg };
-            }
-          })
-        );
-
-        // Append assistant message + tool results
-        conversationMessages.push({ role: "assistant", content: response.content });
-        conversationMessages.push({
-          role: "user",
-          content: results.map((r) => ({
-            type: "tool_result" as const,
-            tool_use_id: r.id,
-            content: r.error
-              ? JSON.stringify({ error: r.error })
-              : JSON.stringify(r.result),
-          })),
-        });
-
-        continue;
+      // After the stream finishes, the runner auto-executes tools.
+      // Yield tool_result events from the appended messages.
+      const lastMsg = runner.params.messages.at(-1);
+      if (lastMsg && lastMsg.role === "user" && Array.isArray(lastMsg.content)) {
+        for (const block of lastMsg.content) {
+          if (typeof block === "object" && "type" in block && block.type === "tool_result") {
+            yield {
+              type: "tool_result",
+              id: block.tool_use_id,
+              name: "",
+              result: block.content,
+            };
+          }
+        }
       }
-
-      // Any other stop_reason: extract text and return
-      const textBlock = response.content.find((b) => b.type === "text");
-      return {
-        text: textBlock?.type === "text" ? textBlock.text : "",
-        toolResults: allToolResults,
-      };
     }
-
-    // Max turns reached — extract whatever text we have from last turn
-    return { text: "", toolResults: allToolResults };
   }
 
   async *streamWithThinking(

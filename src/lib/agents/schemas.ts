@@ -20,26 +20,6 @@ export const NeedSummarySchema = z.object({
 
 export type NeedSummary = z.infer<typeof NeedSummarySchema>;
 
-export const SearchCriteriaSchema = z.object({
-  industries: z
-    .array(z.string())
-    .describe("Target industries to search for startups"),
-  technologies: z
-    .array(z.string())
-    .describe("Required or preferred technologies"),
-  fundingStages: z
-    .array(z.string())
-    .describe("Acceptable funding stages (e.g. Seed, Series A, Series B)"),
-  keywords: z
-    .array(z.string())
-    .describe("Search keywords derived from the problem analysis"),
-  analysisNarrative: z
-    .string()
-    .describe("A narrative explanation of why these criteria were chosen and what to prioritize in the search"),
-});
-
-export type SearchCriteria = z.infer<typeof SearchCriteriaSchema>;
-
 export const StartupCardSchema = z.object({
   id: z.string().describe("The startup's database ID"),
   name: z.string().describe("Startup name"),

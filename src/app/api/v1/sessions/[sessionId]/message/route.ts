@@ -65,6 +65,18 @@ export async function POST(
               }
               break;
 
+            case "analysis_thinking":
+              sendEvent("analysis_thinking", { data: { text: event.text } });
+              break;
+
+            case "analysis_text":
+              sendEvent("analysis_text", { data: { text: event.text } });
+              break;
+
+            case "analysis_complete":
+              sendEvent("analysis_complete", { data: event.data });
+              break;
+
             case "scout_event":
               sendEvent(event.event.eventType, event.event);
               break;

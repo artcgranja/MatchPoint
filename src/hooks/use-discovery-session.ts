@@ -104,92 +104,37 @@ export function useDiscoverySession() {
   );
 
   // ═══════════════════════════════════════════
-  // Analysis Stream (uses agent-panel-store)
+  // Process Analysis events from SSE stream
   // ═══════════════════════════════════════════
-  const runAnalysisStream = useCallback(
-    async (sid: string) => {
-      startPipeline();
-      setPanelOpen(true);
-      setActiveTab("analysis");
-      setAnalysisStatus("thinking");
+  const processAnalysisEvents = useCallback(
+    (sseEvents: Array<{ event: string; data: string }>) => {
+      for (const sse of sseEvents) {
+        try {
+          const data = JSON.parse(sse.data);
 
-      try {
-        const res = await fetch(`/api/v1/searches/${sid}/stream`);
-        if (!res.body) {
-          errorPipeline();
-          return;
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        const parser = parseSseStream();
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const events = parser.feed(chunk);
-
-          for (const sse of events) {
-            try {
-              const data = JSON.parse(sse.data);
-
-              if (sse.event === "analysis_thinking") {
-                setAnalysisStatus("thinking");
-                const text = data.data?.text ?? "";
-                if (text) appendThinking(text);
-              }
-
-              if (sse.event === "analysis_text") {
-                setAnalysisStatus("writing");
-                const text = data.data?.text ?? "";
-                if (text) appendPlanText(text);
-              }
-
-              if (sse.event === "analysis_complete") {
-                setAnalysisStatus("complete");
-              }
-
-              if (sse.event === "error") {
-                addMessage({
-                  role: "assistant",
-                  content: `Erro na analise: ${data.message}`,
-                  type: "stage-update",
-                });
-                setCurrentStage("complete");
-                setDiscoveryState("complete");
-                errorPipeline();
-              }
-            } catch {
-              // Skip malformed JSON
-            }
+          if (sse.event === "analysis_thinking") {
+            setPanelOpen(true);
+            setActiveTab("analysis");
+            setAnalysisStatus("thinking");
+            const text = data.data?.text ?? "";
+            if (text) appendThinking(text);
           }
+
+          if (sse.event === "analysis_text") {
+            setAnalysisStatus("writing");
+            const text = data.data?.text ?? "";
+            if (text) appendPlanText(text);
+          }
+
+          if (sse.event === "analysis_complete") {
+            setAnalysisStatus("complete");
+          }
+        } catch {
+          // Skip malformed JSON
         }
-      } catch (error) {
-        console.error("Analysis stream error:", error);
-        addMessage({
-          role: "assistant",
-          content: "Erro de conexao com a analise. Tente novamente.",
-          type: "stage-update",
-        });
-        setCurrentStage("complete");
-        setDiscoveryState("complete");
-        errorPipeline();
       }
     },
-    [
-      startPipeline,
-      errorPipeline,
-      setPanelOpen,
-      setActiveTab,
-      setAnalysisStatus,
-      appendThinking,
-      appendPlanText,
-      addMessage,
-      setCurrentStage,
-      setDiscoveryState,
-    ]
+    [setPanelOpen, setActiveTab, setAnalysisStatus, appendThinking, appendPlanText]
   );
 
   // ═══════════════════════════════════════════
@@ -424,6 +369,7 @@ export function useDiscoverySession() {
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
+        const sseParser = parseSseStream();
         let assistantMsg = "";
 
         while (true) {
@@ -432,6 +378,13 @@ export function useDiscoverySession() {
 
           const chunk = decoder.decode(value, { stream: true });
 
+          // Handle named SSE events (analysis events)
+          const sseEvents = sseParser.feed(chunk);
+          if (sseEvents.length > 0) {
+            processAnalysisEvents(sseEvents);
+          }
+
+          // Handle unnamed data: lines (text chunks, done, status, error)
           for (const line of chunk.split("\n")) {
             if (line.startsWith("data: ")) {
               try {
@@ -443,7 +396,7 @@ export function useDiscoverySession() {
                   updateLastAssistantMessage(assistantMsg);
                 }
 
-                // Status messages (pipeline in progress)
+                // Status messages
                 if (data.status) {
                   addMessage({
                     role: "assistant",
@@ -454,24 +407,22 @@ export function useDiscoverySession() {
 
                 // Done event
                 if (data.done) {
-                  if (data.transition === "analysis" && data.searchId) {
-                    // Discovery complete → trigger analysis
+                  if (data.transition === "awaiting_confirmation" && data.searchId) {
+                    // Discovery + analysis complete in one response
                     setDiscoveryState("processing");
                     setCurrentStage("analysis");
                     setSearchId(data.searchId);
-
-                    addMessage({
-                      role: "assistant",
-                      content: "Analisando a solucao ideal...",
-                      type: "stage-update",
-                    });
-
-                    await runAnalysisStream(data.searchId);
+                    startPipeline();
                   }
                 }
 
                 if (data.error) {
-                  console.error("Conductor SSE error:", data.error);
+                  addMessage({
+                    role: "assistant",
+                    content: `Erro: ${data.error}`,
+                    type: "stage-update",
+                  });
+                  errorPipeline();
                 }
               } catch {
                 // Skip malformed SSE data lines
@@ -494,7 +445,9 @@ export function useDiscoverySession() {
       setDiscoveryState,
       setCurrentStage,
       setSearchId,
-      runAnalysisStream,
+      startPipeline,
+      errorPipeline,
+      processAnalysisEvents,
     ]
   );
 
