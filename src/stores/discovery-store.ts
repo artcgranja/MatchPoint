@@ -6,7 +6,8 @@ export type DiscoveryState =
   | "idle"
   | "chatting"
   | "processing"
-  | "complete";
+  | "complete"
+  | "advising";
 
 interface DiscoveryStore {
   sessionId: string | null;

@@ -10,6 +10,7 @@ const STAGE_PLACEHOLDERS: Record<SessionStage, string> = {
   analysis: "Analisando suas necessidades...",
   scout: "Buscando startups...",
   complete: "Pergunte sobre as startups encontradas...",
+  advising: "Pergunte sobre as startups encontradas...",
 };
 
 interface ChatInputProps {

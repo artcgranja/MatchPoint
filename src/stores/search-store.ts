@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 import type { PipelineStatus } from "@/types";
 
 interface SearchState {
@@ -12,17 +13,27 @@ interface SearchState {
   resetPipeline: () => void;
 }
 
-export const useSearchStore = create<SearchState>()((set) => ({
-  pipelineStatus: "idle",
-  searchId: null,
+export const useSearchStore = create<SearchState>()(
+  persist(
+    (set) => ({
+      pipelineStatus: "idle",
+      searchId: null,
 
-  setSearchId: (searchId) => set({ searchId }),
+      setSearchId: (searchId) => set({ searchId }),
 
-  startPipeline: () => set({ pipelineStatus: "running" }),
+      startPipeline: () => set({ pipelineStatus: "running" }),
 
-  completePipeline: () => set({ pipelineStatus: "complete" }),
+      completePipeline: () => set({ pipelineStatus: "complete" }),
 
-  errorPipeline: () => set({ pipelineStatus: "error" }),
+      errorPipeline: () => set({ pipelineStatus: "error" }),
 
-  resetPipeline: () => set({ pipelineStatus: "idle", searchId: null }),
-}));
+      resetPipeline: () => set({ pipelineStatus: "idle", searchId: null }),
+    }),
+    {
+      name: "matchpoint-search",
+      partialize: (state) => ({
+        searchId: state.searchId,
+      }),
+    }
+  )
+);

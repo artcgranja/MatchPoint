@@ -29,12 +29,9 @@ export class DiscoveryAgent extends BaseAgent {
 Messages exchanged so far: ${session.messages.length}`;
 
     let fullResponse = "";
-    for await (const chunk of this.streamWithThinking(systemWithContext, historyMessages, { effort: "high" })) {
-      // Only yield text chunks to the user — filter out thinking
-      if (chunk.type === "text") {
-        fullResponse += chunk.text;
-        yield { text: chunk.text };
-      }
+    for await (const chunk of this.stream(systemWithContext, historyMessages)) {
+      fullResponse += chunk;
+      yield { text: chunk };
     }
 
     // Check if discovery is complete

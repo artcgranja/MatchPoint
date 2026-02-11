@@ -101,21 +101,33 @@ model DiscoveryMessage {
 }
 
 model SearchExecution {
-  id                 String            @id @default(uuid())
-  userId             String
-  user               User              @relation(fields: [userId], references: [id])
-  discoverySessionId String?
-  discoverySession   DiscoverySession? @relation(fields: [discoverySessionId], references: [id])
-  painPoint          String
-  filters            Json
-  bizPlan            Json?
-  status             PipelineStatus    @default(idle)
-  resultCount        Int               @default(0)
-  totalTokensUsed    Int               @default(0)
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
-  stageLogs          PipelineStageLog[]
-  results            SearchResult[]
+  id                   String                @id @default(uuid())
+  userId               String
+  user                 User                  @relation(fields: [userId], references: [id])
+  discoverySessionId   String?
+  discoverySession     DiscoverySession?     @relation(fields: [discoverySessionId], references: [id])
+  painPoint            String
+  filters              Json
+  bizPlan              Json?
+  status               PipelineStatus        @default(idle)
+  resultCount          Int                   @default(0)
+  totalTokensUsed      Int                   @default(0)
+  scoutSummary         String?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+  stageLogs            PipelineStageLog[]
+  results              SearchResult[]
+  orchestratorMessages OrchestratorMessage[]
+}
+
+model OrchestratorMessage {
+  id                String          @id @default(uuid())
+  searchExecutionId String
+  searchExecution   SearchExecution @relation(fields: [searchExecutionId], references: [id], onDelete: Cascade)
+  role              String
+  content           String
+  metadata          Json?
+  createdAt         DateTime        @default(now())
 }
 
 model PipelineStageLog {
