@@ -49,6 +49,26 @@ export const scaleIn: Variants = {
   },
 };
 
+export const cardEntrance: Variants = {
+  hidden: { opacity: 0, y: 12, scale: 0.97 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      duration: 0.4,
+      ease: EASE_OUT_EXPO,
+    },
+  },
+};
+
+export const cardStagger: Variants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: staggerDelays.fast, delayChildren: 0.1 },
+  },
+};
+
 export const staggerContainer: Variants = {
   hidden: {},
   visible: { transition: { staggerChildren: staggerDelays.medium } },

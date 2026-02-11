@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import { Streamdown } from "streamdown";
 import { code } from "@streamdown/code";
-import { staggerContainer } from "@/lib/motion";
+import { cardStagger } from "@/lib/motion";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { StartupCard } from "@/components/discovery/startup-card";
 
@@ -23,7 +23,7 @@ export function ScoutCardGrid() {
       )}
 
       <motion.div
-        variants={staggerContainer}
+        variants={cardStagger}
         initial="hidden"
         animate="visible"
         className="grid grid-cols-1 gap-3"

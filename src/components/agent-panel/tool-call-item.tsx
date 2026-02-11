@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "motion/react";
 import { Search, FileText, Check, X, ChevronDown, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { slideUp } from "@/lib/motion";
 import type { ToolCallEvent } from "@/types";
 
 const TOOL_CONFIG: Record<string, { icon: typeof Search; label: string }> = {
@@ -26,10 +24,7 @@ export function ToolCallItem({ toolCall }: ToolCallItemProps) {
   const Icon = config.icon;
 
   return (
-    <motion.div
-      variants={slideUp}
-      className="rounded-lg border border-border bg-background-secondary/30"
-    >
+    <div className="rounded-lg border border-border bg-background-secondary/30">
       <button
         onClick={() => setExpanded(!expanded)}
         className="flex w-full items-center gap-2.5 px-3 py-2"
@@ -69,6 +64,6 @@ export function ToolCallItem({ toolCall }: ToolCallItemProps) {
           )}
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
