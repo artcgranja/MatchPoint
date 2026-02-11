@@ -1,110 +1,21 @@
 import { mockStartups } from "./startups";
-import { mockSearches } from "./searches";
 import { defaultPipelineStages } from "./pipeline";
-import { apiGet } from "@/lib/api/client";
-import type {
-  Startup,
-  SearchQuery,
-  PipelineStage,
-  SearchFilters,
-} from "@/types";
-
-// When true, uses real API; when false, uses mock data
-const USE_API = typeof window !== "undefined" && process.env.NEXT_PUBLIC_USE_API === "true";
+import type { Startup, PipelineStage } from "@/types";
 
 function delay(ms: number = 800): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function getStartups(
-  filters?: Partial<SearchFilters>
-): Promise<Startup[]> {
-  if (USE_API) {
-    const params = new URLSearchParams();
-    if (filters?.industries?.length) params.set("industries", filters.industries.join(","));
-    if (filters?.fundingStages?.length) params.set("fundingStages", filters.fundingStages.join(","));
-    if (filters?.locations?.length) params.set("locations", filters.locations.join(","));
-    if (filters?.technologies?.length) params.set("technologies", filters.technologies.join(","));
-    if (filters?.minMatchScore) params.set("minMatchScore", String(filters.minMatchScore));
-    if (filters?.maxEmployeeCount) params.set("maxEmployeeCount", String(filters.maxEmployeeCount));
-    const qs = params.toString();
-    return apiGet<Startup[]>(`/startups${qs ? `?${qs}` : ""}`);
-  }
-
+export async function getStartups(): Promise<Startup[]> {
   await delay();
-  let results = [...mockStartups];
-
-  if (filters?.industries?.length) {
-    results = results.filter((s) =>
-      s.industries.some((i) => filters.industries!.includes(i))
-    );
-  }
-  if (filters?.fundingStages?.length) {
-    results = results.filter((s) =>
-      filters.fundingStages!.includes(s.fundingStage)
-    );
-  }
-  if (filters?.minMatchScore) {
-    results = results.filter(
-      (s) => s.aiAnalysis.matchScore >= filters.minMatchScore!
-    );
-  }
-  if (filters?.maxEmployeeCount) {
-    results = results.filter(
-      (s) => s.employees <= filters.maxEmployeeCount!
-    );
-  }
-  if (filters?.technologies?.length) {
-    results = results.filter((s) =>
-      s.technologies.some((t) => filters.technologies!.includes(t))
-    );
-  }
-
-  return results.sort(
-    (a, b) => b.aiAnalysis.matchScore - a.aiAnalysis.matchScore
-  );
+  return [...mockStartups];
 }
 
 export async function getStartupById(
   id: string
 ): Promise<Startup | undefined> {
-  if (USE_API) {
-    try {
-      return await apiGet<Startup>(`/startups/${id}`);
-    } catch {
-      return undefined;
-    }
-  }
-
   await delay(500);
   return mockStartups.find((s) => s.id === id);
-}
-
-export async function getSearches(): Promise<SearchQuery[]> {
-  if (USE_API) {
-    return apiGet<SearchQuery[]>("/searches");
-  }
-
-  await delay(600);
-  return [...mockSearches].sort(
-    (a, b) =>
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-  );
-}
-
-export async function getSearchById(
-  id: string
-): Promise<SearchQuery | undefined> {
-  if (USE_API) {
-    try {
-      return await apiGet<SearchQuery>(`/searches/${id}`);
-    } catch {
-      return undefined;
-    }
-  }
-
-  await delay(400);
-  return mockSearches.find((s) => s.id === id);
 }
 
 export function getPipelineStages(): PipelineStage[] {

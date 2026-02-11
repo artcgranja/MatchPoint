@@ -16,7 +16,6 @@ export async function GET() {
 
   const defaults: UserSettings = {
     theme: "dark",
-    defaultFilters: {},
     notificationsEnabled: true,
     compactView: false,
   };

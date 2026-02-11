@@ -2,56 +2,56 @@
 
 import { useCallback } from "react";
 import { useDiscoveryStore } from "@/stores/discovery-store";
+import { useSearchStore } from "@/stores/search-store";
 import { apiPost, apiGet } from "@/lib/api/client";
-import type { DiscoverySession, ScopePhase } from "@/types";
+import type { DiscoverySession, SessionStage, StartupCard } from "@/types";
 
 export function useDiscoverySession() {
   const {
     sessionId,
     discoveryState,
-    currentPhase,
+    currentStage,
     messages,
-    isComplete,
     isStreaming,
     setSessionId,
     setDiscoveryState,
-    setCurrentPhase,
+    setCurrentStage,
     addMessage,
     updateLastAssistantMessage,
-    setComplete,
     setIsStreaming,
     setMessages,
     reset,
   } = useDiscoveryStore();
 
+  const { setSearchId, startPipeline, completePipeline, errorPipeline } =
+    useSearchStore();
+
   const initSession = useCallback(async () => {
-    const { id, currentPhase: phase } = await apiPost<{
+    const { id } = await apiPost<{
       id: string;
-      currentPhase: ScopePhase;
+      currentPhase: string;
     }>("/discovery");
     setSessionId(id);
-    setCurrentPhase(phase);
+    setCurrentStage("discovery");
     setDiscoveryState("chatting");
     return id;
-  }, [setSessionId, setCurrentPhase, setDiscoveryState]);
+  }, [setSessionId, setCurrentStage, setDiscoveryState]);
 
   const loadSession = useCallback(
     async (id: string) => {
       const session = await apiGet<DiscoverySession>(`/discovery/${id}`);
       setSessionId(session.id);
-      setCurrentPhase(session.currentPhase);
-      setComplete(session.isComplete);
+      setCurrentStage(session.currentStage);
       setMessages(
         session.messages.map((m) => ({
           id: m.id,
           role: m.role,
           content: m.content,
-          phase: m.phase,
           createdAt: m.createdAt,
         }))
       );
       if (session.isComplete) {
-        setDiscoveryState("completing");
+        setDiscoveryState("complete");
       } else if (session.messages.length > 0) {
         setDiscoveryState("chatting");
       } else {
@@ -59,7 +59,94 @@ export function useDiscoverySession() {
       }
       return session;
     },
-    [setSessionId, setCurrentPhase, setComplete, setMessages, setDiscoveryState]
+    [setSessionId, setCurrentStage, setMessages, setDiscoveryState]
+  );
+
+  const runPipelineStream = useCallback(
+    async (searchId: string) => {
+      startPipeline();
+
+      try {
+        const res = await fetch(`/api/v1/searches/${searchId}/stream`);
+        if (!res.body) return;
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+            if (line.startsWith("event: ")) {
+              const eventType = line.slice(7).trim();
+              // Next line should be data
+              const dataLine = lines[lines.indexOf(line) + 1];
+              if (dataLine?.startsWith("data: ")) {
+                try {
+                  const data = JSON.parse(dataLine.slice(6));
+
+                  if (eventType === "stage_update" || eventType === "stage_complete") {
+                    // Update stage in chat
+                    const stageMap: Record<string, SessionStage> = {
+                      Analysis: "analysis",
+                      Scout: "scout",
+                    };
+                    const stage = stageMap[data.agentName];
+                    if (stage && eventType === "stage_update" && data.progress === 0) {
+                      setCurrentStage(stage);
+                      addMessage({
+                        role: "assistant",
+                        content: data.message,
+                        type: "stage-update",
+                      });
+                    }
+                  }
+
+                  if (eventType === "pipeline_complete") {
+                    const cards = (data.cards ?? []) as StartupCard[];
+                    const summary = (data.summary ?? "") as string;
+
+                    if (cards.length > 0) {
+                      addMessage({
+                        role: "assistant",
+                        content: summary,
+                        type: "cards",
+                        cards,
+                      });
+                    }
+
+                    setCurrentStage("complete");
+                    setDiscoveryState("complete");
+                    completePipeline();
+                  }
+
+                  if (eventType === "error") {
+                    addMessage({
+                      role: "assistant",
+                      content: `Erro no pipeline: ${data.message}`,
+                      type: "stage-update",
+                    });
+                    errorPipeline();
+                  }
+                } catch {
+                  // Skip malformed data
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Pipeline stream error:", error);
+        errorPipeline();
+      }
+    },
+    [startPipeline, completePipeline, errorPipeline, setCurrentStage, setDiscoveryState, addMessage]
   );
 
   const sendMessage = useCallback(
@@ -88,6 +175,7 @@ export function useDiscoverySession() {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let assistantMsg = "";
+        let discoveryDone = false;
 
         while (true) {
           const { done, value } = await reader.read();
@@ -103,12 +191,8 @@ export function useDiscoverySession() {
                   assistantMsg += data.text;
                   updateLastAssistantMessage(assistantMsg);
                 }
-                if (data.phase) {
-                  setCurrentPhase(data.phase as ScopePhase);
-                  if (data.phase === "complete") {
-                    setComplete(true);
-                    setDiscoveryState("completing");
-                  }
+                if (data.done) {
+                  discoveryDone = true;
                 }
                 if (data.error) {
                   console.error("Discovery SSE error:", data.error);
@@ -119,9 +203,37 @@ export function useDiscoverySession() {
             }
           }
         }
+
+        setIsStreaming(false);
+
+        // If discovery is complete, trigger the pipeline
+        if (discoveryDone) {
+          setDiscoveryState("processing");
+          setCurrentStage("analysis");
+
+          addMessage({
+            role: "assistant",
+            content: "Discovery concluida! Analisando suas necessidades...",
+            type: "stage-update",
+          });
+
+          try {
+            const { id } = await apiPost<{ id: string }>("/searches", {
+              discoverySessionId: activeSessionId,
+            });
+            setSearchId(id);
+            await runPipelineStream(id);
+          } catch (error) {
+            console.error("Failed to create search from discovery:", error);
+            addMessage({
+              role: "assistant",
+              content: "Erro ao iniciar busca. Tente novamente.",
+              type: "stage-update",
+            });
+          }
+        }
       } catch (error) {
         console.error("Discovery session error:", error);
-      } finally {
         setIsStreaming(false);
       }
     },
@@ -130,23 +242,22 @@ export function useDiscoverySession() {
       addMessage,
       updateLastAssistantMessage,
       setIsStreaming,
-      setCurrentPhase,
-      setComplete,
       setDiscoveryState,
+      setCurrentStage,
+      setSearchId,
+      runPipelineStream,
     ]
   );
 
   return {
     sessionId,
     discoveryState,
-    currentPhase,
+    currentStage,
     messages,
-    isComplete,
     isStreaming,
     initSession,
     loadSession,
     sendMessage,
     reset,
-    setDiscoveryState,
   };
 }

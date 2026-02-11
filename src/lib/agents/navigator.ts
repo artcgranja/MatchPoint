@@ -1,57 +1,32 @@
 import { BaseAgent } from "./base";
-import { BizPlanSchema, type BizPlan } from "./schemas";
-import {
-  NAVIGATOR_SCOPE_SYSTEM,
-  NAVIGATOR_BIZPLAN_SYSTEM,
-  NAVIGATOR_QUICK_SYSTEM,
-} from "./prompts/navigator";
+import { NeedSummarySchema, type NeedSummary } from "./schemas";
+import { DISCOVERY_SYSTEM, DISCOVERY_EXTRACT_SYSTEM } from "./prompts/navigator";
 import { prisma } from "@/lib/db";
-import type { ScopePhase } from "@prisma/client";
 
-const PHASE_ORDER: ScopePhase[] = [
-  "situation",
-  "challenge",
-  "objectives",
-  "parameters",
-  "evaluation",
-  "complete",
-];
-
-export class NavigatorAgent extends BaseAgent {
+export class DiscoveryAgent extends BaseAgent {
   constructor() {
-    super("navigator");
+    super("discovery");
   }
 
-  async *conductScopeTurn(
+  async *chat(
     sessionId: string,
     userMessage: string
-  ): AsyncGenerator<{ text?: string; phase?: string }> {
+  ): AsyncGenerator<{ text?: string; done?: boolean }> {
     const session = await prisma.discoverySession.findUniqueOrThrow({
       where: { id: sessionId },
       include: { messages: { orderBy: { createdAt: "asc" } } },
     });
 
-    // Build message history (last 20 messages to manage context)
     const historyMessages = session.messages.slice(-20).map((m) => ({
       role: m.role as "user" | "assistant",
       content: m.content,
     }));
 
-    // Add current user message
     historyMessages.push({ role: "user", content: userMessage });
 
-    // Add phase context to system prompt
-    const systemWithContext = `${NAVIGATOR_SCOPE_SYSTEM}
+    const systemWithContext = `${DISCOVERY_SYSTEM}
 
-Current phase: ${session.currentPhase}
-Messages exchanged so far: ${session.messages.length}
-
-When you've gathered enough information for the current phase, indicate you're moving to the next phase by including one of these markers in your response:
-[PHASE: challenge]
-[PHASE: objectives]
-[PHASE: parameters]
-[PHASE: evaluation]
-[PHASE: complete]`;
+Messages exchanged so far: ${session.messages.length}`;
 
     let fullResponse = "";
     for await (const chunk of this.stream(systemWithContext, historyMessages)) {
@@ -59,33 +34,22 @@ When you've gathered enough information for the current phase, indicate you're m
       yield { text: chunk };
     }
 
-    // Check if phase should advance
-    const phaseMatch = fullResponse.match(/\[PHASE:\s*(\w+)\]/);
-    if (phaseMatch) {
-      const newPhase = phaseMatch[1] as ScopePhase;
-      if (PHASE_ORDER.includes(newPhase)) {
-        await prisma.discoverySession.update({
-          where: { id: sessionId },
-          data: {
-            currentPhase: newPhase,
-            isComplete: newPhase === "complete",
-          },
-        });
-        yield { phase: newPhase };
-      }
-    }
-
-    // If discovery is complete, generate BizPlan
-    if (fullResponse.includes("[PHASE: complete]")) {
-      const bizPlan = await this.extractBizPlan(sessionId);
+    // Check if discovery is complete
+    if (fullResponse.includes("[DISCOVERY_COMPLETE]")) {
+      const needSummary = await this.extractNeedSummary(sessionId);
       await prisma.discoverySession.update({
         where: { id: sessionId },
-        data: { bizPlan: JSON.parse(JSON.stringify(bizPlan)) },
+        data: {
+          isComplete: true,
+          currentPhase: "complete",
+          bizPlan: JSON.parse(JSON.stringify(needSummary)),
+        },
       });
+      yield { done: true };
     }
   }
 
-  async extractBizPlan(sessionId: string): Promise<BizPlan> {
+  async extractNeedSummary(sessionId: string): Promise<NeedSummary> {
     const session = await prisma.discoverySession.findUniqueOrThrow({
       where: { id: sessionId },
       include: { messages: { orderBy: { createdAt: "asc" } } },
@@ -96,17 +60,9 @@ When you've gathered enough information for the current phase, indicate you're m
       .join("\n\n");
 
     return this.invokeStructured(
-      NAVIGATOR_BIZPLAN_SYSTEM,
-      `Here is the complete SCOPE discovery conversation:\n\n${conversation}\n\nPlease synthesize this into a structured BizPlan.`,
-      BizPlanSchema
-    );
-  }
-
-  async generateBizPlan(painPoint: string): Promise<BizPlan> {
-    return this.invokeStructured(
-      NAVIGATOR_QUICK_SYSTEM,
-      `The user's pain point is:\n\n"${painPoint}"\n\nGenerate a comprehensive BizPlan for startup matching based on this pain point.`,
-      BizPlanSchema
+      DISCOVERY_EXTRACT_SYSTEM,
+      `Here is the complete discovery conversation:\n\n${conversation}\n\nExtract a structured NeedSummary from this conversation.`,
+      NeedSummarySchema
     );
   }
 }

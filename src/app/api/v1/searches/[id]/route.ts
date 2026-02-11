@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import type { Startup as StartupType } from "@/types";
 
 export async function GET(
   _req: Request,
@@ -14,12 +13,7 @@ export async function GET(
       results: {
         orderBy: { rank: "asc" },
         include: {
-          startup: {
-            include: {
-              teamMembers: true,
-              metrics: true,
-            },
-          },
+          startup: true,
         },
       },
       stageLogs: { orderBy: { createdAt: "asc" } },
@@ -30,40 +24,23 @@ export async function GET(
     return NextResponse.json({ error: "Search not found" }, { status: 404 });
   }
 
-  const startups: StartupType[] = search.results.map((r) => ({
+  const cards = search.results.map((r) => ({
     id: r.startup.id,
     name: r.startup.name,
-    logo: r.startup.logo,
     tagline: r.startup.tagline,
     description: r.startup.description,
-    website: r.startup.website,
-    founded: r.startup.founded,
-    employees: r.startup.employees,
-    location: r.startup.location,
+    whyRelevant: (r.aiAnalysis as Record<string, unknown>)?.whyRelevant ?? "",
     industries: r.startup.industries,
-    technologies: r.startup.technologies,
-    fundingStage: r.startup.fundingStage as StartupType["fundingStage"],
-    totalFunding: r.startup.totalFunding,
-    team: r.startup.teamMembers.map((t) => ({
-      name: t.name,
-      role: t.role,
-      avatar: t.avatar,
-      linkedin: t.linkedin ?? undefined,
-    })),
-    metrics: r.startup.metrics ?? {
-      revenue: 0, revenueGrowth: 0, customers: 0, nps: 0, burnRate: 0, runway: 0,
-    },
-    aiAnalysis: r.aiAnalysis as unknown as StartupType["aiAnalysis"],
+    fundingStage: r.startup.fundingStage,
+    location: r.startup.location,
   }));
 
   return NextResponse.json({
     id: search.id,
-    painPoint: search.painPoint,
-    filters: search.filters,
     status: search.status,
     resultCount: search.resultCount,
     timestamp: search.createdAt.toISOString(),
-    startups,
+    cards,
     stageLogs: search.stageLogs,
   });
 }

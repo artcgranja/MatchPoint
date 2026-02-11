@@ -3,26 +3,27 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { SendHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { ScopePhase } from "@/types";
+import type { SessionStage } from "@/types";
 
-const PHASE_PLACEHOLDERS: Record<ScopePhase, string> = {
-  situation: "Conte sobre sua empresa e seu contexto de negocio...",
-  challenge: "Quais desafios voce enfrenta hoje?",
-  objectives: "O que seria o cenario ideal para voce?",
-  parameters: "Que tipo de solucao voce busca?",
-  evaluation: "O que e mais importante na hora de escolher um parceiro?",
-  complete: "Discovery concluida.",
+const STAGE_PLACEHOLDERS: Record<SessionStage, string> = {
+  discovery: "Conte sobre sua empresa e o desafio que enfrenta...",
+  analysis: "Analisando suas necessidades...",
+  scout: "Buscando startups...",
+  complete: "Pergunte sobre as startups encontradas...",
 };
 
 interface ChatInputProps {
   onSend: (text: string) => void;
   disabled?: boolean;
-  currentPhase: ScopePhase;
+  currentStage: SessionStage;
 }
 
-export function ChatInput({ onSend, disabled, currentPhase }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, currentStage }: ChatInputProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const isProcessing = currentStage === "analysis" || currentStage === "scout";
+  const isDisabled = disabled || isProcessing;
 
   const adjustHeight = useCallback(() => {
     const textarea = textareaRef.current;
@@ -38,7 +39,7 @@ export function ChatInput({ onSend, disabled, currentPhase }: ChatInputProps) {
 
   const handleSend = () => {
     const trimmed = value.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed || isDisabled) return;
     onSend(trimmed);
     setValue("");
   };
@@ -57,14 +58,14 @@ export function ChatInput({ onSend, disabled, currentPhase }: ChatInputProps) {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder={PHASE_PLACEHOLDERS[currentPhase]}
-        disabled={disabled || currentPhase === "complete"}
+        placeholder={STAGE_PLACEHOLDERS[currentStage]}
+        disabled={isDisabled}
         rows={1}
         className="flex-1 resize-none rounded-xl border border-border bg-background-secondary/50 px-4 py-3 text-sm placeholder:text-foreground-muted/50 focus:border-highlight/30 focus:outline-none focus:ring-1 focus:ring-highlight/20 disabled:opacity-50"
       />
       <Button
         onClick={handleSend}
-        disabled={!value.trim() || disabled || currentPhase === "complete"}
+        disabled={!value.trim() || isDisabled}
         size="icon"
         className="h-10 w-10 shrink-0 rounded-xl"
       >

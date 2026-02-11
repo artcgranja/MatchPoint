@@ -13,24 +13,12 @@ export async function GET(
     include: {
       teamMembers: true,
       metrics: true,
-      searchResults: { take: 1, orderBy: { createdAt: "desc" } },
     },
   });
 
   if (!startup) {
     return NextResponse.json({ error: "Startup not found" }, { status: 404 });
   }
-
-  const defaultAnalysis = {
-    matchScore: 0,
-    confidence: 0,
-    strengths: [],
-    weaknesses: [],
-    opportunities: [],
-    risks: [],
-    synergySummary: "",
-    radarScores: [],
-  };
 
   const mapped: StartupType = {
     id: startup.id,
@@ -53,9 +41,6 @@ export async function GET(
       linkedin: t.linkedin ?? undefined,
     })),
     metrics: startup.metrics ?? { revenue: 0, revenueGrowth: 0, customers: 0, nps: 0, burnRate: 0, runway: 0 },
-    aiAnalysis: startup.searchResults[0]
-      ? (startup.searchResults[0].aiAnalysis as unknown as StartupType["aiAnalysis"])
-      : defaultAnalysis,
   };
 
   return NextResponse.json(mapped);

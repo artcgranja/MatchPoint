@@ -20,14 +20,13 @@ export async function GET(
 
   return NextResponse.json({
     id: session.id,
-    currentPhase: session.currentPhase,
+    currentStage: session.isComplete ? "complete" : "discovery",
     isComplete: session.isComplete,
-    bizPlan: session.bizPlan,
+    needSummary: session.bizPlan,
     messages: session.messages.map((m) => ({
       id: m.id,
       role: m.role,
       content: m.content,
-      phase: m.phase,
       createdAt: m.createdAt.toISOString(),
     })),
   });

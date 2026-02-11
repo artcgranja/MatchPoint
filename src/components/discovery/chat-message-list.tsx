@@ -18,7 +18,6 @@ export function ChatMessageList({
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [userScrolledUp, setUserScrolledUp] = useState(false);
 
-  // Track if user has scrolled away from bottom
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel) return;
@@ -38,7 +37,6 @@ export function ChatMessageList({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
-  // Auto-scroll when new messages arrive (unless user scrolled up)
   useEffect(() => {
     if (!userScrolledUp) {
       scrollToBottom();
@@ -54,7 +52,7 @@ export function ChatMessageList({
             <span className="h-2 w-2 animate-bounce rounded-full bg-highlight [animation-delay:150ms]" />
             <span className="h-2 w-2 animate-bounce rounded-full bg-highlight [animation-delay:300ms]" />
           </div>
-          <span className="text-sm">Navigator is thinking...</span>
+          <span className="text-sm">Pensando...</span>
         </div>
       </div>
     );
@@ -65,7 +63,7 @@ export function ChatMessageList({
       <div className="space-y-4 py-4">
         {messages.map((message, index) => {
           const isLast =
-            index === messages.length - 1 && message.role === "assistant";
+            index === messages.length - 1 && message.role === "assistant" && message.type !== "cards" && message.type !== "stage-update";
           return (
             <ChatMessage
               key={message.id ?? index}

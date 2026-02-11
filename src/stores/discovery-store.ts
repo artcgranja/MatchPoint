@@ -1,27 +1,25 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { ScopePhase, DiscoveryMessage } from "@/types";
+import type { SessionStage, DiscoveryMessage } from "@/types";
 
 export type DiscoveryState =
   | "idle"
   | "chatting"
-  | "completing"
-  | "transitioning";
+  | "processing"
+  | "complete";
 
 interface DiscoveryStore {
   sessionId: string | null;
   discoveryState: DiscoveryState;
-  currentPhase: ScopePhase;
+  currentStage: SessionStage;
   messages: DiscoveryMessage[];
-  isComplete: boolean;
   isStreaming: boolean;
 
   setSessionId: (id: string | null) => void;
   setDiscoveryState: (state: DiscoveryState) => void;
-  setCurrentPhase: (phase: ScopePhase) => void;
+  setCurrentStage: (stage: SessionStage) => void;
   addMessage: (message: DiscoveryMessage) => void;
   updateLastAssistantMessage: (content: string) => void;
-  setComplete: (complete: boolean) => void;
   setIsStreaming: (streaming: boolean) => void;
   setMessages: (messages: DiscoveryMessage[]) => void;
   reset: () => void;
@@ -32,16 +30,15 @@ export const useDiscoveryStore = create<DiscoveryStore>()(
     (set) => ({
       sessionId: null,
       discoveryState: "idle",
-      currentPhase: "situation",
+      currentStage: "discovery",
       messages: [],
-      isComplete: false,
       isStreaming: false,
 
       setSessionId: (sessionId) => set({ sessionId }),
 
       setDiscoveryState: (discoveryState) => set({ discoveryState }),
 
-      setCurrentPhase: (currentPhase) => set({ currentPhase }),
+      setCurrentStage: (currentStage) => set({ currentStage }),
 
       addMessage: (message) =>
         set((state) => ({
@@ -60,8 +57,6 @@ export const useDiscoveryStore = create<DiscoveryStore>()(
           return { messages: msgs };
         }),
 
-      setComplete: (isComplete) => set({ isComplete }),
-
       setIsStreaming: (isStreaming) => set({ isStreaming }),
 
       setMessages: (messages) => set({ messages }),
@@ -70,9 +65,8 @@ export const useDiscoveryStore = create<DiscoveryStore>()(
         set({
           sessionId: null,
           discoveryState: "idle",
-          currentPhase: "situation",
+          currentStage: "discovery",
           messages: [],
-          isComplete: false,
           isStreaming: false,
         }),
     }),

@@ -7,7 +7,7 @@ export abstract class BaseAgent {
   protected client = anthropic;
   protected model: string;
 
-  constructor(model: keyof typeof MODELS = "worker") {
+  constructor(model: keyof typeof MODELS) {
     this.model = MODELS[model];
   }
 

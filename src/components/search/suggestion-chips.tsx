@@ -1,15 +1,40 @@
 "use client";
 
-import { useSearchStore } from "@/stores/search-store";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { motion } from "motion/react";
+import { Building2, Heart, Shield, Truck, GraduationCap, Leaf } from "lucide-react";
+import { staggerContainer, fadeIn } from "@/lib/motion";
 
 const suggestions = [
-  "Automate customer support with AI to reduce response times",
-  "Find blockchain solutions for supply chain transparency",
-  "Implement real-time cybersecurity threat detection",
-  "Build predictive analytics for patient health outcomes",
-  "Optimize energy consumption with smart grid technology",
-  "Deploy AI-powered employee training and upskilling",
+  {
+    icon: Building2,
+    label: "Varejo + IA",
+    text: "Somos uma rede de varejo com 200 lojas e precisamos de automacao com IA",
+  },
+  {
+    icon: Heart,
+    label: "Telemedicina",
+    text: "Hospital de medio porte buscando solucoes de telemedicina",
+  },
+  {
+    icon: Shield,
+    label: "Antifraude",
+    text: "Fintech precisando de solucao antifraude em tempo real",
+  },
+  {
+    icon: Truck,
+    label: "Logistica",
+    text: "Empresa de logistica buscando otimizacao de rotas com IA",
+  },
+  {
+    icon: GraduationCap,
+    label: "Educacao",
+    text: "Rede de educacao precisando de plataforma de ensino adaptativo",
+  },
+  {
+    icon: Leaf,
+    label: "Sustentabilidade",
+    text: "Industria buscando solucoes de gestao energetica e ESG",
+  },
 ];
 
 interface SuggestionChipsProps {
@@ -17,33 +42,31 @@ interface SuggestionChipsProps {
 }
 
 export function SuggestionChips({ onSelect }: SuggestionChipsProps) {
-  const { setPainPoint } = useSearchStore();
-
-  const handleClick = (suggestion: string) => {
-    if (onSelect) {
-      onSelect(suggestion);
-    } else {
-      setPainPoint(suggestion);
-    }
-  };
-
   return (
-    <div className="space-y-2">
-      <p className="text-xs text-foreground-muted">Try a suggestion:</p>
-      <ScrollArea className="w-full whitespace-nowrap">
-        <div className="flex gap-2 pb-2">
-          {suggestions.map((suggestion) => (
-            <button
-              key={suggestion}
-              onClick={() => handleClick(suggestion)}
-              className="inline-flex shrink-0 items-center rounded-full border border-border bg-background-secondary/50 px-3 py-1.5 text-xs text-foreground-muted hover:bg-highlight/10 hover:text-highlight hover:border-highlight/20 transition-colors"
-            >
-              {suggestion}
-            </button>
-          ))}
-        </div>
-        <ScrollBar orientation="horizontal" />
-      </ScrollArea>
-    </div>
+    <motion.div
+      variants={staggerContainer}
+      initial="hidden"
+      animate="visible"
+      className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"
+    >
+      {suggestions.map((s) => (
+        <motion.button
+          key={s.label}
+          variants={fadeIn}
+          onClick={() => onSelect?.(s.text)}
+          className="group flex items-start gap-3 rounded-xl border border-border bg-background-secondary/30 p-3 text-left transition-all hover:border-highlight/30 hover:bg-highlight/5"
+        >
+          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-highlight/10 text-highlight transition-colors group-hover:bg-highlight/20">
+            <s.icon className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-foreground">{s.label}</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-foreground-muted line-clamp-2">
+              {s.text}
+            </p>
+          </div>
+        </motion.button>
+      ))}
+    </motion.div>
   );
 }

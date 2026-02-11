@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { NavigatorAgent } from "@/lib/agents/navigator";
+import { DiscoveryAgent } from "@/lib/agents/navigator";
 
 export async function POST(
   req: Request,
@@ -34,13 +34,13 @@ export async function POST(
   });
 
   const encoder = new TextEncoder();
-  const navigator = new NavigatorAgent();
+  const discovery = new DiscoveryAgent();
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
         let fullResponse = "";
-        for await (const chunk of navigator.conductScopeTurn(id, message)) {
+        for await (const chunk of discovery.chat(id, message)) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
           if (chunk.text) fullResponse += chunk.text;
         }

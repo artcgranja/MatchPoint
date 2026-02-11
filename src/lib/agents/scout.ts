@@ -1,15 +1,14 @@
 import { BaseAgent } from "./base";
-import { ScoutResultSchema, type ScoutResult, type BizPlan } from "./schemas";
+import { ScoutResultSchema, type ScoutResult, type SearchCriteria, type NeedSummary } from "./schemas";
 import { SCOUT_SYSTEM } from "./prompts/scout";
 import { prisma } from "@/lib/db";
 
 export class ScoutAgent extends BaseAgent {
   constructor() {
-    super("worker");
+    super("scout");
   }
 
-  async search(bizPlan: BizPlan): Promise<string[]> {
-    // Fetch all startups from DB (with <1000 startups, we send summaries to the agent)
+  async search(criteria: SearchCriteria, needSummary: NeedSummary): Promise<ScoutResult> {
     const startups = await prisma.startup.findMany({
       include: { metrics: true },
     });
@@ -30,22 +29,20 @@ export class ScoutAgent extends BaseAgent {
       customers: s.metrics?.customers ?? 0,
     }));
 
-    const userMessage = `## BizPlan
+    const userMessage = `## SearchCriteria
 
-${JSON.stringify(bizPlan, null, 2)}
+${JSON.stringify(criteria, null, 2)}
+
+## NeedSummary
+
+${JSON.stringify(needSummary, null, 2)}
 
 ## Available Startups (${startups.length} total)
 
 ${JSON.stringify(startupSummaries, null, 2)}
 
-Based on the BizPlan, select the top 8-15 most promising startups for deeper analysis. Return their IDs.`;
+Based on the SearchCriteria and NeedSummary, select the most relevant startups and return them as cards with whyRelevant explanations.`;
 
-    const result: ScoutResult = await this.invokeStructured(
-      SCOUT_SYSTEM,
-      userMessage,
-      ScoutResultSchema
-    );
-
-    return result.shortlistedStartupIds;
+    return this.invokeStructured(SCOUT_SYSTEM, userMessage, ScoutResultSchema);
   }
 }

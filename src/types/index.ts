@@ -23,23 +23,6 @@ export interface StartupMetrics {
   runway: number;
 }
 
-export interface RadarScore {
-  dimension: string;
-  score: number;
-  benchmark: number;
-}
-
-export interface AIAnalysis {
-  matchScore: number;
-  confidence: number;
-  strengths: string[];
-  weaknesses: string[];
-  opportunities: string[];
-  risks: string[];
-  synergySummary: string;
-  radarScores: RadarScore[];
-}
-
 export interface Startup {
   id: string;
   name: string;
@@ -56,17 +39,13 @@ export interface Startup {
   totalFunding: number;
   team: TeamMember[];
   metrics: StartupMetrics;
-  aiAnalysis: AIAnalysis;
 }
 
 export type PipelineStatus = "idle" | "running" | "complete" | "error";
 
-export type AgentName =
-  | "Navigator"
-  | "Scout"
-  | "Analyst"
-  | "Matchmaker"
-  | "Reporter";
+export type AgentName = "Analysis" | "Scout";
+
+export type SessionStage = "discovery" | "analysis" | "scout" | "complete";
 
 export interface PipelineStage {
   id: string;
@@ -75,82 +54,38 @@ export interface PipelineStage {
   status: PipelineStatus;
   progress: number;
   message: string;
-  icon: string;
 }
 
-export interface SearchFilters {
+export interface StartupCard {
+  id: string;
+  name: string;
+  tagline: string;
+  description: string;
+  whyRelevant: string;
   industries: string[];
-  fundingStages: FundingStage[];
-  locations: string[];
-  minMatchScore: number;
-  maxEmployeeCount: number;
-  technologies: string[];
+  fundingStage: string;
+  location: string;
 }
-
-export interface SearchQuery {
-  id: string;
-  painPoint: string;
-  filters: SearchFilters;
-  timestamp: string;
-  status: PipelineStatus;
-  resultCount: number;
-}
-
-export interface ComparisonSet {
-  id: string;
-  startupIds: string[];
-  createdAt: string;
-}
-
-export interface ReportSection {
-  title: string;
-  content: string;
-  chartType?: "radar" | "bar" | "line";
-}
-
-export interface Report {
-  id: string;
-  title: string;
-  searchQueryId: string;
-  sections: ReportSection[];
-  createdAt: string;
-}
-
-export interface ChartConfig {
-  type: "radar" | "bar" | "line";
-  data: Record<string, unknown>[];
-  keys: string[];
-}
-
-export interface UserSettings {
-  theme: "light" | "dark" | "system";
-  defaultFilters: Partial<SearchFilters>;
-  notificationsEnabled: boolean;
-  compactView: boolean;
-}
-
-// Discovery / SCOPE conversation types
-
-export type ScopePhase =
-  | "situation"
-  | "challenge"
-  | "objectives"
-  | "parameters"
-  | "evaluation"
-  | "complete";
 
 export interface DiscoveryMessage {
   id?: string;
   role: "user" | "assistant";
   content: string;
-  phase?: ScopePhase;
+  type?: "text" | "cards" | "stage-update";
+  cards?: StartupCard[];
   createdAt?: string;
 }
 
 export interface DiscoverySession {
   id: string;
-  currentPhase: ScopePhase;
+  currentStage: SessionStage;
   isComplete: boolean;
-  bizPlan?: Record<string, unknown>;
+  needSummary?: Record<string, unknown>;
   messages: DiscoveryMessage[];
+}
+
+export interface UserSettings {
+  theme: "light" | "dark" | "system";
+  notificationsEnabled: boolean;
+  compactView: boolean;
 }
