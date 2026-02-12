@@ -83,24 +83,92 @@ export function useDiscoverySession() {
       const session = await apiGet<DiscoverySession>(`/discovery/${id}`);
       setSessionId(session.id);
       setCurrentStage(session.currentStage);
-      setMessages(
-        session.messages.map((m) => ({
-          id: m.id,
-          role: m.role,
-          content: m.content,
-          createdAt: m.createdAt,
-        }))
-      );
-      if (session.isComplete) {
+
+      // Build messages array from discovery messages
+      const msgs = session.messages.map((m) => ({
+        id: m.id,
+        role: m.role as "user" | "assistant",
+        content: m.content,
+        createdAt: m.createdAt,
+      }));
+
+      // Restore search execution state if it exists
+      const search = session.searchExecution;
+      if (search) {
+        setSearchId(search.id);
+
+        // Restore analysis panel
+        if (search.productDocument) {
+          appendPlanText(search.productDocument);
+          setAnalysisStatus("confirmed");
+        }
+
+        // Restore scout cards
+        if (search.cards.length > 0) {
+          setCards(search.cards, search.scoutSummary ?? "");
+          setScoutStatus("complete");
+          setScoutProgress(100, "Busca concluida");
+          setPanelOpen(true);
+          setActiveTab("scout");
+
+          // Add cards message to chat
+          msgs.push({
+            id: undefined,
+            role: "assistant" as const,
+            content: `${search.cards.length} startups encontradas! Veja os resultados no painel.`,
+            createdAt: undefined,
+            type: "cards" as const,
+            cards: search.cards,
+          } as typeof msgs[number]);
+        }
+
+        if (search.status === "complete") {
+          completePipeline();
+        }
+
+        // Restore advisor messages
+        if (search.orchestratorMessages.length > 0) {
+          for (const m of search.orchestratorMessages) {
+            msgs.push({
+              id: m.id,
+              role: m.role as "user" | "assistant",
+              content: m.content,
+              createdAt: m.createdAt,
+            });
+          }
+        }
+      }
+
+      setMessages(msgs);
+
+      // Set discovery state based on stage
+      if (session.currentStage === "advising") {
+        setDiscoveryState("advising");
+      } else if (session.isComplete) {
         setDiscoveryState("complete");
       } else if (session.messages.length > 0) {
         setDiscoveryState("chatting");
       } else {
         setDiscoveryState("idle");
       }
+
       return session;
     },
-    [setSessionId, setCurrentStage, setMessages, setDiscoveryState]
+    [
+      setSessionId,
+      setCurrentStage,
+      setMessages,
+      setDiscoveryState,
+      setSearchId,
+      appendPlanText,
+      setAnalysisStatus,
+      setCards,
+      setScoutStatus,
+      setScoutProgress,
+      setPanelOpen,
+      setActiveTab,
+      completePipeline,
+    ]
   );
 
   // ═══════════════════════════════════════════

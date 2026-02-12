@@ -1,22 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getAuthUser } from "@/lib/auth";
+import { getUserIdOrThrow } from "@/lib/auth";
 
 export async function POST() {
   let userId: string;
-  const user = await getAuthUser();
-  if (user) {
-    userId = user.userId;
-  } else {
-    const defaultUser = await prisma.user.upsert({
-      where: { email: "default@matchpoint.ai" },
-      update: {},
-      create: {
-        email: "default@matchpoint.ai",
-        hashedPassword: "not-a-real-password",
-      },
-    });
-    userId = defaultUser.id;
+  try {
+    userId = await getUserIdOrThrow();
+  } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const session = await prisma.discoverySession.create({

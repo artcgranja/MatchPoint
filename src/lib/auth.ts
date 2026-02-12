@@ -1,5 +1,4 @@
 import { SignJWT, jwtVerify } from "jose";
-import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET || "development-secret-change-in-production");
@@ -24,14 +23,6 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
   } catch {
     return null;
   }
-}
-
-export async function hashPassword(password: string): Promise<string> {
-  return bcrypt.hash(password, 12);
-}
-
-export async function comparePassword(password: string, hash: string): Promise<boolean> {
-  return bcrypt.compare(password, hash);
 }
 
 export async function getAuthUser(): Promise<JWTPayload | null> {

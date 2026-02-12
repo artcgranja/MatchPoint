@@ -7,11 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { usePathname } from "next/navigation";
 
 const routeLabels: Record<string, string> = {
-  "/search": "Search",
-  "/results": "Results",
-  "/compare": "Compare",
-  "/reports": "Reports",
-  "/history": "History",
+  "/": "Discovery",
   "/settings": "Settings",
 };
 

@@ -150,6 +150,19 @@ async function* handleDiscoveryMessage(
     },
   });
 
+  // Auto-generate title from first user message
+  if (!session.title) {
+    const messageCount = await prisma.discoveryMessage.count({
+      where: { sessionId, role: "user" },
+    });
+    if (messageCount === 1) {
+      await prisma.discoverySession.update({
+        where: { id: sessionId },
+        data: { title: message.slice(0, 80) },
+      });
+    }
+  }
+
   const discovery = new DiscoveryAgent();
   let fullResponse = "";
   let discoveryDone = false;

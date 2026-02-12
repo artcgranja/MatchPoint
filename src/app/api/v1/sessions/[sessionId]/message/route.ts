@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser } from "@/lib/auth";
 import { handleMessage } from "@/lib/agents/state-machine";
 
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
+  const auth = await getAuthUser();
+  if (!auth) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { sessionId } = await params;
   const body = await req.json();
   const { message } = body;
@@ -25,6 +31,13 @@ export async function POST(
     return NextResponse.json(
       { error: "Session not found" },
       { status: 404 }
+    );
+  }
+
+  if (session.userId !== auth.userId) {
+    return NextResponse.json(
+      { error: "Forbidden" },
+      { status: 403 }
     );
   }
 

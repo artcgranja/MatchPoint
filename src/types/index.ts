@@ -35,12 +35,24 @@ export interface DiscoveryMessage {
   createdAt?: string;
 }
 
+export interface SearchExecutionSummary {
+  id: string;
+  status: PipelineStatus;
+  resultCount: number;
+  scoutSummary: string | null;
+  productDocument: string | null;
+  cards: StartupCard[];
+  orchestratorMessages: { id: string; role: string; content: string; createdAt: string }[];
+}
+
 export interface DiscoverySession {
   id: string;
+  title?: string | null;
   currentStage: SessionStage;
   isComplete: boolean;
   needSummary?: Record<string, unknown>;
   messages: DiscoveryMessage[];
+  searchExecution?: SearchExecutionSummary | null;
 }
 
 export type BizDevPlanStatus = "idle" | "thinking" | "writing" | "complete" | "confirmed";

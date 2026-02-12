@@ -14,12 +14,9 @@ export default function NotFound() {
         The page you&apos;re looking for might have been moved or doesn&apos;t
         exist. Let&apos;s get you back on track.
       </p>
-      <div className="mt-8 flex gap-3">
+      <div className="mt-8">
         <Button asChild>
           <Link href="/">Go Home</Link>
-        </Button>
-        <Button asChild variant="outline">
-          <Link href="/search">Search</Link>
         </Button>
       </div>
     </div>

@@ -11,6 +11,19 @@ export async function GET(
     where: { id },
     include: {
       messages: { orderBy: { createdAt: "asc" } },
+      searches: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        include: {
+          results: {
+            orderBy: { rank: "asc" },
+            include: { company: true },
+          },
+          orchestratorMessages: {
+            orderBy: { createdAt: "asc" },
+          },
+        },
+      },
     },
   });
 
@@ -18,9 +31,40 @@ export async function GET(
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
+  const search = session.searches[0] ?? null;
+
+  // Determine currentStage from session + search state
+  let currentStage: string;
+  if (!session.isComplete) {
+    currentStage = "discovery";
+  } else if (!search) {
+    currentStage = "complete";
+  } else if (search.status === "complete") {
+    currentStage = "advising";
+  } else {
+    currentStage = "analysis";
+  }
+
+  // Build cards from search results
+  const cards = search?.results.map((r) => ({
+    id: r.company.id,
+    name: r.company.name,
+    oneLiner: r.company.oneLiner,
+    whyRelevant: (r.aiAnalysis as Record<string, unknown>)?.whyRelevant ?? "",
+    industries: r.company.industries,
+    tags: r.company.tags,
+    batch: r.company.batch,
+    location: r.company.allLocations,
+    website: r.company.website,
+    ycUrl: r.company.ycUrl,
+  })) ?? [];
+
+  const bizPlan = search?.bizPlan as Record<string, unknown> | null;
+
   return NextResponse.json({
     id: session.id,
-    currentStage: session.isComplete ? "complete" : "discovery",
+    title: session.title,
+    currentStage,
     isComplete: session.isComplete,
     needSummary: session.bizPlan,
     messages: session.messages.map((m) => ({
@@ -29,5 +73,21 @@ export async function GET(
       content: m.content,
       createdAt: m.createdAt.toISOString(),
     })),
+    searchExecution: search
+      ? {
+          id: search.id,
+          status: search.status,
+          resultCount: search.resultCount,
+          scoutSummary: search.scoutSummary,
+          productDocument: bizPlan?.productDocument ?? null,
+          cards,
+          orchestratorMessages: search.orchestratorMessages.map((m) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            createdAt: m.createdAt.toISOString(),
+          })),
+        }
+      : null,
   });
 }

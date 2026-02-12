@@ -4,6 +4,9 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   ANTHROPIC_API_KEY: z.string().min(1),
   JWT_SECRET: z.string().min(32),
+  GITHUB_CLIENT_ID: z.string().min(1),
+  GITHUB_CLIENT_SECRET: z.string().min(1),
+  NEXT_PUBLIC_APP_URL: z.string().url(),
 });
 
 export function validateEnv() {

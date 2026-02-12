@@ -10,13 +10,14 @@ import {
   Plus,
   Settings,
   LogOut,
+  LogIn,
   Moon,
   Sun,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +27,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useDiscoveryStore } from "@/stores/discovery-store";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
+import { useAuthStore } from "@/stores/auth-store";
+import { SessionList } from "@/components/layout/session-list";
 import { useState } from "react";
 
 export function AppSidebar() {
@@ -34,14 +37,24 @@ export function AppSidebar() {
   const { theme, setTheme } = useTheme();
   const resetDiscovery = useDiscoveryStore((s) => s.reset);
   const resetPanel = useAgentPanelStore((s) => s.reset);
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
 
-  const isSearchActive =
-    pathname === "/search" || pathname.startsWith("/search/");
+  const isSearchActive = pathname === "/" || pathname === "/search";
 
   const handleNewChat = () => {
     resetDiscovery();
     resetPanel();
   };
+
+  const initials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
+    : "?";
 
   return (
     <aside
@@ -76,7 +89,7 @@ export function AppSidebar() {
       {/* Nav */}
       <nav className="mt-1 flex flex-col gap-1 px-2">
         <Link
-          href="/search"
+          href="/"
           className={cn(
             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
             isSearchActive
@@ -89,54 +102,74 @@ export function AppSidebar() {
         </Link>
       </nav>
 
-      {/* Spacer */}
-      <div className="flex-1" />
+      {/* Session history */}
+      {!collapsed && <SessionList />}
+
+      {/* Spacer (only when collapsed or no session list) */}
+      {collapsed && <div className="flex-1" />}
 
       {/* Footer: avatar + collapse */}
       <div className="flex flex-col gap-2 border-t border-border p-2">
-        {/* User avatar with dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              className={cn(
-                "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-background-secondary",
-                collapsed && "justify-center"
-              )}
-            >
-              <Avatar className="h-7 w-7 shrink-0">
-                <AvatarFallback className="bg-highlight/15 text-highlight text-xs">
-                  JD
-                </AvatarFallback>
-              </Avatar>
-              {!collapsed && (
-                <span className="truncate text-foreground-muted">John Doe</span>
-              )}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="w-48">
-            <DropdownMenuItem asChild>
-              <Link href="/settings">
-                <Settings className="h-4 w-4" />
-                Settings
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            >
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-              {theme === "dark" ? "Light Mode" : "Dark Mode"}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem variant="destructive">
-              <LogOut className="h-4 w-4" />
-              Log Out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {user ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-background-secondary",
+                  collapsed && "justify-center"
+                )}
+              >
+                <Avatar className="h-7 w-7 shrink-0">
+                  {user.avatarUrl && (
+                    <AvatarImage src={user.avatarUrl} alt={user.name ?? ""} />
+                  )}
+                  <AvatarFallback className="bg-highlight/15 text-highlight text-xs">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+                {!collapsed && (
+                  <span className="truncate text-foreground-muted">
+                    {user.name ?? user.email}
+                  </span>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="w-48">
+              <DropdownMenuItem asChild>
+                <Link href="/settings">
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
+                {theme === "dark" ? "Light Mode" : "Dark Mode"}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onClick={logout}>
+                <LogOut className="h-4 w-4" />
+                Log Out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Link
+            href="/login"
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-background-secondary text-foreground-muted",
+              collapsed && "justify-center"
+            )}
+          >
+            <LogIn className="h-4 w-4 shrink-0 text-highlight" />
+            {!collapsed && <span>Sign In</span>}
+          </Link>
+        )}
 
         {/* Collapse toggle */}
         <Button

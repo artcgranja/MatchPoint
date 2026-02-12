@@ -25,7 +25,9 @@ enum ScopePhase {
 model User {
   id                String              @id @default(uuid())
   email             String              @unique
-  hashedPassword    String
+  name              String?
+  avatarUrl         String?
+  githubId          Int                 @unique
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   settings          Json?
@@ -64,6 +66,7 @@ model DiscoverySession {
   id           String             @id @default(uuid())
   userId       String
   user         User               @relation(fields: [userId], references: [id])
+  title        String?
   currentPhase ScopePhase         @default(situation)
   bizPlan      Json?
   isComplete   Boolean            @default(false)
