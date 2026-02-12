@@ -26,7 +26,7 @@ export function CTASection() {
           <AnimateOnScrollItem variants={slideUp}>
             <div className="mt-8">
               <Link
-                href="/login"
+                href="/?login=1"
                 className="group inline-flex items-center gap-3 rounded-full bg-highlight px-8 py-4 text-base font-medium text-white transition-all duration-300 hover:bg-highlight-dim hover:scale-105 active:scale-95 hover:shadow-[0_0_24px_rgba(59,130,246,0.3)]"
               >
                 Começar Agora

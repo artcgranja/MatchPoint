@@ -39,6 +39,6 @@ export const useAuthStore = create<AuthStore>()((set) => ({
   logout: async () => {
     await fetch("/api/v1/auth/logout", { method: "POST" });
     set({ user: null });
-    window.location.href = "/login";
+    window.location.href = "/";
   },
 }));

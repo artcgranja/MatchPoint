@@ -29,6 +29,7 @@ import { useDiscoveryStore } from "@/stores/discovery-store";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { useSearchStore } from "@/stores/search-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { useLoginModalStore } from "@/stores/login-modal-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { SessionList } from "@/components/layout/session-list";
 
@@ -159,8 +160,9 @@ export function AppSidebar() {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Link
-            href="/login"
+          <button
+            type="button"
+            onClick={() => useLoginModalStore.getState().openLoginModal()}
             className={cn(
               "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-background-secondary text-foreground-muted",
               collapsed && "justify-center"
@@ -168,7 +170,7 @@ export function AppSidebar() {
           >
             <LogIn className="h-4 w-4 shrink-0 text-highlight" />
             {!collapsed && <span>Entrar</span>}
-          </Link>
+          </button>
         )}
 
         {/* Collapse toggle */}

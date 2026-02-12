@@ -43,7 +43,7 @@ export function Footer() {
               </p>
               <ul className="space-y-2">
                 <li>
-                  <Link href="/login" className="text-xs text-foreground-muted transition-colors hover:text-foreground">
+                  <Link href="/?login=1" className="text-xs text-foreground-muted transition-colors hover:text-foreground">
                     Entrar
                   </Link>
                 </li>

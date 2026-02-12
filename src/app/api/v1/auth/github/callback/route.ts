@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   const storedState = cookieStore.get("github_oauth_state")?.value ?? null;
 
   if (!code || !state || !storedState || state !== storedState) {
-    const response = NextResponse.redirect(`${appUrl}/login?error=invalid_state`);
+    const response = NextResponse.redirect(`${appUrl}/?auth_error=invalid_state`);
     response.cookies.delete("github_oauth_state");
     return response;
   }
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
 
   const tokenData = await tokenResponse.json();
   if (tokenData.error) {
-    const response = NextResponse.redirect(`${appUrl}/login?error=token_exchange`);
+    const response = NextResponse.redirect(`${appUrl}/?auth_error=token_exchange`);
     response.cookies.delete("github_oauth_state");
     return response;
   }
@@ -78,7 +78,7 @@ export async function GET(request: Request) {
   }
 
   if (!email) {
-    const response = NextResponse.redirect(`${appUrl}/login?error=no_email`);
+    const response = NextResponse.redirect(`${appUrl}/?auth_error=no_email`);
     response.cookies.delete("github_oauth_state");
     return response;
   }

@@ -1,7 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Space_Grotesk, Fira_Code } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { LoginModalProvider } from "@/components/auth/login-modal-provider";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -80,7 +82,11 @@ export default function RootLayout({
           Pular para o conteúdo principal
         </a>
         <ThemeProvider>
-          <TooltipProvider>{children}</TooltipProvider>
+          <TooltipProvider>
+            <Suspense fallback={null}>
+              <LoginModalProvider>{children}</LoginModalProvider>
+            </Suspense>
+          </TooltipProvider>
           <Toaster richColors position="bottom-right" />
         </ThemeProvider>
       </body>

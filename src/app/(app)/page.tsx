@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { RotateCcw, Brain, Rocket, Loader2 } from "lucide-react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
@@ -20,6 +19,7 @@ import { AgentWorkPanel } from "@/components/agent-panel/agent-work-panel";
 import { useDiscoverySession } from "@/hooks/use-discovery-session";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { useLoginModalStore } from "@/stores/login-modal-store";
 import { toast } from "sonner";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 
@@ -37,8 +37,6 @@ export default function HomePage() {
     confirmPlan,
     reset,
   } = useDiscoverySession();
-
-  const router = useRouter();
 
   const {
     panelOpen,
@@ -80,7 +78,7 @@ export default function HomePage() {
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (!user) {
-        router.push("/login");
+        useLoginModalStore.getState().openLoginModal();
         return;
       }
       if (!sessionId) {
@@ -90,7 +88,7 @@ export default function HomePage() {
         await sendMessage(text);
       }
     },
-    [user, router, sessionId, initSession, sendMessage]
+    [user, sessionId, initSession, sendMessage]
   );
 
   const handleNewDiscovery = useCallback(() => {
