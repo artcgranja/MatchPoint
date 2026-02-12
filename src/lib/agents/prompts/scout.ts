@@ -12,6 +12,12 @@ You receive a product document describing the solution a client needs. Find and 
 ${startupDataSkill.instructions}
 </tools_guidance>
 
+<use_parallel_tool_calls>
+When searching with multiple filter combinations, make all independent
+search_companies calls in parallel. When getting details on multiple
+companies, call get_company_details for all of them simultaneously.
+</use_parallel_tool_calls>
+
 <output_format>
 After completing your research, output your final answer as a JSON object matching this exact structure:
 

@@ -43,7 +43,7 @@ Using your tools, search for YC companies that match this product document. Foll
     let fullText = "";
     const toolCallNames = new Map<string, string>();
 
-    for await (const event of this.streamWithToolEvents(SCOUT_SYSTEM, messages, tools, { maxIterations: 15 })) {
+    for await (const event of this.streamWithToolEvents(SCOUT_SYSTEM, messages, tools, { maxIterations: 15, cacheTtl: "1h" })) {
       if (event.type === "text") {
         fullText += event.text;
       }
@@ -72,8 +72,8 @@ Using your tools, search for YC companies that match this product document. Foll
       yield { type: "result", data: parsed };
     } else {
       const fallback = await this.invokeStructured(
-        "Extract the company search results from this text into the required structured format.",
-        fullText,
+        SCOUT_SYSTEM,
+        `Extract the startup search results from the following text into the required JSON format:\n\n${fullText}`,
         ScoutResultSchema
       );
       yield { type: "result", data: fallback };

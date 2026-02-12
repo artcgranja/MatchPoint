@@ -1,6 +1,4 @@
 import type { ZodType } from "zod";
-import Anthropic from "@anthropic-ai/sdk";
-import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import type { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta";
 import type { BetaRunnableTool } from "@anthropic-ai/sdk/lib/tools/BetaRunnableTool";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
@@ -11,6 +9,23 @@ export type ToolStreamEvent =
   | { type: "tool_call"; id: string; name: string; input: Record<string, unknown> }
   | { type: "tool_result"; id: string; name: string; result: unknown; error?: string };
 
+interface BaseMethodOptions {
+  maxTokens?: number;
+  cacheTtl?: "1h";
+}
+
+interface StreamOptions extends BaseMethodOptions {
+  effort?: "high" | "medium" | "low";
+}
+
+interface ToolOptions extends BaseMethodOptions {
+  maxIterations?: number;
+}
+
+interface ThinkingOptions extends BaseMethodOptions {
+  effort?: "high" | "medium" | "low";
+}
+
 export abstract class BaseAgent {
   protected client = anthropic;
   protected model: string;
@@ -19,13 +34,17 @@ export abstract class BaseAgent {
     this.model = MODELS[model];
   }
 
-  async invoke(systemPrompt: string, userMessage: string): Promise<string> {
+  private buildSystemBlocks(systemPrompt: string, cacheTtl?: "1h") {
+    const cacheControl: { type: "ephemeral"; ttl?: "1h" } = { type: "ephemeral" };
+    if (cacheTtl) cacheControl.ttl = cacheTtl;
+    return [{ type: "text" as const, text: systemPrompt, cache_control: cacheControl }];
+  }
+
+  async invoke(systemPrompt: string, userMessage: string, options?: BaseMethodOptions): Promise<string> {
     const response = await this.client.messages.create({
       model: this.model,
-      max_tokens: 4096,
-      system: [
-        { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
-      ],
+      max_tokens: options?.maxTokens ?? 4096,
+      system: this.buildSystemBlocks(systemPrompt, options?.cacheTtl),
       messages: [{ role: "user", content: userMessage }],
     });
 
@@ -36,14 +55,13 @@ export abstract class BaseAgent {
   async invokeStructured<T>(
     systemPrompt: string,
     userMessage: string,
-    schema: ZodType<T>
+    schema: ZodType<T>,
+    options?: BaseMethodOptions
   ): Promise<T> {
     const response = await this.client.messages.create({
       model: this.model,
-      max_tokens: 4096,
-      system: [
-        { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
-      ],
+      max_tokens: options?.maxTokens ?? 4096,
+      system: this.buildSystemBlocks(systemPrompt, options?.cacheTtl),
       messages: [{ role: "user", content: userMessage }],
       output_config: { format: zodOutputFormat(schema) },
     });
@@ -57,15 +75,15 @@ export abstract class BaseAgent {
 
   async *stream(
     systemPrompt: string,
-    messages: Array<{ role: "user" | "assistant"; content: string }>
+    messages: Array<{ role: "user" | "assistant"; content: string }>,
+    options?: StreamOptions
   ): AsyncGenerator<string> {
     const stream = this.client.messages.stream({
       model: this.model,
-      max_tokens: 4096,
-      system: [
-        { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
-      ],
+      max_tokens: options?.maxTokens ?? 4096,
+      system: this.buildSystemBlocks(systemPrompt, options?.cacheTtl),
       messages,
+      ...(options?.effort && { output_config: { effort: options.effort } }),
     });
 
     for await (const event of stream) {
@@ -83,14 +101,12 @@ export abstract class BaseAgent {
     messages: BetaMessageParam[],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tools: BetaRunnableTool<any>[],
-    options?: { maxIterations?: number }
+    options?: ToolOptions
   ): Promise<{ text: string }> {
     const runner = this.client.beta.messages.toolRunner({
       model: this.model,
-      max_tokens: 8192,
-      system: [
-        { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
-      ],
+      max_tokens: options?.maxTokens ?? 8192,
+      system: this.buildSystemBlocks(systemPrompt, options?.cacheTtl),
       messages,
       tools,
       max_iterations: options?.maxIterations ?? 15,
@@ -106,14 +122,12 @@ export abstract class BaseAgent {
     messages: BetaMessageParam[],
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tools: BetaRunnableTool<any>[],
-    options?: { maxIterations?: number }
+    options?: ToolOptions
   ): AsyncGenerator<ToolStreamEvent> {
     const runner = this.client.beta.messages.toolRunner({
       model: this.model,
-      max_tokens: 8192,
-      system: [
-        { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
-      ],
+      max_tokens: options?.maxTokens ?? 8192,
+      system: this.buildSystemBlocks(systemPrompt, options?.cacheTtl),
       messages,
       tools,
       stream: true,
@@ -175,16 +189,14 @@ export abstract class BaseAgent {
   async *streamWithThinking(
     systemPrompt: string,
     messages: Array<{ role: "user" | "assistant"; content: string }>,
-    options?: { effort?: "high" | "medium" | "low" }
+    options?: ThinkingOptions
   ): AsyncGenerator<{ type: "thinking" | "text"; text: string }> {
     const stream = this.client.messages.stream({
       model: this.model,
-      max_tokens: 16384,
+      max_tokens: options?.maxTokens ?? 16384,
       thinking: { type: "adaptive" },
       output_config: { effort: options?.effort ?? "high" },
-      system: [
-        { type: "text", text: systemPrompt, cache_control: { type: "ephemeral" } },
-      ],
+      system: this.buildSystemBlocks(systemPrompt, options?.cacheTtl),
       messages,
     });
 

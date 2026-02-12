@@ -1,9 +1,6 @@
 import { BaseAgent } from "./base";
 import { ADVISOR_SYSTEM } from "./prompts/advisor";
-import {
-  type SessionContext,
-  buildContextBlock,
-} from "./context";
+import { type SessionContext, buildContextBlock } from "./context";
 import { composeToolsForAgent } from "./skills/registry";
 
 export class AdvisorAgent extends BaseAgent {
@@ -19,18 +16,20 @@ export class AdvisorAgent extends BaseAgent {
     context: SessionContext,
     userMessage: string
   ): AsyncGenerator<{ text: string }> {
-    const systemPrompt = `${ADVISOR_SYSTEM}\n\n<session_context>\n${buildContextBlock(context)}\n</session_context>`;
+    const contextBlock = buildContextBlock(context);
 
     const messages: Array<{
       role: "user" | "assistant";
       content: string;
     }> = [
+      { role: "user", content: `<session_context>\n${contextBlock}\n</session_context>` },
+      { role: "assistant", content: "Understood. I have the full session context." },
       ...context.postPipelineMessages,
       { role: "user", content: userMessage },
     ];
 
     for await (const event of this.streamWithToolEvents(
-      systemPrompt,
+      ADVISOR_SYSTEM,
       messages,
       this.getTools(),
       { maxIterations: 5 }

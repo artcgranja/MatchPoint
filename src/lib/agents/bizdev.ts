@@ -1,5 +1,6 @@
 import { BaseAgent } from "./base";
 import { BIZDEV_SYSTEM } from "./prompts/bizdev";
+import type { NeedSummary } from "./schemas";
 
 export class BizDevAgent extends BaseAgent {
   constructor() {
@@ -7,9 +8,22 @@ export class BizDevAgent extends BaseAgent {
   }
 
   async *streamPlan(
-    conversationTranscript: string
+    conversationTranscript: string,
+    needSummary?: NeedSummary
   ): AsyncGenerator<{ type: "thinking" | "text"; text: string }> {
-    const userMessage = `<conversation_transcript>
+    const needSummaryBlock = needSummary
+      ? `<need_summary>
+Company: ${needSummary.companyContext}
+Problem: ${needSummary.coreProblem}
+Desired Outcome: ${needSummary.desiredOutcome}
+Constraints: ${needSummary.constraints.join("; ")}
+Preferences: ${needSummary.preferences.join("; ")}
+</need_summary>
+
+`
+      : "";
+
+    const userMessage = `${needSummaryBlock}<conversation_transcript>
 ${conversationTranscript}
 </conversation_transcript>
 
@@ -18,7 +32,7 @@ Analyze this conversation and produce a complete product document — define wha
     yield* this.streamWithThinking(
       BIZDEV_SYSTEM,
       [{ role: "user", content: userMessage }],
-      { effort: "high" }
+      { effort: "high", maxTokens: 32768 }
     );
   }
 }

@@ -66,6 +66,11 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
       .map((m) => `${m.role}: ${m.content}`)
       .join("\n\n");
 
+    // Extract NeedSummary for Analysis context
+    const needSummary = search.discoverySession.bizPlan
+      ? (search.discoverySession.bizPlan as unknown as import("./schemas").NeedSummary)
+      : undefined;
+
     yield {
       eventType: "stage_update",
       stageId: "stage-1",
@@ -80,8 +85,8 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
     const bizDevAgent = new BizDevAgent();
     let fullPlanText = "";
 
-    // Stream thinking + text chunks — BizDev now receives the conversation transcript
-    for await (const chunk of bizDevAgent.streamPlan(conversationTranscript)) {
+    // Stream thinking + text chunks — BizDev receives transcript + NeedSummary
+    for await (const chunk of bizDevAgent.streamPlan(conversationTranscript, needSummary)) {
       if (chunk.type === "thinking") {
         yield {
           eventType: "analysis_thinking",

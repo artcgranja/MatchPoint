@@ -24,12 +24,8 @@ export class DiscoveryAgent extends BaseAgent {
 
     historyMessages.push({ role: "user", content: userMessage });
 
-    const systemWithContext = `${DISCOVERY_SYSTEM}
-
-Messages exchanged so far: ${session.messages.length}`;
-
     let fullResponse = "";
-    for await (const chunk of this.stream(systemWithContext, historyMessages)) {
+    for await (const chunk of this.stream(DISCOVERY_SYSTEM, historyMessages)) {
       fullResponse += chunk;
       yield { text: chunk };
     }

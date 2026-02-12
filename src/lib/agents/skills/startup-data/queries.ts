@@ -53,7 +53,7 @@ export async function searchCompanies(filters: {
 
   const companies = await prisma.company.findMany({
     where,
-    take: 50,
+    take: 30,
   });
 
   return companies.map((c) => ({
@@ -61,7 +61,7 @@ export async function searchCompanies(filters: {
     name: c.name,
     slug: c.slug,
     oneLiner: c.oneLiner,
-    longDescription: c.longDescription.slice(0, 300),
+    longDescription: c.longDescription.slice(0, 200),
     industries: c.industries,
     tags: c.tags.slice(0, 5),
     batch: c.batch,
