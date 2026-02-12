@@ -3,11 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Search,
+  Home,
   PanelLeftClose,
   PanelLeft,
   Compass,
-  Plus,
   Settings,
   LogOut,
   LogIn,
@@ -41,16 +40,20 @@ export function AppSidebar() {
   const { theme, setTheme } = useTheme();
   const resetDiscovery = useDiscoveryStore((s) => s.reset);
   const resetPanel = useAgentPanelStore((s) => s.reset);
+  const currentSessionId = useDiscoveryStore((s) => s.sessionId);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
-  const isSearchActive = pathname === "/" || pathname === "/search";
+  const isOnChat = pathname === "/" || pathname === "/search";
+  const isHomeActive = isOnChat && !currentSessionId;
+  const isDescubraActive = pathname.startsWith("/descubra");
 
-  const handleNewChat = () => {
+  const handleHomeClick = (e: React.MouseEvent) => {
+    e.preventDefault();
     resetDiscovery();
     resetPanel();
     useSearchStore.getState().resetPipeline();
-    if (pathname !== "/") router.push("/");
+    router.push("/");
   };
 
   const initials = getInitials(user?.name);
@@ -70,34 +73,32 @@ export function AppSidebar() {
         )}
       </div>
 
-      {/* New Chat button */}
-      <div className="px-2 pt-2 pb-1">
-        <Button
-          onClick={handleNewChat}
-          variant="outline"
-          className={cn(
-            "w-full gap-2 border-border bg-background-secondary/50 hover:bg-background-secondary",
-            collapsed && "px-0"
-          )}
-        >
-          <Plus className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Novo Chat</span>}
-        </Button>
-      </div>
-
       {/* Nav */}
-      <nav className="mt-1 flex flex-col gap-1 px-2">
+      <nav className="mt-2 flex flex-col gap-1 px-2">
         <Link
           href="/"
+          onClick={handleHomeClick}
           className={cn(
             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-            isSearchActive
+            isHomeActive
               ? "bg-highlight/10 text-highlight"
               : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
           )}
         >
-          <Search className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Descoberta</span>}
+          <Home className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Home</span>}
+        </Link>
+        <Link
+          href="/descubra"
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+            isDescubraActive
+              ? "bg-highlight/10 text-highlight"
+              : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+          )}
+        >
+          <Compass className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Descubra</span>}
         </Link>
       </nav>
 

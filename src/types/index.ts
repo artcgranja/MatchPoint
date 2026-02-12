@@ -74,3 +74,37 @@ export interface UserSettings {
   notificationsEnabled: boolean;
   compactView: boolean;
 }
+
+export interface BrowseCompany {
+  id: number;
+  name: string;
+  slug: string;
+  oneLiner: string;
+  longDescription: string;
+  website: string;
+  smallLogoUrl: string;
+  allLocations: string;
+  teamSize: number;
+  industries: string[];
+  tags: string[];
+  batch: string;
+  status: string;
+  stage: string;
+  ycUrl: string;
+}
+
+export interface BrowseCompanyDetail extends BrowseCompany {
+  industry: string;
+  subindustry: string;
+  regions: string[];
+  topCompany: boolean;
+  isHiring: boolean;
+  nonprofit: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}

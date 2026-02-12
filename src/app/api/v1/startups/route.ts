@@ -30,14 +30,17 @@ export async function GET(req: NextRequest) {
   if (regions.length) where.regions = { hasSome: regions };
   if (maxTeamSize) where.teamSize = { lte: maxTeamSize };
 
-  const companies = await prisma.company.findMany({
-    where,
-    skip: (page - 1) * limit,
-    take: limit,
-  });
+  const [companies, total] = await Promise.all([
+    prisma.company.findMany({
+      where,
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.company.count({ where }),
+  ]);
 
-  return NextResponse.json(
-    companies.map((c) => ({
+  return NextResponse.json({
+    data: companies.map((c) => ({
       id: c.id,
       name: c.name,
       slug: c.slug,
@@ -53,6 +56,9 @@ export async function GET(req: NextRequest) {
       status: c.status,
       stage: c.stage,
       ycUrl: c.ycUrl,
-    }))
-  );
+    })),
+    total,
+    page,
+    limit,
+  });
 }
