@@ -39,9 +39,33 @@ const suggestions = [
 
 interface SuggestionChipsProps {
   onSelect?: (suggestion: string) => void;
+  variant?: "default" | "compact";
 }
 
-export function SuggestionChips({ onSelect }: SuggestionChipsProps) {
+export function SuggestionChips({ onSelect, variant = "default" }: SuggestionChipsProps) {
+  if (variant === "compact") {
+    return (
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-wrap items-center justify-center gap-2"
+      >
+        {suggestions.map((s) => (
+          <motion.button
+            key={s.label}
+            variants={fadeIn}
+            onClick={() => onSelect?.(s.text)}
+            className="group flex items-center gap-2 rounded-full border border-border-base bg-surface px-3 py-1.5 text-xs font-medium text-foreground-muted transition-all hover:border-highlight/30 hover:text-foreground hover:bg-surface-hover"
+          >
+            <s.icon className="h-3 w-3" />
+            {s.label}
+          </motion.button>
+        ))}
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       variants={staggerContainer}

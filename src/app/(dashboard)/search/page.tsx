@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useCallback, useRef } from "react";
-import { Compass, Sparkles, RotateCcw, Brain, Rocket } from "lucide-react";
-import { motion } from "motion/react";
+import { RotateCcw, Brain, Rocket } from "lucide-react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,14 +9,13 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
-import { SuggestionChips } from "@/components/search/suggestion-chips";
+import { ChatWelcome } from "@/components/search/chat-welcome";
 import { ChatMessageList } from "@/components/discovery/chat-message-list";
 import { ChatInput } from "@/components/discovery/chat-input";
 import { StageIndicator } from "@/components/discovery/phase-indicator";
 import { AgentWorkPanel } from "@/components/agent-panel/agent-work-panel";
 import { useDiscoverySession } from "@/hooks/use-discovery-session";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
-import { fadeIn, slideUp } from "@/lib/motion";
 
 export default function SearchPage() {
   const {
@@ -146,51 +144,12 @@ export default function SearchPage() {
 
           {/* Main area */}
           {isIdle ? (
-            /* Idle: welcome + suggestions + input */
-            <div className="flex flex-1 flex-col">
-              <div className="flex flex-1 flex-col items-center justify-center px-4">
-                <motion.div
-                  variants={fadeIn}
-                  initial="hidden"
-                  animate="visible"
-                  className="flex flex-col items-center"
-                >
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-highlight/10">
-                    <Compass className="h-7 w-7 text-highlight" />
-                  </div>
-                  <h2 className="mt-4 text-xl font-bold">
-                    O que voce esta buscando?
-                  </h2>
-                  <p className="mt-2 max-w-lg text-center text-sm text-foreground-muted">
-                    Descreva seu desafio e vou encontrar as startups mais relevantes
-                    para sua empresa.
-                  </p>
-                </motion.div>
-
-                <motion.div
-                  variants={slideUp}
-                  initial="hidden"
-                  animate="visible"
-                  className="mt-8 w-full max-w-2xl"
-                >
-                  <div className="mb-3 flex items-center gap-1.5">
-                    <Sparkles className="h-3.5 w-3.5 text-foreground-muted" />
-                    <span className="text-xs font-medium text-foreground-muted">
-                      Ou experimente um cenario
-                    </span>
-                  </div>
-                  <SuggestionChips onSelect={handleChipSelect} />
-                </motion.div>
-              </div>
-
-              <div className="mx-auto w-full max-w-3xl px-4 pb-4 pt-2">
-                <ChatInput
-                  onSend={handleSendMessage}
-                  disabled={isStreaming}
-                  currentStage={currentStage}
-                />
-              </div>
-            </div>
+            <ChatWelcome
+              onSendMessage={handleSendMessage}
+              onChipSelect={handleChipSelect}
+              isStreaming={isStreaming}
+              currentStage={currentStage}
+            />
           ) : (
             /* Active: messages + input */
             <div className="flex min-h-0 flex-1 flex-col">

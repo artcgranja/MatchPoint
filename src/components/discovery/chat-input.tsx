@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ArrowUp } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { SessionStage } from "@/types";
 
@@ -17,9 +18,10 @@ interface ChatInputProps {
   onSend: (text: string) => void;
   disabled?: boolean;
   currentStage: SessionStage;
+  variant?: "default" | "welcome";
 }
 
-export function ChatInput({ onSend, disabled, currentStage }: ChatInputProps) {
+export function ChatInput({ onSend, disabled, currentStage, variant = "default" }: ChatInputProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -53,7 +55,12 @@ export function ChatInput({ onSend, disabled, currentStage }: ChatInputProps) {
   };
 
   return (
-    <div className="relative rounded-2xl border border-border bg-background-secondary/40 shadow-sm transition-colors focus-within:border-highlight/30 focus-within:shadow-[0_0_0_1px_rgba(59,130,246,0.1)]">
+    <div className={cn(
+      "relative rounded-2xl border shadow-sm transition-colors focus-within:border-highlight/30",
+      variant === "welcome"
+        ? "glass border-border-highlight shadow-lg focus-within:shadow-[0_0_12px_rgba(59,130,246,0.15)] focus-within:border-highlight/40"
+        : "border-border bg-background-secondary/40 focus-within:shadow-[0_0_0_1px_rgba(59,130,246,0.1)]"
+    )}>
       <textarea
         ref={textareaRef}
         value={value}
@@ -62,7 +69,10 @@ export function ChatInput({ onSend, disabled, currentStage }: ChatInputProps) {
         placeholder={STAGE_PLACEHOLDERS[currentStage]}
         disabled={isDisabled}
         rows={1}
-        className="w-full resize-none bg-transparent px-4 pt-3 pb-12 text-sm placeholder:text-foreground-muted/50 focus:outline-none disabled:opacity-50"
+        className={cn(
+          "w-full resize-none bg-transparent px-4 pb-12 placeholder:text-foreground-muted/50 focus:outline-none disabled:opacity-50",
+          variant === "welcome" ? "pt-4 text-base" : "pt-3 text-sm"
+        )}
       />
       <div className="absolute right-2 bottom-2">
         <Button

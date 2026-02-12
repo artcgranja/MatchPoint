@@ -504,6 +504,39 @@ section[id] {
   z-index: 0;
 }
 
+/* Welcome screen centered glow */
+.welcome-glow {
+  position: relative;
+}
+
+.welcome-glow::before {
+  content: '';
+  position: absolute;
+  top: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 400px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(59, 130, 246, 0.12) 0%,
+    rgba(107, 142, 107, 0.06) 40%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(60px);
+}
+
+:root .welcome-glow::before {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(59, 130, 246, 0.08) 0%,
+    rgba(107, 142, 107, 0.04) 40%,
+    transparent 70%
+  );
+}
+
 /* Dot grid pattern for cards */
 .dot-grid {
   background-image: radial-gradient(circle, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
