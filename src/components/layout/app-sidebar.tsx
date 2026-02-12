@@ -62,7 +62,7 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "flex h-screen flex-col border-r border-border bg-background-secondary/50 transition-all duration-300",
+        "flex h-screen flex-col overflow-hidden border-r border-border bg-background-secondary/50 transition-all duration-300",
         collapsed ? "w-16" : "w-60"
       )}
     >
@@ -86,7 +86,7 @@ export function AppSidebar() {
               : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
           )}
         >
-          <Home className="h-4 w-4 shrink-0" />
+          <Home className="h-5 w-5 shrink-0" />
           {!collapsed && <span>Home</span>}
         </Link>
         <Link
@@ -98,7 +98,7 @@ export function AppSidebar() {
               : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
           )}
         >
-          <Compass className="h-4 w-4 shrink-0" />
+          <Compass className="h-5 w-5 shrink-0" />
           {!collapsed && <span>Descubra</span>}
         </Link>
       </nav>

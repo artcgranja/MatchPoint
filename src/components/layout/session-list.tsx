@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Trash2, MessageSquare, CheckCircle2, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -75,7 +75,6 @@ function groupSessions(sessions: SessionItem[]): GroupedSessions[] {
 
 export function SessionList() {
   const [sessions, setSessions] = useState<SessionItem[]>([]);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
@@ -171,7 +170,7 @@ export function SessionList() {
     <ScrollArea className="flex-1 px-2 pt-2">
       {grouped.map((group) => (
         <div key={group.label} className="mb-3">
-          <p className="mb-1 px-2 text-[10px] font-medium uppercase tracking-wider text-foreground-muted/50">
+          <p className="mb-1 px-3 text-[11px] font-medium uppercase tracking-wider text-foreground-muted/50">
             {group.label}
           </p>
           {group.sessions.map((session) => (
@@ -181,36 +180,34 @@ export function SessionList() {
               tabIndex={0}
               onClick={() => handleSelect(session.id)}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleSelect(session.id); }}
-              onMouseEnter={() => setHoveredId(session.id)}
-              onMouseLeave={() => setHoveredId(null)}
               className={cn(
-                "group flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors",
+                "group flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors",
                 session.id === currentSessionId
                   ? "bg-highlight/10 text-highlight"
                   : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
               )}
             >
               {session.hasResults ? (
-                <CheckCircle2 className="h-3 w-3 shrink-0 text-green-500" />
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-green-500" />
               ) : (
-                <MessageSquare className="h-3 w-3 shrink-0" />
+                <MessageSquare className="h-4 w-4 shrink-0" />
               )}
-              <span className="min-w-0 flex-1 truncate text-xs">
+              <span className="min-w-0 flex-1 truncate">
                 {session.title}
               </span>
-              {hoveredId === session.id ? (
+              {/* Right area: timestamp + delete occupy same space via absolute overlay */}
+              <div className="relative flex shrink-0 items-center">
+                <span className="text-[10px] text-foreground-muted/40 transition-opacity group-hover:opacity-0">
+                  {getRelativeTime(session.updatedAt)}
+                </span>
                 <button
                   onClick={(e) => handleDelete(e, session.id)}
                   aria-label={`Excluir sessão: ${session.title}`}
-                  className="shrink-0 rounded p-0.5 text-foreground-muted/50 hover:text-destructive"
+                  className="absolute inset-0 flex items-center justify-center rounded text-foreground-muted/50 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                 >
-                  <Trash2 className="h-3 w-3" />
+                  <Trash2 className="h-4 w-4" />
                 </button>
-              ) : (
-                <span className="shrink-0 text-[10px] text-foreground-muted/40">
-                  {getRelativeTime(session.updatedAt)}
-                </span>
-              )}
+              </div>
             </div>
           ))}
         </div>
