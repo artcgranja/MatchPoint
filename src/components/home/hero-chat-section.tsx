@@ -4,13 +4,12 @@ import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { WarpShaderBackground } from "@/components/ui/warp-shader-background";
 import { ChatInput } from "@/components/discovery/chat-input";
-import { SuggestionChips } from "@/components/search/suggestion-chips";
 import { MinimalNavbar } from "@/components/home/minimal-navbar";
 import { CondensedValueProps } from "@/components/home/condensed-value-props";
 import { PipelineSection } from "@/components/home/pipeline-section";
 import { CTASection } from "@/components/home/cta-section";
 import { Footer } from "@/components/home/footer";
-import { slideUp, fadeIn, staggerContainer } from "@/lib/motion";
+import { slideUp, staggerContainer } from "@/lib/motion";
 import type { SessionStage } from "@/types";
 
 interface HeroChatSectionProps {
@@ -35,7 +34,7 @@ export function HeroChatSection({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Shader — full area, masked to fade from bottom (visible) to top (transparent) */}
+        {/* Shader — fade top-to-bottom (opacity on shader itself), bottom edge curved/oval */}
         {prefersReducedMotion ? (
           <div
             className="absolute inset-0 z-0"
@@ -48,8 +47,12 @@ export function HeroChatSection({
           <div
             className="absolute inset-0 z-0"
             style={{
-              maskImage: "linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(0,0,0,0.05) 55%, rgba(0,0,0,0.12) 65%, rgba(0,0,0,0.3) 78%, rgba(0,0,0,0.6) 88%, black 96%)",
-              WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(0,0,0,0.05) 55%, rgba(0,0,0,0.12) 65%, rgba(0,0,0,0.3) 78%, rgba(0,0,0,0.6) 88%, black 96%)",
+              maskImage:
+                "linear-gradient(to bottom, transparent 0%, transparent 38%, rgba(0,0,0,0.08) 48%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0.5) 63%, rgba(0,0,0,0.75) 72%, black 82%, black 100%), radial-gradient(ellipse 130% 55% at 50% 100%, black 0%, black 75%, transparent 100%)",
+              WebkitMaskImage:
+                "linear-gradient(to bottom, transparent 0%, transparent 38%, rgba(0,0,0,0.08) 48%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0.5) 63%, rgba(0,0,0,0.75) 72%, black 82%, black 100%), radial-gradient(ellipse 130% 55% at 50% 100%, black 0%, black 75%, transparent 100%)",
+              maskComposite: "intersect",
+              WebkitMaskComposite: "source-in",
             }}
           >
             <WarpShaderBackground isHovered={isHovered} />
@@ -101,15 +104,7 @@ export function HeroChatSection({
               variant="hero"
             />
           </motion.div>
-
-          {/* Suggestion chips */}
-          <motion.div variants={fadeIn} className="mt-4 w-full">
-            <SuggestionChips onSelect={onSendMessage} variant="compact" disabled={isStreaming} />
-          </motion.div>
         </motion.div>
-
-        {/* Bottom gradient fade */}
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 z-[1] h-32 bg-gradient-to-t from-void to-transparent" />
       </div>
 
       {/* Below the fold */}

@@ -1,21 +1,18 @@
 "use client";
 
 import { motion } from "motion/react";
-import { fadeIn, slideUp, staggerContainer } from "@/lib/motion";
+import { slideUp, staggerContainer } from "@/lib/motion";
 import { ChatInput } from "@/components/discovery/chat-input";
-import { SuggestionChips } from "@/components/search/suggestion-chips";
 import type { SessionStage } from "@/types";
 
 interface ChatWelcomeProps {
   onSendMessage: (text: string) => void;
-  onChipSelect: (suggestion: string) => void;
   isStreaming: boolean;
   currentStage: SessionStage;
 }
 
 export function ChatWelcome({
   onSendMessage,
-  onChipSelect,
   isStreaming,
   currentStage,
 }: ChatWelcomeProps) {
@@ -48,11 +45,6 @@ export function ChatWelcome({
             currentStage={currentStage}
             variant="welcome"
           />
-        </motion.div>
-
-        {/* Suggestion chips */}
-        <motion.div variants={fadeIn} className="mt-4 w-full">
-          <SuggestionChips onSelect={onChipSelect} variant="compact" disabled={isStreaming} />
         </motion.div>
       </motion.div>
     </div>

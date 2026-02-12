@@ -93,13 +93,6 @@ export default function HomePage() {
     [user, router, sessionId, initSession, sendMessage]
   );
 
-  const handleChipSelect = useCallback(
-    (suggestion: string) => {
-      handleSendMessage(suggestion);
-    },
-    [handleSendMessage]
-  );
-
   const handleNewDiscovery = useCallback(() => {
     reset();
   }, [reset]);
@@ -145,7 +138,6 @@ export default function HomePage() {
           >
             <ChatWelcome
               onSendMessage={handleSendMessage}
-              onChipSelect={handleChipSelect}
               isStreaming={isStreaming}
               currentStage={currentStage}
             />
