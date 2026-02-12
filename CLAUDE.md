@@ -69,7 +69,28 @@ Model config in `/src/lib/anthropic.ts`. All agents extend `BaseAgent` (`/src/li
 - `streamWithToolEvents()` — agentic loop via SDK `toolRunner` (streaming, yields `ToolStreamEvent`)
 - `streamWithThinking()` — adaptive thinking with streaming
 
-Tools are defined using `betaZodTool()` from `@anthropic-ai/sdk/helpers/beta/zod` — provides type-safe Zod-based input schemas with auto-execution.
+Tools are defined using `betaZodTool()` from `@anthropic-ai/sdk/helpers/beta/zod` — provides type-safe Zod-based input schemas with auto-execution via the Skills architecture (see below).
+
+### Skills (`/src/lib/agents/skills/`)
+
+Agent tools are organized as **skills** — self-contained modules that bundle tool definitions, instructions, and DB queries following Anthropic's Agent Skills pattern.
+
+| Skill | Tools | Used By | Directory |
+|-------|-------|---------|-----------|
+| startup-data | `search_companies`, `get_company_details` | Scout, Advisor | `skills/startup-data/` |
+
+Each skill contains:
+- `SKILL.md` — documentation with YAML frontmatter (source of truth)
+- `tools.ts` — canonical `betaZodTool` definitions (single source, shared by all agents)
+- `queries.ts` — raw DB query functions
+- `instructions.ts` — runtime export of tool usage instructions (injected into agent prompts)
+- `index.ts` — re-exports as `SkillModule`
+
+**Registry** (`skills/registry.ts`) provides:
+- `composeToolsForAgent(agentName)` — returns all `BetaRunnableTool[]` for an agent
+- `composeInstructionsForAgent(agentName)` — returns combined instructions string
+
+**Adding a new skill**: Create a directory under `skills/`, implement `SkillModule` interface, register in `SKILL_MODULES` array in `registry.ts`. The registry auto-routes tools and instructions to agents based on the `agents` field in metadata.
 
 ### Discovery Flow
 
@@ -173,15 +194,16 @@ Uses `ReadableStream` with proper SSE headers. Frontend consumes via `fetch` + `
 When creating or modifying agents:
 
 1. **Extend `BaseAgent`** — provides `invoke()`, `invokeStructured()`, `stream()`, `runWithTools()`, `streamWithToolEvents()`, and `streamWithThinking()` with automatic model selection and prompt caching
-2. **Define tools with `betaZodTool()`** — from `@anthropic-ai/sdk/helpers/beta/zod`, provides type-safe Zod schemas with auto-execution
-3. **Prompts go in `/src/lib/agents/prompts/`** — one file per agent, export named constants for each system prompt variant
-4. **Schemas go in `/src/lib/agents/schemas.ts`** — all Zod schemas for structured agent outputs, centralized
-5. **Analysis is the only Opus agent** — Discovery uses Sonnet, Scout and Advisor use Haiku. Only promote to Opus if the task requires complex reasoning
-6. **Discovery is natural conversation** — no rigid phases. The agent emits `[DISCOVERY_COMPLETE]` when it has enough info
-7. **NeedSummary drives everything downstream** — Analysis and Scout both receive the NeedSummary. Changes to the schema affect the entire pipeline
-8. **Pipeline stages log to `PipelineStageLog`** — every stage records input/output data, token usage, and duration for observability
-9. **Startup cards render in chat** — Scout results are sent as `pipeline_complete` event data and rendered as cards inline in the chat
-10. **State machine is the single orchestrator** — all stages flow through `handleMessage()` in `state-machine.ts`, dispatched by the unified endpoint
+2. **Define tools as skills** — create a skill module in `skills/` with `betaZodTool()` definitions, register in `skills/registry.ts`. Agents consume via `composeToolsForAgent(agentName)`. Never define tools inline in agent classes.
+3. **Skill instructions inject into prompts** — import the skill module in `prompts/agent.ts` and use `${skill.instructions}` inside a `<tools_guidance>` block. This ensures consistent tool documentation across agents.
+4. **Prompts go in `/src/lib/agents/prompts/`** — one file per agent, export named constants for each system prompt variant
+5. **Schemas go in `/src/lib/agents/schemas.ts`** — all Zod schemas for structured agent outputs, centralized
+6. **Analysis is the only Opus agent** — Discovery uses Sonnet, Scout and Advisor use Haiku. Only promote to Opus if the task requires complex reasoning
+7. **Discovery is natural conversation** — no rigid phases. The agent emits `[DISCOVERY_COMPLETE]` when it has enough info
+8. **NeedSummary drives everything downstream** — Analysis and Scout both receive the NeedSummary. Changes to the schema affect the entire pipeline
+9. **Pipeline stages log to `PipelineStageLog`** — every stage records input/output data, token usage, and duration for observability
+10. **Startup cards render in chat** — Scout results are sent as `pipeline_complete` event data and rendered as cards inline in the chat
+11. **State machine is the single orchestrator** — all stages flow through `handleMessage()` in `state-machine.ts`, dispatched by the unified endpoint
 
 ## Database Schema
 

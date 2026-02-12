@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 
-// Database tools used by agents for querying YC company data
+// Database queries used by the startup-data skill
 
 export async function searchCompanies(filters: {
   query?: string;

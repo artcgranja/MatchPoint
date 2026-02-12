@@ -1,9 +1,7 @@
-import { z } from "zod";
-import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { BaseAgent } from "./base";
 import { ScoutResultSchema, type ScoutResult } from "./schemas";
 import { SCOUT_SYSTEM } from "./prompts/scout";
-import { searchCompanies, getCompanyDetails } from "./tools";
+import { composeToolsForAgent } from "./skills/registry";
 
 export type ScoutEvent =
   | { type: "tool_call"; toolCallId: string; toolName: string; input: Record<string, unknown> }
@@ -15,71 +13,8 @@ export class ScoutAgent extends BaseAgent {
     super("scout");
   }
 
-  private buildTools() {
-    return [
-      betaZodTool({
-        name: "search_companies",
-        description:
-          "Search the YC company database with optional filters. Returns up to 50 matching companies. Use multiple searches with different filter combinations for better coverage.",
-        inputSchema: z.object({
-          query: z
-            .string()
-            .optional()
-            .describe("Text search on name, one-liner, and description"),
-          industries: z
-            .array(z.string())
-            .optional()
-            .describe("Filter by industries (e.g. ['B2B', 'Healthcare', 'Fintech'])"),
-          tags: z
-            .array(z.string())
-            .optional()
-            .describe("Filter by tags (e.g. ['machine-learning', 'saas', 'api'])"),
-          status: z
-            .string()
-            .optional()
-            .describe("Filter by status: Active, Inactive, Acquired, or Public"),
-          stage: z
-            .string()
-            .optional()
-            .describe("Filter by stage: Early or Growth"),
-          regions: z
-            .array(z.string())
-            .optional()
-            .describe("Filter by regions (e.g. ['United States of America', 'Europe'])"),
-          batch: z
-            .string()
-            .optional()
-            .describe("Filter by YC batch (e.g. 'W25', 'S24')"),
-          maxTeamSize: z
-            .number()
-            .optional()
-            .describe("Maximum team size"),
-          isHiring: z
-            .boolean()
-            .optional()
-            .describe("Filter for companies currently hiring"),
-          topCompany: z
-            .boolean()
-            .optional()
-            .describe("Filter for top YC companies"),
-        }),
-        run: async (input) => JSON.stringify(await searchCompanies(input)),
-      }),
-      betaZodTool({
-        name: "get_company_details",
-        description:
-          "Get detailed information about a specific YC company by numeric ID, including full description, all tags, regions, and metadata.",
-        inputSchema: z.object({
-          companyId: z
-            .number()
-            .describe("The numeric YC company ID"),
-        }),
-        run: async (input) => {
-          const result = await getCompanyDetails(input.companyId);
-          return JSON.stringify(result ?? { error: "Company not found" });
-        },
-      }),
-    ];
+  private getTools() {
+    return composeToolsForAgent("scout");
   }
 
   private buildUserMessage(productDocument: string) {
@@ -102,7 +37,7 @@ Using your tools, search for YC companies that match this product document. Foll
   }
 
   async *searchWithEvents(productDocument: string): AsyncGenerator<ScoutEvent> {
-    const tools = this.buildTools();
+    const tools = this.getTools();
     const messages = [{ role: "user" as const, content: this.buildUserMessage(productDocument) }];
 
     let fullText = "";
