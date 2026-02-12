@@ -52,7 +52,7 @@ export function ChatWelcome({
 
         {/* Suggestion chips */}
         <motion.div variants={fadeIn} className="mt-4 w-full">
-          <SuggestionChips onSelect={onChipSelect} variant="compact" />
+          <SuggestionChips onSelect={onChipSelect} variant="compact" disabled={isStreaming} />
         </motion.div>
       </motion.div>
     </div>

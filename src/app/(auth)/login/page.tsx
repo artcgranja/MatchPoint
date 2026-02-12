@@ -8,9 +8,9 @@ import { Button } from "@/components/ui/button";
 import { fadeIn, slideUp } from "@/lib/motion";
 
 const ERROR_MESSAGES: Record<string, string> = {
-  invalid_state: "Authentication failed. Please try again.",
-  token_exchange: "Could not connect to GitHub. Please try again.",
-  no_email: "No email found on your GitHub account. Please make sure you have a verified email.",
+  invalid_state: "Falha na autenticação. Tente novamente.",
+  token_exchange: "Não foi possível conectar ao GitHub. Tente novamente.",
+  no_email: "Nenhum email encontrado na sua conta GitHub. Verifique se você tem um email verificado.",
 };
 
 function GitHubIcon({ className }: { className?: string }) {
@@ -47,16 +47,16 @@ function LoginContent() {
 
           {/* Heading */}
           <div className="text-center">
-            <h1 className="text-lg font-semibold">Sign in to continue</h1>
+            <h1 className="text-lg font-semibold">Entre para continuar</h1>
             <p className="mt-1 text-sm text-foreground-muted">
-              Connect your GitHub account to start discovering startups
+              Conecte sua conta GitHub para começar a descobrir startups
             </p>
           </div>
 
           {/* Error */}
           {error && (
             <div className="w-full rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
-              {ERROR_MESSAGES[error] ?? "An unexpected error occurred. Please try again."}
+              {ERROR_MESSAGES[error] ?? "Ocorreu um erro inesperado. Tente novamente."}
             </div>
           )}
 
@@ -64,7 +64,7 @@ function LoginContent() {
           <Button asChild className="w-full gap-2" size="lg">
             <a href="/api/v1/auth/github">
               <GitHubIcon className="h-5 w-5" />
-              Continue with GitHub
+              Continuar com GitHub
             </a>
           </Button>
         </motion.div>

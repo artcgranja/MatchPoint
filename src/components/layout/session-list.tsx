@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Trash2, MessageSquare, CheckCircle2, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -33,12 +34,12 @@ function getRelativeTime(dateStr: string): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  if (diffDays === 1) return "yesterday";
-  if (diffDays < 7) return `${diffDays}d ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (diffMins < 1) return "agora";
+  if (diffMins < 60) return `${diffMins}m atrás`;
+  if (diffHours < 24) return `${diffHours}h atrás`;
+  if (diffDays === 1) return "ontem";
+  if (diffDays < 7) return `${diffDays}d atrás`;
+  return date.toLocaleDateString("pt-BR", { month: "short", day: "numeric" });
 }
 
 function groupSessions(sessions: SessionItem[]): GroupedSessions[] {
@@ -48,22 +49,22 @@ function groupSessions(sessions: SessionItem[]): GroupedSessions[] {
   const weekAgo = new Date(today.getTime() - 7 * 86400000);
 
   const groups: Record<string, SessionItem[]> = {
-    Today: [],
-    Yesterday: [],
-    "Previous 7 days": [],
-    Older: [],
+    Hoje: [],
+    Ontem: [],
+    "Últimos 7 dias": [],
+    Anteriores: [],
   };
 
   for (const session of sessions) {
     const date = new Date(session.updatedAt);
     if (date >= today) {
-      groups.Today.push(session);
+      groups.Hoje.push(session);
     } else if (date >= yesterday) {
-      groups.Yesterday.push(session);
+      groups.Ontem.push(session);
     } else if (date >= weekAgo) {
-      groups["Previous 7 days"].push(session);
+      groups["Últimos 7 dias"].push(session);
     } else {
-      groups.Older.push(session);
+      groups.Anteriores.push(session);
     }
   }
 
@@ -75,12 +76,17 @@ function groupSessions(sessions: SessionItem[]): GroupedSessions[] {
 export function SessionList() {
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const pathname = usePathname();
+  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const currentSessionId = useDiscoveryStore((s) => s.sessionId);
   const setSessionId = useDiscoveryStore((s) => s.setSessionId);
+  const setIsLoadingSession = useDiscoveryStore((s) => s.setIsLoadingSession);
   const resetDiscovery = useDiscoveryStore((s) => s.reset);
   const resetPanel = useAgentPanelStore((s) => s.reset);
   const resetPipeline = useSearchStore((s) => s.resetPipeline);
+
+  const prevSessionIdRef = useRef(currentSessionId);
 
   const fetchSessions = useCallback(async () => {
     if (!user) return;
@@ -90,21 +96,35 @@ export function SessionList() {
         const data: SessionItem[] = await res.json();
         setSessions(data);
       }
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error("Failed to fetch sessions:", err);
     }
   }, [user]);
 
+  // Fetch on mount and when a new session is created (null → value)
+  useEffect(() => {
+    const prev = prevSessionIdRef.current;
+    prevSessionIdRef.current = currentSessionId;
+
+    if (prev === null && currentSessionId !== null) {
+      fetchSessions();
+    }
+  }, [currentSessionId, fetchSessions]);
+
+  // Initial fetch on mount
   useEffect(() => {
     fetchSessions();
-  }, [fetchSessions, currentSessionId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const handleSelect = (sessionId: string) => {
     if (sessionId === currentSessionId) return;
     resetDiscovery();
     resetPanel();
     resetPipeline();
+    setIsLoadingSession(true);
     setSessionId(sessionId);
+    if (pathname !== "/") router.push("/");
   };
 
   const handleDelete = async (e: React.MouseEvent, sessionId: string) => {
@@ -121,8 +141,8 @@ export function SessionList() {
           resetPipeline();
         }
       }
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error("Failed to delete session:", err);
     }
   };
 
@@ -131,7 +151,7 @@ export function SessionList() {
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-6 text-center">
         <LogIn className="h-5 w-5 text-foreground-muted/50" />
         <p className="text-xs text-foreground-muted/50">
-          Sign in to see chat history
+          Entre para ver seu histórico
         </p>
       </div>
     );
@@ -140,7 +160,7 @@ export function SessionList() {
   if (sessions.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-4 py-6">
-        <p className="text-xs text-foreground-muted/50">No chats yet</p>
+        <p className="text-xs text-foreground-muted/50">Nenhum chat ainda</p>
       </div>
     );
   }
@@ -181,6 +201,7 @@ export function SessionList() {
               {hoveredId === session.id ? (
                 <button
                   onClick={(e) => handleDelete(e, session.id)}
+                  aria-label={`Excluir sessão: ${session.title}`}
                   className="shrink-0 rounded p-0.5 text-foreground-muted/50 hover:text-destructive"
                 >
                   <Trash2 className="h-3 w-3" />

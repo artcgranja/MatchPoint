@@ -8,8 +8,8 @@ import type { SessionStage } from "@/types";
 
 const STAGE_PLACEHOLDERS: Record<SessionStage, string> = {
   discovery: "Conte sobre sua empresa e o desafio que enfrenta...",
-  analysis: "Analisando suas necessidades...",
-  scout: "Buscando startups...",
+  analysis: "Analisando suas necessidades…",
+  scout: "Buscando startups…",
   complete: "Pergunte sobre as startups encontradas...",
   advising: "Pergunte sobre as startups encontradas...",
 };
@@ -82,6 +82,7 @@ export function ChatInput({ onSend, disabled, currentStage, variant = "default" 
           onClick={handleSend}
           disabled={!value.trim() || isDisabled}
           size="icon"
+          aria-label="Enviar mensagem"
           className="h-8 w-8 rounded-lg"
         >
           <ArrowUp className="h-4 w-4" />

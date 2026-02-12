@@ -7,8 +7,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <SectionHeader
-        title="Settings"
-        description="Manage your preferences and account settings."
+        title="Configurações"
+        description="Gerencie suas preferências e configurações de conta."
       />
       <SettingsForm />
     </div>

@@ -35,7 +35,7 @@ export function ToolCallLog() {
       >
         <Search className="h-3.5 w-3.5 shrink-0 text-foreground-muted" />
         <span className="flex-1 text-left text-xs font-medium text-foreground/90">
-          {toolCalls.length} {toolCalls.length === 1 ? "acao" : "acoes"}
+          {toolCalls.length} {toolCalls.length === 1 ? "ação" : "ações"}
         </span>
 
         <span className="flex items-center gap-1 text-[10px] text-sage">

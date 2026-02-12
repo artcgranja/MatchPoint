@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Search,
   PanelLeftClose,
@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
+import { getInitials } from "@/lib/utils/user";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -27,13 +28,16 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useDiscoveryStore } from "@/stores/discovery-store";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
+import { useSearchStore } from "@/stores/search-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { useSidebarStore } from "@/stores/sidebar-store";
 import { SessionList } from "@/components/layout/session-list";
-import { useState } from "react";
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
+  const router = useRouter();
+  const collapsed = useSidebarStore((s) => s.collapsed);
+  const toggleCollapsed = useSidebarStore((s) => s.toggleCollapsed);
   const { theme, setTheme } = useTheme();
   const resetDiscovery = useDiscoveryStore((s) => s.reset);
   const resetPanel = useAgentPanelStore((s) => s.reset);
@@ -45,16 +49,11 @@ export function AppSidebar() {
   const handleNewChat = () => {
     resetDiscovery();
     resetPanel();
+    useSearchStore.getState().resetPipeline();
+    if (pathname !== "/") router.push("/");
   };
 
-  const initials = user?.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase()
-    : "?";
+  const initials = getInitials(user?.name);
 
   return (
     <aside
@@ -82,7 +81,7 @@ export function AppSidebar() {
           )}
         >
           <Plus className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>New Chat</span>}
+          {!collapsed && <span>Novo Chat</span>}
         </Button>
       </div>
 
@@ -98,7 +97,7 @@ export function AppSidebar() {
           )}
         >
           <Search className="h-4 w-4 shrink-0" />
-          {!collapsed && <span>Discovery</span>}
+          {!collapsed && <span>Descoberta</span>}
         </Link>
       </nav>
 
@@ -138,7 +137,7 @@ export function AppSidebar() {
               <DropdownMenuItem asChild>
                 <Link href="/settings">
                   <Settings className="h-4 w-4" />
-                  Settings
+                  Configurações
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -149,12 +148,12 @@ export function AppSidebar() {
                 ) : (
                   <Moon className="h-4 w-4" />
                 )}
-                {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                {theme === "dark" ? "Modo Claro" : "Modo Escuro"}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={logout}>
                 <LogOut className="h-4 w-4" />
-                Log Out
+                Sair
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -167,7 +166,7 @@ export function AppSidebar() {
             )}
           >
             <LogIn className="h-4 w-4 shrink-0 text-highlight" />
-            {!collapsed && <span>Sign In</span>}
+            {!collapsed && <span>Entrar</span>}
           </Link>
         )}
 
@@ -175,8 +174,8 @@ export function AppSidebar() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setCollapsed(!collapsed)}
-          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          onClick={toggleCollapsed}
+          aria-label={collapsed ? "Expandir barra lateral" : "Recolher barra lateral"}
           className="w-full"
         >
           {collapsed ? (

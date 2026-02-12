@@ -25,7 +25,7 @@ export function ScoutTab() {
           <Rocket className="h-5 w-5 text-foreground-muted/40" />
         </div>
         <p className="text-xs text-foreground-muted/60">
-          A busca de startups iniciara apos confirmar a analise.
+          A busca de startups iniciará após confirmar a análise.
         </p>
       </div>
     );

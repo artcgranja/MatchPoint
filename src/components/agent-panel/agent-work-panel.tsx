@@ -75,7 +75,7 @@ export function AgentWorkPanel({ onConfirm, onClose }: AgentWorkPanelProps) {
         <TabsList variant="line" className="w-full shrink-0 border-b border-border px-4">
           <TabsTrigger value="analysis" className="gap-1.5">
             <Brain className="h-3.5 w-3.5" />
-            Analise
+            Análise
             <AnalysisStatusDot />
           </TabsTrigger>
           <TabsTrigger value="scout" className="gap-1.5">

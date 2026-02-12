@@ -15,12 +15,12 @@ export default function AppError({
       <div className="rounded-xl bg-destructive/10 p-4">
         <AlertTriangle className="h-8 w-8 text-destructive" />
       </div>
-      <h2 className="mt-4 text-lg font-semibold">Something went wrong</h2>
+      <h2 className="mt-4 text-lg font-semibold">Algo deu errado</h2>
       <p className="mt-1 text-sm text-foreground-muted max-w-md">
-        {error.message || "An unexpected error occurred. Please try again."}
+        {error.message || "Ocorreu um erro inesperado. Tente novamente."}
       </p>
       <Button onClick={reset} className="mt-6">
-        Try Again
+        Tentar novamente
       </Button>
     </div>
   );

@@ -8,15 +8,15 @@ export default function NotFound() {
       <Compass className="h-16 w-16 text-highlight mb-6" />
       <h1 className="text-6xl font-bold font-code">404</h1>
       <p className="mt-4 text-xl text-foreground-muted">
-        This page couldn&apos;t be found
+        Página não encontrada
       </p>
       <p className="mt-2 text-sm text-foreground-muted max-w-md">
-        The page you&apos;re looking for might have been moved or doesn&apos;t
-        exist. Let&apos;s get you back on track.
+        A página que você procura pode ter sido movida ou não existe.
+        Vamos te colocar de volta no caminho certo.
       </p>
       <div className="mt-8">
         <Button asChild>
-          <Link href="/">Go Home</Link>
+          <Link href="/">Voltar ao início</Link>
         </Button>
       </div>
     </div>

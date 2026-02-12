@@ -4,12 +4,13 @@ import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { WarpShaderBackground } from "@/components/ui/warp-shader-background";
 import { ChatInput } from "@/components/discovery/chat-input";
+import { SuggestionChips } from "@/components/search/suggestion-chips";
 import { MinimalNavbar } from "@/components/home/minimal-navbar";
 import { CondensedValueProps } from "@/components/home/condensed-value-props";
 import { PipelineSection } from "@/components/home/pipeline-section";
 import { CTASection } from "@/components/home/cta-section";
 import { Footer } from "@/components/home/footer";
-import { slideUp, staggerContainer } from "@/lib/motion";
+import { slideUp, fadeIn, staggerContainer } from "@/lib/motion";
 import type { SessionStage } from "@/types";
 
 interface HeroChatSectionProps {
@@ -27,7 +28,7 @@ export function HeroChatSection({
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <div className="relative flex min-h-screen flex-col">
+    <section aria-label="Início" className="relative flex min-h-screen flex-col">
       {/* Full-viewport hero area */}
       <div
         className="relative flex min-h-screen flex-col items-center justify-center"
@@ -70,7 +71,7 @@ export function HeroChatSection({
             variants={slideUp}
             className="mb-6 font-mono text-xs uppercase tracking-[0.3em] text-text-muted"
           >
-            AI-Powered Startup Matching
+            Matching de Startups com IA
           </motion.p>
 
           {/* Headline */}
@@ -78,8 +79,8 @@ export function HeroChatSection({
             variants={slideUp}
             className="mb-3 text-center font-heading text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl"
           >
-            O que vamos{" "}
-            <span className="text-gradient">resolver</span>?
+            Encontre a startup ideal para sua{" "}
+            <span className="text-gradient">empresa</span>
           </motion.h1>
 
           {/* Subtitle */}
@@ -100,6 +101,11 @@ export function HeroChatSection({
               variant="hero"
             />
           </motion.div>
+
+          {/* Suggestion chips */}
+          <motion.div variants={fadeIn} className="mt-4 w-full">
+            <SuggestionChips onSelect={onSendMessage} variant="compact" disabled={isStreaming} />
+          </motion.div>
         </motion.div>
 
         {/* Bottom gradient fade */}
@@ -113,6 +119,6 @@ export function HeroChatSection({
         <CTASection />
         <Footer />
       </div>
-    </div>
+    </section>
   );
 }

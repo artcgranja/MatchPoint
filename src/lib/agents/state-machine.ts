@@ -115,7 +115,7 @@ export async function* handleMessage(
     case "analysis":
       yield {
         type: "status",
-        message: "Analise em andamento, aguarde...",
+        message: "Análise em andamento, aguarde...",
       };
       break;
 
@@ -202,7 +202,7 @@ async function* handleDiscoveryMessage(
       },
     });
 
-    yield { type: "status", message: "Descoberta completa! Iniciando analise..." };
+    yield { type: "status", message: "Descoberta completa! Iniciando análise..." };
 
     // Run analysis inline — same SSE stream
     for await (const event of runAnalysis(search.id)) {

@@ -15,6 +15,7 @@ interface DiscoveryStore {
   currentStage: SessionStage;
   messages: DiscoveryMessage[];
   isStreaming: boolean;
+  isLoadingSession: boolean;
 
   setSessionId: (id: string | null) => void;
   setDiscoveryState: (state: DiscoveryState) => void;
@@ -22,6 +23,7 @@ interface DiscoveryStore {
   addMessage: (message: DiscoveryMessage) => void;
   updateLastAssistantMessage: (content: string) => void;
   setIsStreaming: (streaming: boolean) => void;
+  setIsLoadingSession: (loading: boolean) => void;
   setMessages: (messages: DiscoveryMessage[]) => void;
   reset: () => void;
 }
@@ -34,6 +36,7 @@ export const useDiscoveryStore = create<DiscoveryStore>()(
       currentStage: "discovery",
       messages: [],
       isStreaming: false,
+      isLoadingSession: false,
 
       setSessionId: (sessionId) => set({ sessionId }),
 
@@ -60,6 +63,8 @@ export const useDiscoveryStore = create<DiscoveryStore>()(
 
       setIsStreaming: (isStreaming) => set({ isStreaming }),
 
+      setIsLoadingSession: (isLoadingSession) => set({ isLoadingSession }),
+
       setMessages: (messages) => set({ messages }),
 
       reset: () =>
@@ -69,6 +74,7 @@ export const useDiscoveryStore = create<DiscoveryStore>()(
           currentStage: "discovery",
           messages: [],
           isStreaming: false,
+          isLoadingSession: false,
         }),
     }),
     {

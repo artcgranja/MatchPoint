@@ -8,41 +8,42 @@ const suggestions = [
   {
     icon: Building2,
     label: "Varejo + IA",
-    text: "Somos uma rede de varejo com 200 lojas e precisamos de automacao com IA",
+    text: "Somos uma rede de varejo com 200 lojas e precisamos de automação com IA",
   },
   {
     icon: Heart,
     label: "Telemedicina",
-    text: "Hospital de medio porte buscando solucoes de telemedicina",
+    text: "Hospital de médio porte buscando soluções de telemedicina",
   },
   {
     icon: Shield,
     label: "Antifraude",
-    text: "Fintech precisando de solucao antifraude em tempo real",
+    text: "Fintech precisando de solução antifraude em tempo real",
   },
   {
     icon: Truck,
-    label: "Logistica",
-    text: "Empresa de logistica buscando otimizacao de rotas com IA",
+    label: "Logística",
+    text: "Empresa de logística buscando otimização de rotas com IA",
   },
   {
     icon: GraduationCap,
-    label: "Educacao",
-    text: "Rede de educacao precisando de plataforma de ensino adaptativo",
+    label: "Educação",
+    text: "Rede de educação precisando de plataforma de ensino adaptativo",
   },
   {
     icon: Leaf,
     label: "Sustentabilidade",
-    text: "Industria buscando solucoes de gestao energetica e ESG",
+    text: "Indústria buscando soluções de gestão energética e ESG",
   },
 ];
 
 interface SuggestionChipsProps {
   onSelect?: (suggestion: string) => void;
   variant?: "default" | "compact";
+  disabled?: boolean;
 }
 
-export function SuggestionChips({ onSelect, variant = "default" }: SuggestionChipsProps) {
+export function SuggestionChips({ onSelect, variant = "default", disabled }: SuggestionChipsProps) {
   if (variant === "compact") {
     return (
       <motion.div
@@ -56,7 +57,8 @@ export function SuggestionChips({ onSelect, variant = "default" }: SuggestionChi
             key={s.label}
             variants={fadeIn}
             onClick={() => onSelect?.(s.text)}
-            className="group flex items-center gap-2 rounded-full border border-border-base bg-surface px-3 py-1.5 text-xs font-medium text-foreground-muted transition-all hover:border-highlight/30 hover:text-foreground hover:bg-surface-hover"
+            disabled={disabled}
+            className="group flex items-center gap-2 rounded-full border border-border-base bg-surface px-3 py-1.5 text-xs font-medium text-foreground-muted transition-all hover:border-highlight/30 hover:text-foreground hover:bg-surface-hover disabled:pointer-events-none disabled:opacity-50"
           >
             <s.icon className="h-3 w-3" />
             {s.label}
@@ -78,7 +80,8 @@ export function SuggestionChips({ onSelect, variant = "default" }: SuggestionChi
           key={s.label}
           variants={fadeIn}
           onClick={() => onSelect?.(s.text)}
-          className="group flex items-start gap-3 rounded-xl border border-border bg-background-secondary/30 p-3 text-left transition-all hover:border-highlight/30 hover:bg-highlight/5"
+          disabled={disabled}
+          className="group flex items-start gap-3 rounded-xl border border-border bg-background-secondary/30 p-3 text-left transition-all hover:border-highlight/30 hover:bg-highlight/5 disabled:pointer-events-none disabled:opacity-50"
         >
           <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-highlight/10 text-highlight transition-colors group-hover:bg-highlight/20">
             <s.icon className="h-4 w-4" />
