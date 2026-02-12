@@ -4,25 +4,22 @@ import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { WarpShaderBackground } from "@/components/ui/warp-shader-background";
 import { ChatInput } from "@/components/discovery/chat-input";
-import { SuggestionChips } from "@/components/search/suggestion-chips";
 import { MinimalNavbar } from "@/components/home/minimal-navbar";
 import { CondensedValueProps } from "@/components/home/condensed-value-props";
 import { PipelineSection } from "@/components/home/pipeline-section";
 import { CTASection } from "@/components/home/cta-section";
 import { Footer } from "@/components/home/footer";
-import { slideUp, fadeIn, staggerContainer } from "@/lib/motion";
+import { slideUp, staggerContainer } from "@/lib/motion";
 import type { SessionStage } from "@/types";
 
 interface HeroChatSectionProps {
   onSendMessage: (text: string) => void;
-  onChipSelect: (suggestion: string) => void;
   isStreaming: boolean;
   currentStage: SessionStage;
 }
 
 export function HeroChatSection({
   onSendMessage,
-  onChipSelect,
   isStreaming,
   currentStage,
 }: HeroChatSectionProps) {
@@ -37,17 +34,25 @@ export function HeroChatSection({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Shader or static gradient background */}
+        {/* Shader — full area, masked to fade from bottom (visible) to top (transparent) */}
         {prefersReducedMotion ? (
           <div
             className="absolute inset-0 z-0"
             style={{
               background:
-                "radial-gradient(ellipse at 50% 40%, hsl(217, 91%, 20%) 0%, hsl(215, 50%, 10%) 50%, hsl(215, 25%, 8%) 100%)",
+                "radial-gradient(ellipse at 50% 80%, hsl(217, 91%, 20%) 0%, hsl(215, 50%, 10%) 40%, transparent 70%)",
             }}
           />
         ) : (
-          <WarpShaderBackground isHovered={isHovered} />
+          <div
+            className="absolute inset-0 z-0"
+            style={{
+              maskImage: "linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(0,0,0,0.05) 55%, rgba(0,0,0,0.12) 65%, rgba(0,0,0,0.3) 78%, rgba(0,0,0,0.6) 88%, black 96%)",
+              WebkitMaskImage: "linear-gradient(to bottom, transparent 0%, transparent 40%, rgba(0,0,0,0.05) 55%, rgba(0,0,0,0.12) 65%, rgba(0,0,0,0.3) 78%, rgba(0,0,0,0.6) 88%, black 96%)",
+            }}
+          >
+            <WarpShaderBackground isHovered={isHovered} />
+          </div>
         )}
 
         {/* Minimal navbar */}
@@ -92,13 +97,8 @@ export function HeroChatSection({
               onSend={onSendMessage}
               disabled={isStreaming}
               currentStage={currentStage}
-              variant="welcome"
+              variant="hero"
             />
-          </motion.div>
-
-          {/* Suggestion chips */}
-          <motion.div variants={fadeIn} className="mt-4 w-full">
-            <SuggestionChips onSelect={onChipSelect} variant="compact" />
           </motion.div>
         </motion.div>
 

@@ -17,7 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthProvider>
-    <div className="flex h-screen overflow-hidden">
+    <div className={`flex h-screen ${chatIsActive ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden"}`}>
       <AnimatePresence initial={false}>
         {showSidebar && (
           <motion.div
@@ -32,7 +32,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </motion.div>
         )}
       </AnimatePresence>
-      <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <main className={`flex flex-1 flex-col ${chatIsActive ? "min-h-0 overflow-hidden" : "min-h-screen"}`}>
         {children}
       </main>
     </div>

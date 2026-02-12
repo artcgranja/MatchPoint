@@ -1,3 +1,4 @@
+import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { signToken } from "@/lib/auth";
@@ -22,14 +23,15 @@ export async function GET(request: Request) {
   const state = url.searchParams.get("state");
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
 
+  // Read state cookie for CSRF validation
   const cookieStore = await cookies();
   const storedState = cookieStore.get("github_oauth_state")?.value ?? null;
 
   if (!code || !state || !storedState || state !== storedState) {
-    return Response.redirect(`${appUrl}/login?error=invalid_state`);
+    const response = NextResponse.redirect(`${appUrl}/login?error=invalid_state`);
+    response.cookies.delete("github_oauth_state");
+    return response;
   }
-
-  cookieStore.delete("github_oauth_state");
 
   // Exchange code for access token
   const tokenResponse = await fetch(
@@ -50,7 +52,9 @@ export async function GET(request: Request) {
 
   const tokenData = await tokenResponse.json();
   if (tokenData.error) {
-    return Response.redirect(`${appUrl}/login?error=token_exchange`);
+    const response = NextResponse.redirect(`${appUrl}/login?error=token_exchange`);
+    response.cookies.delete("github_oauth_state");
+    return response;
   }
 
   const accessToken = tokenData.access_token as string;
@@ -61,7 +65,7 @@ export async function GET(request: Request) {
   });
   const githubUser: GitHubUser = await userResponse.json();
 
-  // Fetch primary email if not public
+  // Fetch primary verified email if not public
   let email = githubUser.email;
   if (!email) {
     const emailsResponse = await fetch("https://api.github.com/user/emails", {
@@ -69,11 +73,14 @@ export async function GET(request: Request) {
     });
     const emails: GitHubEmail[] = await emailsResponse.json();
     const primary = emails.find((e) => e.primary && e.verified);
-    email = primary?.email ?? emails[0]?.email ?? null;
+    const verified = emails.find((e) => e.verified);
+    email = primary?.email ?? verified?.email ?? null;
   }
 
   if (!email) {
-    return Response.redirect(`${appUrl}/login?error=no_email`);
+    const response = NextResponse.redirect(`${appUrl}/login?error=no_email`);
+    response.cookies.delete("github_oauth_state");
+    return response;
   }
 
   // Find or create user
@@ -118,10 +125,12 @@ export async function GET(request: Request) {
     });
   }
 
-  // Issue JWT
+  // Issue JWT and redirect to home
   const token = await signToken({ userId: user.id, email: user.email });
 
-  cookieStore.set("token", token, {
+  const response = NextResponse.redirect(`${appUrl}/`);
+
+  response.cookies.set("token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -129,5 +138,7 @@ export async function GET(request: Request) {
     path: "/",
   });
 
-  return Response.redirect(`${appUrl}/search`);
+  response.cookies.delete("github_oauth_state");
+
+  return response;
 }

@@ -125,7 +125,6 @@ export default function HomePage() {
         >
           <HeroChatSection
             onSendMessage={handleSendMessage}
-            onChipSelect={handleChipSelect}
             isStreaming={isStreaming}
             currentStage={currentStage}
           />

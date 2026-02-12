@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser } from "@/lib/auth";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await getAuthUser();
+  if (!auth) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
 
   const session = await prisma.discoverySession.findUnique({
@@ -29,6 +35,10 @@ export async function GET(
 
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
+  }
+
+  if (session.userId !== auth.userId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const search = session.searches[0] ?? null;

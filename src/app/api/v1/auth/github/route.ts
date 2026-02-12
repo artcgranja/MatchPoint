@@ -1,17 +1,8 @@
-import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import crypto from "crypto";
 
 export async function GET() {
   const state = crypto.randomBytes(32).toString("hex");
-
-  const cookieStore = await cookies();
-  cookieStore.set("github_oauth_state", state, {
-    path: "/",
-    secure: process.env.NODE_ENV === "production",
-    httpOnly: true,
-    maxAge: 60 * 10,
-    sameSite: "lax",
-  });
 
   const params = new URLSearchParams({
     client_id: process.env.GITHUB_CLIENT_ID!,
@@ -20,7 +11,17 @@ export async function GET() {
     state,
   });
 
-  return Response.redirect(
+  const response = NextResponse.redirect(
     `https://github.com/login/oauth/authorize?${params.toString()}`
   );
+
+  response.cookies.set("github_oauth_state", state, {
+    path: "/",
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    maxAge: 60 * 10,
+    sameSite: "lax",
+  });
+
+  return response;
 }
