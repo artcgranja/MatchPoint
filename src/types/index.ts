@@ -1,46 +1,3 @@
-export type FundingStage =
-  | "Pre-Seed"
-  | "Seed"
-  | "Series A"
-  | "Series B"
-  | "Series C"
-  | "Series D+"
-  | "IPO";
-
-export interface TeamMember {
-  name: string;
-  role: string;
-  avatar: string;
-  linkedin?: string;
-}
-
-export interface StartupMetrics {
-  revenue: number;
-  revenueGrowth: number;
-  customers: number;
-  nps: number;
-  burnRate: number;
-  runway: number;
-}
-
-export interface Startup {
-  id: string;
-  name: string;
-  logo: string;
-  tagline: string;
-  description: string;
-  website: string;
-  founded: number;
-  employees: number;
-  location: string;
-  industries: string[];
-  technologies: string[];
-  fundingStage: FundingStage;
-  totalFunding: number;
-  team: TeamMember[];
-  metrics: StartupMetrics;
-}
-
 export type PipelineStatus = "idle" | "running" | "complete" | "error";
 
 export type AgentName = "Analysis" | "Scout";
@@ -57,14 +14,16 @@ export interface PipelineStage {
 }
 
 export interface StartupCard {
-  id: string;
+  id: number;
   name: string;
-  tagline: string;
-  description: string;
+  oneLiner: string;
   whyRelevant: string;
   industries: string[];
-  fundingStage: string;
+  tags: string[];
+  batch: string;
   location: string;
+  website: string;
+  ycUrl: string;
 }
 
 export interface DiscoveryMessage {

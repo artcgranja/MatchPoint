@@ -33,47 +33,31 @@ model User {
   discoverySessions DiscoverySession[]
 }
 
-model Startup {
-  id            String          @id @default(uuid())
-  name          String
-  logo          String
-  tagline       String
-  description   String
-  website       String
-  founded       Int
-  employees     Int
-  location      String
-  industries    String[]
-  technologies  String[]
-  fundingStage  String
-  totalFunding  Float
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  teamMembers   TeamMember[]
-  metrics       StartupMetrics?
-  searchResults SearchResult[]
-}
-
-model TeamMember {
-  id        String  @id @default(uuid())
-  name      String
-  role      String
-  avatar    String
-  linkedin  String?
-  startupId String
-  startup   Startup @relation(fields: [startupId], references: [id], onDelete: Cascade)
-}
-
-model StartupMetrics {
-  id            String  @id @default(uuid())
-  revenue       Float
-  revenueGrowth Float
-  customers     Int
-  nps           Int
-  burnRate      Float
-  runway        Int
-  startupId     String  @unique
-  startup       Startup @relation(fields: [startupId], references: [id], onDelete: Cascade)
+model Company {
+  id              Int            @id
+  name            String
+  slug            String         @unique
+  oneLiner        String
+  longDescription String
+  website         String
+  smallLogoUrl    String
+  allLocations    String
+  teamSize        Int
+  industry        String
+  subindustry     String
+  industries      String[]
+  tags            String[]
+  batch           String
+  status          String
+  stage           String
+  regions         String[]
+  topCompany      Boolean        @default(false)
+  isHiring        Boolean        @default(false)
+  nonprofit       Boolean        @default(false)
+  launchedAt      Int?
+  ycUrl           String
+  syncedAt        DateTime       @default(now())
+  searchResults   SearchResult[]
 }
 
 model DiscoverySession {
@@ -149,8 +133,8 @@ model SearchResult {
   id                String          @id @default(uuid())
   searchExecutionId String
   searchExecution   SearchExecution @relation(fields: [searchExecutionId], references: [id], onDelete: Cascade)
-  startupId         String
-  startup           Startup         @relation(fields: [startupId], references: [id])
+  companyId         Int
+  company           Company         @relation(fields: [companyId], references: [id])
   matchScore        Float
   confidence        Float
   aiAnalysis        Json

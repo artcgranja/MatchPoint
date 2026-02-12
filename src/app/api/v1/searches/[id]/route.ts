@@ -13,7 +13,7 @@ export async function GET(
       results: {
         orderBy: { rank: "asc" },
         include: {
-          startup: true,
+          company: true,
         },
       },
       stageLogs: { orderBy: { createdAt: "asc" } },
@@ -25,14 +25,16 @@ export async function GET(
   }
 
   const cards = search.results.map((r) => ({
-    id: r.startup.id,
-    name: r.startup.name,
-    tagline: r.startup.tagline,
-    description: r.startup.description,
+    id: r.company.id,
+    name: r.company.name,
+    oneLiner: r.company.oneLiner,
     whyRelevant: (r.aiAnalysis as Record<string, unknown>)?.whyRelevant ?? "",
-    industries: r.startup.industries,
-    fundingStage: r.startup.fundingStage,
-    location: r.startup.location,
+    industries: r.company.industries,
+    tags: r.company.tags,
+    batch: r.company.batch,
+    location: r.company.allLocations,
+    website: r.company.website,
+    ycUrl: r.company.ycUrl,
   }));
 
   return NextResponse.json({

@@ -7,7 +7,7 @@ export interface SessionContext {
   scoutSummary: string | null;
   searchResults: Array<{
     rank: number;
-    startupName: string;
+    companyName: string;
     whyRelevant: string;
   }>;
   postPipelineMessages: Array<{
@@ -25,7 +25,7 @@ export async function assembleSessionContext(
       discoverySession: true,
       results: {
         orderBy: { rank: "asc" },
-        include: { startup: { select: { name: true } } },
+        include: { company: { select: { name: true } } },
       },
       orchestratorMessages: {
         orderBy: { createdAt: "asc" },
@@ -52,7 +52,7 @@ export async function assembleSessionContext(
     } | null;
     return {
       rank: r.rank,
-      startupName: r.startup.name,
+      companyName: r.company.name,
       whyRelevant: analysis?.whyRelevant ?? "",
     };
   });
@@ -94,7 +94,7 @@ ${context.productDocument}
 
   if (context.searchResults.length > 0) {
     const resultsText = context.searchResults
-      .map((r) => `${r.rank}. ${r.startupName} — ${r.whyRelevant}`)
+      .map((r) => `${r.rank}. ${r.companyName} — ${r.whyRelevant}`)
       .join("\n");
     sections.push(`<search_results>
 ${context.scoutSummary ? `Summary: ${context.scoutSummary}\n\n` : ""}${resultsText}

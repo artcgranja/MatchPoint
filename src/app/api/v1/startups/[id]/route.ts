@@ -1,47 +1,46 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import type { Startup as StartupType } from "@/types";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const numericId = Number(id);
 
-  const startup = await prisma.startup.findUnique({
-    where: { id },
-    include: {
-      teamMembers: true,
-      metrics: true,
-    },
-  });
-
-  if (!startup) {
-    return NextResponse.json({ error: "Startup not found" }, { status: 404 });
+  if (isNaN(numericId)) {
+    return NextResponse.json({ error: "Invalid company ID" }, { status: 400 });
   }
 
-  const mapped: StartupType = {
-    id: startup.id,
-    name: startup.name,
-    logo: startup.logo,
-    tagline: startup.tagline,
-    description: startup.description,
-    website: startup.website,
-    founded: startup.founded,
-    employees: startup.employees,
-    location: startup.location,
-    industries: startup.industries,
-    technologies: startup.technologies,
-    fundingStage: startup.fundingStage as StartupType["fundingStage"],
-    totalFunding: startup.totalFunding,
-    team: startup.teamMembers.map((t) => ({
-      name: t.name,
-      role: t.role,
-      avatar: t.avatar,
-      linkedin: t.linkedin ?? undefined,
-    })),
-    metrics: startup.metrics ?? { revenue: 0, revenueGrowth: 0, customers: 0, nps: 0, burnRate: 0, runway: 0 },
-  };
+  const company = await prisma.company.findUnique({
+    where: { id: numericId },
+  });
 
-  return NextResponse.json(mapped);
+  if (!company) {
+    return NextResponse.json({ error: "Company not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    id: company.id,
+    name: company.name,
+    slug: company.slug,
+    oneLiner: company.oneLiner,
+    longDescription: company.longDescription,
+    website: company.website,
+    smallLogoUrl: company.smallLogoUrl,
+    allLocations: company.allLocations,
+    teamSize: company.teamSize,
+    industry: company.industry,
+    subindustry: company.subindustry,
+    industries: company.industries,
+    tags: company.tags,
+    batch: company.batch,
+    status: company.status,
+    stage: company.stage,
+    regions: company.regions,
+    topCompany: company.topCompany,
+    isHiring: company.isHiring,
+    nonprofit: company.nonprofit,
+    ycUrl: company.ycUrl,
+  });
 }

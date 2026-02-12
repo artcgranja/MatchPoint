@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import type { ToolCallEvent } from "@/types";
 
 const TOOL_CONFIG: Record<string, { icon: typeof Search; label: string }> = {
-  search_startups: { icon: Search, label: "Pesquisa de Startups" },
-  get_startup_details: { icon: FileText, label: "Detalhes da Startup" },
+  search_companies: { icon: Search, label: "Pesquisa de Empresas" },
+  get_company_details: { icon: FileText, label: "Detalhes da Empresa" },
 };
 
 interface ToolCallItemProps {

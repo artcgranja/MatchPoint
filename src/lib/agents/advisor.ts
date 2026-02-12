@@ -6,7 +6,7 @@ import {
   type SessionContext,
   buildContextBlock,
 } from "./context";
-import { getStartupDetails, searchStartups } from "./tools";
+import { getCompanyDetails, searchCompanies } from "./tools";
 
 export class AdvisorAgent extends BaseAgent {
   constructor() {
@@ -16,42 +16,54 @@ export class AdvisorAgent extends BaseAgent {
   private buildTools() {
     return [
       betaZodTool({
-        name: "get_startup_details",
+        name: "get_company_details",
         description:
-          "Get full details of a specific startup including team, metrics, and funding. Use when the user asks about a specific startup.",
+          "Get full details of a specific YC company including description, tags, regions, and metadata. Use when the user asks about a specific company.",
         inputSchema: z.object({
-          startupId: z
-            .string()
-            .describe("The startup ID to look up"),
+          companyId: z
+            .number()
+            .describe("The numeric YC company ID"),
         }),
         run: async (input) => {
-          const result = await getStartupDetails(input.startupId);
-          return JSON.stringify(result ?? { error: "Startup not found" });
+          const result = await getCompanyDetails(input.companyId);
+          return JSON.stringify(result ?? { error: "Company not found" });
         },
       }),
       betaZodTool({
-        name: "search_startups",
+        name: "search_companies",
         description:
-          "Search for startups in the database with filters. Use when the user wants to explore different criteria.",
+          "Search YC companies with filters. Use when the user wants to explore different criteria.",
         inputSchema: z.object({
+          query: z
+            .string()
+            .optional()
+            .describe("Text search on name, one-liner, and description"),
           industries: z
             .array(z.string())
             .optional()
             .describe("Filter by industries"),
-          technologies: z
+          tags: z
             .array(z.string())
             .optional()
-            .describe("Filter by technologies"),
-          fundingStages: z
+            .describe("Filter by tags"),
+          status: z
+            .string()
+            .optional()
+            .describe("Filter by status: Active, Inactive, Acquired, or Public"),
+          stage: z
+            .string()
+            .optional()
+            .describe("Filter by stage: Early or Growth"),
+          regions: z
             .array(z.string())
             .optional()
-            .describe("Filter by funding stages"),
-          maxEmployees: z
+            .describe("Filter by regions"),
+          maxTeamSize: z
             .number()
             .optional()
-            .describe("Max number of employees"),
+            .describe("Max team size"),
         }),
-        run: async (input) => JSON.stringify(await searchStartups(input)),
+        run: async (input) => JSON.stringify(await searchCompanies(input)),
       }),
     ];
   }

@@ -261,7 +261,7 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
       await prisma.searchResult.create({
         data: {
           searchExecutionId: searchId,
-          startupId: card.id,
+          companyId: card.id,
           matchScore: 0,
           confidence: 0,
           aiAnalysis: JSON.parse(JSON.stringify({ whyRelevant: card.whyRelevant })),
