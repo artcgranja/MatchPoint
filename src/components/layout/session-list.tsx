@@ -155,13 +155,16 @@ export function SessionList() {
             {group.label}
           </p>
           {group.sessions.map((session) => (
-            <button
+            <div
               key={session.id}
+              role="button"
+              tabIndex={0}
               onClick={() => handleSelect(session.id)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleSelect(session.id); }}
               onMouseEnter={() => setHoveredId(session.id)}
               onMouseLeave={() => setHoveredId(null)}
               className={cn(
-                "group flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors",
+                "group flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm transition-colors",
                 session.id === currentSessionId
                   ? "bg-highlight/10 text-highlight"
                   : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
@@ -187,7 +190,7 @@ export function SessionList() {
                   {getRelativeTime(session.updatedAt)}
                 </span>
               )}
-            </button>
+            </div>
           ))}
         </div>
       ))}

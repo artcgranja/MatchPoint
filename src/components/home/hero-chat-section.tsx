@@ -27,7 +27,7 @@ export function HeroChatSection({
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-y-auto">
+    <div className="relative flex min-h-screen flex-col">
       {/* Full-viewport hero area */}
       <div
         className="relative flex min-h-screen flex-col items-center justify-center"

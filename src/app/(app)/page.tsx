@@ -42,6 +42,7 @@ export default function HomePage() {
     scoutStatus,
     cards,
   } = useAgentPanelStore();
+  const user = useAuthStore((s) => s.user);
   const agentPanelRef = useRef<PanelImperativeHandle>(null);
 
   useEffect(() => {
@@ -68,8 +69,6 @@ export default function HomePage() {
       // Panel not yet registered with group — ignore
     }
   }, [panelOpen]);
-
-  const user = useAuthStore((s) => s.user);
 
   const handleSendMessage = useCallback(
     async (text: string) => {
@@ -103,6 +102,7 @@ export default function HomePage() {
   }, [setPanelOpen]);
 
   const isIdle = discoveryState === "idle";
+  const isLoggedIn = !!user;
   const showPanel = panelOpen || analysisStatus !== "idle" || scoutStatus !== "idle";
   const showPanelToggle = !panelOpen && (analysisStatus !== "idle" || scoutStatus !== "idle");
 
@@ -117,18 +117,34 @@ export default function HomePage() {
   return (
     <AnimatePresence mode="wait" initial={false}>
       {isIdle ? (
-        <motion.div
-          key="hero"
-          exit={{ opacity: 0, scale: 0.98 }}
-          transition={{ duration: 0.3, ease: EASE_OUT_EXPO }}
-          className="h-full"
-        >
-          <HeroChatSection
-            onSendMessage={handleSendMessage}
-            isStreaming={isStreaming}
-            currentStage={currentStage}
-          />
-        </motion.div>
+        isLoggedIn ? (
+          <motion.div
+            key="welcome"
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.3, ease: EASE_OUT_EXPO }}
+            className="flex h-full flex-col"
+          >
+            <ChatWelcome
+              onSendMessage={handleSendMessage}
+              onChipSelect={handleChipSelect}
+              isStreaming={isStreaming}
+              currentStage={currentStage}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="hero"
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.3, ease: EASE_OUT_EXPO }}
+            className="h-full overflow-y-auto"
+          >
+            <HeroChatSection
+              onSendMessage={handleSendMessage}
+              isStreaming={isStreaming}
+              currentStage={currentStage}
+            />
+          </motion.div>
+        )
       ) : (
         <motion.div
           key="chat"
