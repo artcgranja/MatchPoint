@@ -42,13 +42,7 @@ async function logStage(
 export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEvent> {
   const search = await prisma.searchExecution.findUniqueOrThrow({
     where: { id: searchId },
-    include: {
-      discoverySession: {
-        include: {
-          messages: { orderBy: { createdAt: "asc" } },
-        },
-      },
-    },
+    include: { discoverySession: true },
   });
 
   await prisma.searchExecution.update({
@@ -57,12 +51,23 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
   });
 
   try {
-    if (!search.discoverySession?.messages?.length) {
+    if (!search.discoverySession) {
+      throw new Error("No discovery conversation found for this search");
+    }
+
+    // Load transcript messages with safety cap
+    const transcriptMessages = await prisma.discoveryMessage.findMany({
+      where: { sessionId: search.discoverySession.id },
+      orderBy: { createdAt: "asc" },
+      take: 200,
+    });
+
+    if (!transcriptMessages.length) {
       throw new Error("No discovery conversation found for this search");
     }
 
     // Build conversation transcript from discovery messages
-    const conversationTranscript = search.discoverySession.messages
+    const conversationTranscript = transcriptMessages
       .map((m) => `${m.role}: ${m.content}`)
       .join("\n\n");
 
@@ -260,18 +265,17 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
       message: `${scoutResult.cards.length} startups encontradas`,
     };
 
-    // Save Results to Database
-    for (let i = 0; i < scoutResult.cards.length; i++) {
-      const card = scoutResult.cards[i];
-      await prisma.searchResult.create({
-        data: {
+    // Save Results to Database (batch insert)
+    if (scoutResult.cards.length > 0) {
+      await prisma.searchResult.createMany({
+        data: scoutResult.cards.map((card, i) => ({
           searchExecutionId: searchId,
           companyId: card.id,
           matchScore: 0,
           confidence: 0,
-          aiAnalysis: JSON.parse(JSON.stringify({ whyRelevant: card.whyRelevant })),
+          aiAnalysis: { whyRelevant: card.whyRelevant } as never,
           rank: i + 1,
-        },
+        })),
       });
     }
 

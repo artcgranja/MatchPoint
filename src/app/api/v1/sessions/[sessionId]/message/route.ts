@@ -23,6 +23,13 @@ export async function POST(
     );
   }
 
+  if (message.length > 10_000) {
+    return NextResponse.json(
+      { error: "Message too long (max 10000 characters)" },
+      { status: 400 }
+    );
+  }
+
   const session = await prisma.discoverySession.findUnique({
     where: { id: sessionId },
   });
@@ -42,25 +49,39 @@ export async function POST(
   }
 
   const encoder = new TextEncoder();
+  const abortController = new AbortController();
+  const { signal } = abortController;
 
   const stream = new ReadableStream({
     async start(controller) {
       const send = (data: object) => {
-        controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
-        );
+        if (signal.aborted || controller.desiredSize === null) return;
+        try {
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
+          );
+        } catch {
+          abortController.abort();
+        }
       };
 
       const sendEvent = (event: string, data: object) => {
-        controller.enqueue(
-          encoder.encode(
-            `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
-          )
-        );
+        if (signal.aborted || controller.desiredSize === null) return;
+        try {
+          controller.enqueue(
+            encoder.encode(
+              `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
+            )
+          );
+        } catch {
+          abortController.abort();
+        }
       };
 
       try {
         for await (const event of handleMessage(sessionId, message)) {
+          if (signal.aborted) break;
+
           switch (event.type) {
             case "text":
               send({ text: event.text });
@@ -112,12 +133,19 @@ export async function POST(
           }
         }
       } catch (error) {
-        const msg =
-          error instanceof Error ? error.message : "Internal error";
-        send({ error: msg });
+        if (!signal.aborted) {
+          const msg =
+            error instanceof Error ? error.message : "Internal error";
+          send({ error: msg });
+        }
       } finally {
-        controller.close();
+        if (!signal.aborted) {
+          controller.close();
+        }
       }
+    },
+    cancel() {
+      abortController.abort();
     },
   });
 

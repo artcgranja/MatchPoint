@@ -15,14 +15,20 @@ interface AnalysisTabProps {
 }
 
 export function AnalysisTab({ onConfirm }: AnalysisTabProps) {
-  const { analysisStatus, thinkingText, planText } = useAgentPanelStore();
+  const analysisStatus = useAgentPanelStore((s) => s.analysisStatus);
+  const thinkingText = useAgentPanelStore((s) => s.thinkingText);
+  const planText = useAgentPanelStore((s) => s.planText);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = scrollRef.current;
-    if (el) {
+    if (!el) return;
+
+    const rafId = requestAnimationFrame(() => {
       el.scrollTop = el.scrollHeight;
-    }
+    });
+
+    return () => cancelAnimationFrame(rafId);
   }, [thinkingText, planText]);
 
   return (

@@ -42,6 +42,11 @@ interface AgentPanelStore {
   updateToolCall: (id: string, update: Partial<ToolCallEvent>) => void;
   setCards: (cards: StartupCard[], summary: string) => void;
 
+  // Batch update (single set() call for multiple fields)
+  batchUpdate: (partial: Partial<Pick<AgentPanelStore,
+    'panelOpen' | 'activeTab' | 'analysisStatus' | 'thinkingText' | 'planText' |
+    'scoutStatus' | 'scoutProgress' | 'scoutMessage' | 'toolCalls' | 'cards' | 'scoutSummary'>>) => void;
+
   // Reset
   reset: () => void;
 }
@@ -89,6 +94,9 @@ export const useAgentPanelStore = create<AgentPanelStore>()((set) => ({
     })),
   setCards: (cards, scoutSummary) =>
     set({ cards, scoutSummary }),
+
+  // Batch update (single set() call for multiple fields)
+  batchUpdate: (partial) => set(partial),
 
   // Reset
   reset: () => set(initialState),

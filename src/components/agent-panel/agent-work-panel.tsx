@@ -15,7 +15,7 @@ interface AgentWorkPanelProps {
 }
 
 function AnalysisStatusDot() {
-  const { analysisStatus } = useAgentPanelStore();
+  const analysisStatus = useAgentPanelStore((s) => s.analysisStatus);
   if (analysisStatus === "idle") return null;
 
   if (analysisStatus === "complete" || analysisStatus === "confirmed") {
@@ -25,13 +25,14 @@ function AnalysisStatusDot() {
 }
 
 function ScoutStatusDot() {
-  const { scoutStatus, cards } = useAgentPanelStore();
+  const scoutStatus = useAgentPanelStore((s) => s.scoutStatus);
+  const cardsLength = useAgentPanelStore((s) => s.cards.length);
   if (scoutStatus === "idle") return null;
 
   if (scoutStatus === "complete") {
     return (
       <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-sage/20 px-1 text-[9px] font-bold text-sage">
-        {cards.length}
+        {cardsLength}
       </span>
     );
   }
@@ -42,7 +43,8 @@ function ScoutStatusDot() {
 }
 
 export function AgentWorkPanel({ onConfirm }: AgentWorkPanelProps) {
-  const { activeTab, setActiveTab } = useAgentPanelStore();
+  const activeTab = useAgentPanelStore((s) => s.activeTab);
+  const setActiveTab = useAgentPanelStore((s) => s.setActiveTab);
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">

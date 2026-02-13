@@ -14,6 +14,13 @@ export async function POST(
     return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
 
+  if (message.length > 10_000) {
+    return NextResponse.json(
+      { error: "Message too long (max 10000 characters)" },
+      { status: 400 }
+    );
+  }
+
   const session = await prisma.discoverySession.findUnique({
     where: { id },
     include: { messages: { orderBy: { createdAt: "asc" } } },
