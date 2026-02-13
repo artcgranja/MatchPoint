@@ -45,12 +45,17 @@ export async function GET(
 
   // Determine currentStage from session + search state
   let currentStage: string;
+  let awaitingConfirmation = false;
   if (!session.isComplete) {
     currentStage = "discovery";
   } else if (!search) {
     currentStage = "complete";
   } else if (search.status === "complete") {
     currentStage = "advising";
+  } else if (search.bizPlan && (search.status === "idle" || search.status === "running")) {
+    // BizPlan exists but scout hasn't completed — user needs to approve
+    currentStage = "analysis";
+    awaitingConfirmation = true;
   } else {
     currentStage = "analysis";
   }
@@ -75,6 +80,7 @@ export async function GET(
     id: session.id,
     title: session.title,
     currentStage,
+    awaitingConfirmation,
     isComplete: session.isComplete,
     needSummary: session.bizPlan,
     messages: session.messages.map((m) => ({
