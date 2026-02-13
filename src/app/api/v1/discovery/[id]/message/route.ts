@@ -47,9 +47,13 @@ export async function POST(
     async start(controller) {
       try {
         let fullResponse = "";
-        for await (const chunk of discovery.chat(id, message)) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`));
-          if (chunk.text) fullResponse += chunk.text;
+        for await (const event of discovery.chat(id, message)) {
+          if (event.type === "text") {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: event.text })}\n\n`));
+            fullResponse += event.text;
+          } else if (event.type === "done") {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
+          }
         }
 
         // Save assistant message

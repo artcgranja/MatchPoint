@@ -124,7 +124,11 @@ export async function POST(
               break;
 
             case "status":
-              send({ status: event.message });
+              send({
+                status: event.message,
+                ...(event.key && { statusKey: event.key }),
+                ...(event.params && { statusParams: event.params }),
+              });
               break;
 
             case "error":

@@ -30,7 +30,12 @@ Using your tools, search for YC companies that match this product document. Foll
     const jsonStr = jsonMatch ? jsonMatch[1].trim() : text;
     try {
       const parsed = JSON.parse(jsonStr);
-      return ScoutResultSchema.parse(parsed);
+      const result = ScoutResultSchema.safeParse(parsed);
+      if (!result.success) {
+        console.warn("[Scout] JSON parsed but failed schema validation:", result.error.issues);
+        return null;
+      }
+      return result.data;
     } catch {
       return null;
     }
@@ -42,6 +47,7 @@ Using your tools, search for YC companies that match this product document. Foll
 
     let fullText = "";
     const toolCallNames = new Map<string, string>();
+    const collectedToolResults: { toolName: string; result: string }[] = [];
 
     for await (const event of this.streamWithToolEvents(SCOUT_SYSTEM, messages, tools, { maxIterations: 15, cacheTtl: "1h" })) {
       if (event.type === "text") {
@@ -53,14 +59,21 @@ Using your tools, search for YC companies that match this product document. Foll
       }
       if (event.type === "tool_result") {
         const toolName = toolCallNames.get(event.id) ?? "unknown";
-        let summary = "Concluido";
+        const resultContent = typeof event.result === "string" ? event.result : JSON.stringify(event.result);
+        collectedToolResults.push({ toolName, result: resultContent });
+
+        let summary = "Completed";
         try {
-          const content = typeof event.result === "string" ? event.result : JSON.stringify(event.result);
-          const parsed = JSON.parse(content);
-          if (Array.isArray(parsed)) {
-            summary = `${parsed.length} resultados encontrados`;
+          const parsed = JSON.parse(resultContent);
+          if (parsed && typeof parsed === "object" && "count" in parsed) {
+            // Wrapped search_companies response: { results, count, message? }
+            summary = parsed.count > 0
+              ? `${parsed.count} results found`
+              : (parsed.message ?? "No results");
+          } else if (Array.isArray(parsed)) {
+            summary = `${parsed.length} results found`;
           } else if (typeof parsed === "object" && parsed !== null) {
-            summary = "Detalhes obtidos";
+            summary = "Details retrieved";
           }
         } catch { /* use default summary */ }
         yield { type: "tool_result", toolCallId: event.id, toolName, resultSummary: summary };
@@ -71,9 +84,13 @@ Using your tools, search for YC companies that match this product document. Foll
     if (parsed) {
       yield { type: "result", data: parsed };
     } else {
+      // Include tool results in fallback prompt so Claude has grounding data
+      const toolContext = collectedToolResults
+        .map((tr) => `<tool name="${tr.toolName}">\n${tr.result}\n</tool>`)
+        .join("\n");
       const fallback = await this.invokeStructured(
         SCOUT_SYSTEM,
-        `Extract the startup search results from the following text into the required JSON format:\n\n${fullText}`,
+        `Extract the startup search results from the following text and tool results into the required JSON format. Use ONLY company IDs that appear in the tool results below.\n\n<tool_results>\n${toolContext}\n</tool_results>\n\n<agent_text>\n${fullText}\n</agent_text>`,
         ScoutResultSchema
       );
       yield { type: "result", data: fallback };

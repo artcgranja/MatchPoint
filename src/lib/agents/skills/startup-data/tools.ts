@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
+import { ToolError } from "@anthropic-ai/sdk/resources/beta/messages";
 import { searchCompanies, getCompanyDetails } from "./queries";
 
 /**
@@ -53,7 +54,17 @@ export const tools = [
         .optional()
         .describe("Filter for top YC companies"),
     }),
-    run: async (input) => JSON.stringify(await searchCompanies(input)),
+    run: async (input) => {
+      const results = await searchCompanies(input);
+      const response: { results: typeof results; count: number; message?: string } = {
+        results,
+        count: results.length,
+      };
+      if (results.length === 0) {
+        response.message = "No companies matched these filters. Try broadening your search: remove filters, use different keywords, or search by related industries/tags.";
+      }
+      return JSON.stringify(response);
+    },
   }),
   betaZodTool({
     name: "get_company_details",
@@ -66,7 +77,10 @@ export const tools = [
     }),
     run: async (input) => {
       const result = await getCompanyDetails(input.companyId);
-      return JSON.stringify(result ?? { error: "Company not found" });
+      if (!result) {
+        throw new ToolError(`Company with ID ${input.companyId} does not exist in the database. Do NOT use this ID in your results.`);
+      }
+      return JSON.stringify(result);
     },
   }),
 ];

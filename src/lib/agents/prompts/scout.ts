@@ -45,6 +45,8 @@ Order cards by relevance, best match first. Prioritize quality over quantity —
 </output_format>
 
 <quality_standards>
+CRITICAL — Company IDs: Every "id" in your output MUST be a numeric ID that was returned by search_companies or get_company_details. NEVER fabricate, guess, or modify an ID. If a company was not found via tools, do NOT include it. If get_company_details returned an error for an ID, EXCLUDE that ID entirely.
+
 Every field in every card should come from actual tool results — use exact company IDs, names, and data as returned by the tools.
 
 The whyRelevant field is the most important part of each card. It should connect the company's specific capabilities to the client's specific needs, not generic praise. A strong whyRelevant reads like a recommendation from someone who understands both parties.

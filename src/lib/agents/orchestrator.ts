@@ -10,6 +10,8 @@ export interface PipelineEvent {
   status: string;
   progress: number;
   message: string;
+  key?: string;
+  params?: Record<string, string | number>;
   data?: Record<string, unknown>;
 }
 
@@ -82,7 +84,8 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
       agentName: "Analysis",
       status: "running",
       progress: 0,
-      message: "Preparando plano BizDev...",
+      message: "Preparing BizDev plan...",
+      key: "preparingAnalysis",
     };
     await logStage(searchId, "Analysis", "running", 0, "Starting BizDev analysis...");
 
@@ -133,7 +136,8 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
       agentName: "Analysis",
       status: "complete",
       progress: 100,
-      message: "Plano BizDev concluido",
+      message: "BizDev plan complete",
+      key: "analysisComplete",
       data: { productDocument: fullPlanText },
     };
   } catch (error) {
@@ -182,7 +186,8 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
       agentName: "Scout",
       status: "running",
       progress: 0,
-      message: "Buscando startups...",
+      message: "Searching startups...",
+      key: "searchingStartups",
     };
     await logStage(searchId, "Scout", "running", 0, "Searching startup databases...");
 
@@ -205,8 +210,11 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
           status: "running",
           progress,
           message: event.toolName === "search_startups"
-            ? "Pesquisando base de dados..."
-            : "Analisando detalhes...",
+            ? "Searching database..."
+            : "Analyzing details...",
+          key: event.toolName === "search_startups"
+            ? "searchingDatabase"
+            : "analyzingDetails",
           data: {
             toolCallId: event.toolCallId,
             toolName: event.toolName,
@@ -221,8 +229,11 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
           status: "running",
           progress,
           message: event.toolName === "search_startups"
-            ? "Pesquisando base de dados..."
-            : "Analisando detalhes...",
+            ? "Searching database..."
+            : "Analyzing details...",
+          key: event.toolName === "search_startups"
+            ? "searchingDatabase"
+            : "analyzingDetails",
         };
       }
 
@@ -262,21 +273,45 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
       agentName: "Scout",
       status: "complete",
       progress: 100,
-      message: `${scoutResult.cards.length} startups encontradas`,
+      message: `${scoutResult.cards.length} startups found`,
+      key: "startupsFound",
+      params: { count: scoutResult.cards.length },
     };
 
-    // Save Results to Database (batch insert)
+    // Validate company IDs exist before inserting (defense against hallucinated IDs)
     if (scoutResult.cards.length > 0) {
-      await prisma.searchResult.createMany({
-        data: scoutResult.cards.map((card, i) => ({
-          searchExecutionId: searchId,
-          companyId: card.id,
-          matchScore: 0,
-          confidence: 0,
-          aiAnalysis: { whyRelevant: card.whyRelevant } as never,
-          rank: i + 1,
-        })),
+      const cardIds = scoutResult.cards.map((c) => c.id);
+      const existingCompanies = await prisma.company.findMany({
+        where: { id: { in: cardIds } },
+        select: { id: true },
       });
+      const validIds = new Set(existingCompanies.map((c) => c.id));
+      const invalidIds = cardIds.filter((id) => !validIds.has(id));
+
+      if (invalidIds.length > 0) {
+        console.warn(`[Scout] Hallucinated company IDs filtered out: ${invalidIds.join(", ")}`);
+        await logStage(searchId, "Scout", "running", 95, `Filtered ${invalidIds.length} hallucinated IDs`, {
+          output: { hallucinatedIds: invalidIds, validCount: validIds.size },
+        });
+        // Update scoutResult to contain only valid cards
+        scoutResult = {
+          ...scoutResult,
+          cards: scoutResult.cards.filter((c) => validIds.has(c.id)),
+        };
+      }
+
+      if (scoutResult.cards.length > 0) {
+        await prisma.searchResult.createMany({
+          data: scoutResult.cards.map((card, i) => ({
+            searchExecutionId: searchId,
+            companyId: card.id,
+            matchScore: 0,
+            confidence: 0,
+            aiAnalysis: { whyRelevant: card.whyRelevant } as never,
+            rank: i + 1,
+          })),
+        });
+      }
     }
 
     await prisma.searchExecution.update({
