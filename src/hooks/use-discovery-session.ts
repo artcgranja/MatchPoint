@@ -90,7 +90,16 @@ export function useDiscoverySession() {
           // Restore analysis panel
           if (search.productDocument) {
             appendPlanText(search.productDocument);
-            setAnalysisStatus("confirmed");
+
+            // If awaiting confirmation, show the approval button ("complete")
+            // Otherwise, the user already confirmed ("confirmed")
+            if (session.awaitingConfirmation) {
+              setAnalysisStatus("complete");
+              setPanelOpen(true);
+              setActiveTab("analysis");
+            } else {
+              setAnalysisStatus("confirmed");
+            }
           }
 
           // Restore scout cards
@@ -130,7 +139,9 @@ export function useDiscoverySession() {
         setMessages(msgs);
 
         // Set discovery state based on stage
-        if (session.currentStage === "advising") {
+        if (session.awaitingConfirmation) {
+          setDiscoveryState("processing");
+        } else if (session.currentStage === "advising") {
           setDiscoveryState("advising");
         } else if (session.isComplete) {
           setDiscoveryState("complete");
