@@ -2,52 +2,17 @@
 
 import { useMemo } from "react";
 import { Trash2, MessageSquare, Rocket, FileText, LogIn } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSessions } from "@/hooks/use-sessions";
-import type { SessionItem, SessionPipelineStage } from "@/types";
-
-const STAGE_GROUPS: {
-  stage: SessionPipelineStage;
-  label: string;
-  icon: typeof MessageSquare;
-  color: string;
-}[] = [
-  { stage: "results", label: "Resultados", icon: Rocket, color: "text-green-500" },
-  { stage: "analysis", label: "Análise", icon: FileText, color: "text-amber-400" },
-  { stage: "discovery", label: "Descoberta", icon: MessageSquare, color: "text-blue-400" },
-];
+import type { SessionPipelineStage } from "@/types";
 
 const STAGE_ICON_MAP: Record<SessionPipelineStage, { icon: typeof MessageSquare; color: string }> = {
   discovery: { icon: MessageSquare, color: "text-blue-400" },
   analysis: { icon: FileText, color: "text-amber-400" },
   results: { icon: Rocket, color: "text-green-500" },
 };
-
-function getRelativeTime(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "agora";
-  if (diffMins < 60) return `${diffMins}m atrás`;
-  if (diffHours < 24) return `${diffHours}h atrás`;
-  if (diffDays === 1) return "ontem";
-  if (diffDays < 7) return `${diffDays}d atrás`;
-  return date.toLocaleDateString("pt-BR", { month: "short", day: "numeric" });
-}
-
-function groupByStage(sessions: SessionItem[]) {
-  return STAGE_GROUPS.map((group) => {
-    const items = sessions
-      .filter((s) => s.pipelineStage === group.stage)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-    return { ...group, sessions: items };
-  }).filter((g) => g.sessions.length > 0);
-}
 
 export function SessionList() {
   const {
@@ -58,14 +23,52 @@ export function SessionList() {
     deleteSession,
   } = useSessions();
 
-  const grouped = useMemo(() => groupByStage(sessions), [sessions]);
+  const tHistory = useTranslations("ChatHistory");
+  const tTime = useTranslations("RelativeTime");
+
+  const STAGE_GROUPS: {
+    stage: SessionPipelineStage;
+    label: string;
+    icon: typeof MessageSquare;
+    color: string;
+  }[] = [
+    { stage: "results", label: tHistory("results"), icon: Rocket, color: "text-green-500" },
+    { stage: "analysis", label: tHistory("analysis"), icon: FileText, color: "text-amber-400" },
+    { stage: "discovery", label: tHistory("discovery"), icon: MessageSquare, color: "text-blue-400" },
+  ];
+
+  function getRelativeTime(dateStr: string): string {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return tTime("now");
+    if (diffMins < 60) return tTime("minutesAgo", { minutes: diffMins });
+    if (diffHours < 24) return tTime("hoursAgo", { hours: diffHours });
+    if (diffDays === 1) return tTime("yesterday");
+    if (diffDays < 7) return tTime("daysAgo", { days: diffDays });
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+
+  const grouped = useMemo(() => {
+    return STAGE_GROUPS.map((group) => {
+      const items = sessions
+        .filter((s) => s.pipelineStage === group.stage)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      return { ...group, sessions: items };
+    }).filter((g) => g.sessions.length > 0);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessions, tHistory, tTime]);
 
   if (!user) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-6 text-center">
         <LogIn className="h-5 w-5 text-foreground-muted/50" />
         <p className="text-xs text-foreground-muted/50">
-          Entre para ver seu histórico
+          {tHistory("loginToSeeHistory")}
         </p>
       </div>
     );
@@ -74,7 +77,7 @@ export function SessionList() {
   if (sessions.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center px-4 py-6">
-        <p className="text-xs text-foreground-muted/50">Nenhum chat ainda</p>
+        <p className="text-xs text-foreground-muted/50">{tHistory("noChatsYet")}</p>
       </div>
     );
   }
@@ -119,7 +122,7 @@ export function SessionList() {
                       e.stopPropagation();
                       deleteSession(session.id);
                     }}
-                    aria-label={`Excluir sessão: ${session.title}`}
+                    aria-label={tHistory("deleteSession", { title: session.title })}
                     className="absolute inset-0 flex items-center justify-center rounded text-foreground-muted/50 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                   >
                     <Trash2 className="h-4 w-4" />

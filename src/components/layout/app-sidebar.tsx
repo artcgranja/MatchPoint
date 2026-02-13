@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import {
   Home,
   PanelLeftClose,
@@ -15,6 +14,8 @@ import {
   Monitor,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/utils/user";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -36,6 +37,8 @@ import { SessionList } from "@/components/layout/session-list";
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useTranslations("Navigation");
+  const tCommon = useTranslations("Common");
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggleCollapsed = useSidebarStore((s) => s.toggleCollapsed);
   const { theme, setTheme } = useTheme();
@@ -74,7 +77,7 @@ export function AppSidebar() {
         {collapsed ? (
           <button
             onClick={toggleCollapsed}
-            aria-label="Expandir barra lateral"
+            aria-label={t("expandSidebar")}
             className="rounded-lg p-1 text-foreground-muted transition-colors hover:bg-background-secondary hover:text-foreground"
           >
             <PanelLeft className="h-5 w-5" />
@@ -84,7 +87,7 @@ export function AppSidebar() {
             <Compass className="h-6 w-6 shrink-0 text-highlight" />
             <button
               onClick={toggleCollapsed}
-              aria-label="Recolher barra lateral"
+              aria-label={t("collapseSidebar")}
               className="rounded-lg p-1 text-foreground-muted transition-colors hover:bg-background-secondary hover:text-foreground"
             >
               <PanelLeftClose className="h-4 w-4" />
@@ -106,7 +109,7 @@ export function AppSidebar() {
           )}
         >
           <Home className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>Home</span>}
+          {!collapsed && <span>{t("home")}</span>}
         </Link>
         <Link
           href="/descubra"
@@ -118,7 +121,7 @@ export function AppSidebar() {
           )}
         >
           <Compass className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>Descubra</span>}
+          {!collapsed && <span>{t("discover")}</span>}
         </Link>
       </nav>
 
@@ -158,7 +161,7 @@ export function AppSidebar() {
               <DropdownMenuItem asChild>
                 <Link href="/settings">
                   <Settings className="h-4 w-4" />
-                  Configurações
+                  {t("settings")}
                 </Link>
               </DropdownMenuItem>
               <div className="mx-1 my-1 flex items-center gap-1 rounded-lg bg-background-secondary/50 p-1">
@@ -188,7 +191,7 @@ export function AppSidebar() {
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={logout}>
                 <LogOut className="h-4 w-4" />
-                Sair
+                {tCommon("logout")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -202,7 +205,7 @@ export function AppSidebar() {
             )}
           >
             <LogIn className="h-4 w-4 shrink-0 text-highlight" />
-            {!collapsed && <span>Entrar</span>}
+            {!collapsed && <span>{tCommon("login")}</span>}
           </button>
         )}
 

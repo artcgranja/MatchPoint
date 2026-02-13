@@ -1,9 +1,11 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { motion } from "motion/react";
 import { Compass, ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { apiGet } from "@/lib/api/client";
 import { cardStagger } from "@/lib/motion";
 import { SectionHeader } from "@/components/ui/section-header";
@@ -19,6 +21,7 @@ const LIMIT = 12;
 function DescubraContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const t = useTranslations("Browse");
 
   const page = Number(searchParams.get("page") ?? 1);
 
@@ -106,7 +109,7 @@ function DescubraContent() {
 
       {data && !loading && (
         <p className="text-sm text-foreground-muted">
-          {data.total} {data.total === 1 ? "startup encontrada" : "startups encontradas"}
+          {t("startupsFound", { count: data.total })}
         </p>
       )}
 
@@ -121,8 +124,8 @@ function DescubraContent() {
       {!loading && data && data.data.length === 0 && (
         <EmptyState
           icon={Compass}
-          title="Nenhuma startup encontrada"
-          description="Tente ajustar os filtros ou buscar por outro termo."
+          title={t("noStartupsFound")}
+          description={t("noStartupsHint")}
         />
       )}
 
@@ -150,7 +153,7 @@ function DescubraContent() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="text-sm text-foreground-muted px-3">
-            {page} de {totalPages}
+            {t("pageOf", { page, totalPages })}
           </span>
           <Button
             variant="outline"
@@ -180,11 +183,13 @@ function DescubraFallback() {
 }
 
 export default function DescubraPage() {
+  const t = useTranslations("Browse");
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-6 overflow-y-auto">
       <SectionHeader
-        title="Descubra"
-        description="Explore startups e encontre parceiros ideais para o seu negocio."
+        title={t("title")}
+        description={t("description")}
       />
       <Suspense fallback={<DescubraFallback />}>
         <DescubraContent />

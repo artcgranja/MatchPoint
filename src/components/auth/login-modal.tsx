@@ -2,6 +2,7 @@
 
 import { Compass } from "lucide-react";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -12,13 +13,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { useLoginModalStore } from "@/stores/login-modal-store";
 import { slideUp } from "@/lib/motion";
-
-const ERROR_MESSAGES: Record<string, string> = {
-  invalid_state: "Falha na autenticação. Tente novamente.",
-  token_exchange: "Não foi possível conectar ao GitHub. Tente novamente.",
-  no_email:
-    "Nenhum email encontrado na sua conta GitHub. Verifique se você tem um email verificado.",
-};
 
 function GitHubIcon({ className }: { className?: string }) {
   return (
@@ -34,6 +28,13 @@ function GitHubIcon({ className }: { className?: string }) {
  */
 export function LoginModal() {
   const { open, error, closeLoginModal } = useLoginModalStore();
+  const t = useTranslations("Auth");
+
+  const ERROR_MESSAGES: Record<string, string> = {
+    invalid_state: t("loginError"),
+    token_exchange: t("loginConnectionError"),
+    no_email: t("loginNoEmail"),
+  };
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && closeLoginModal()}>
@@ -54,10 +55,10 @@ export function LoginModal() {
           </motion.div>
 
           <DialogTitle className="text-center">
-            Entre para continuar
+            {t("loginTitle")}
           </DialogTitle>
           <DialogDescription className="text-center">
-            Conecte sua conta GitHub para começar a descobrir startups
+            {t("loginDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -68,8 +69,7 @@ export function LoginModal() {
               role="alert"
               className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive"
             >
-              {ERROR_MESSAGES[error] ??
-                "Ocorreu um erro inesperado. Tente novamente."}
+              {ERROR_MESSAGES[error] ?? t("loginUnexpectedError")}
             </div>
           )}
 
@@ -77,7 +77,7 @@ export function LoginModal() {
           <Button asChild className="w-full gap-2" size="lg">
             <a href="/api/v1/auth/github">
               <GitHubIcon className="h-5 w-5" />
-              Continuar com GitHub
+              {t("continueWithGitHub")}
             </a>
           </Button>
         </div>

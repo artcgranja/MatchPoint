@@ -2,39 +2,16 @@
 
 import { motion } from "motion/react";
 import { Building2, Heart, Shield, Truck, GraduationCap, Leaf } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { staggerContainer, fadeIn } from "@/lib/motion";
 
-const suggestions = [
-  {
-    icon: Building2,
-    label: "Varejo + IA",
-    text: "Somos uma rede de varejo com 200 lojas e precisamos de automação com IA",
-  },
-  {
-    icon: Heart,
-    label: "Telemedicina",
-    text: "Hospital de médio porte buscando soluções de telemedicina",
-  },
-  {
-    icon: Shield,
-    label: "Antifraude",
-    text: "Fintech precisando de solução antifraude em tempo real",
-  },
-  {
-    icon: Truck,
-    label: "Logística",
-    text: "Empresa de logística buscando otimização de rotas com IA",
-  },
-  {
-    icon: GraduationCap,
-    label: "Educação",
-    text: "Rede de educação precisando de plataforma de ensino adaptativo",
-  },
-  {
-    icon: Leaf,
-    label: "Sustentabilidade",
-    text: "Indústria buscando soluções de gestão energética e ESG",
-  },
+const SUGGESTION_ICONS = [
+  { key: "retailAI" as const, promptKey: "retailAIPrompt" as const, icon: Building2 },
+  { key: "telemedicine" as const, promptKey: "telemedicinePrompt" as const, icon: Heart },
+  { key: "antifraud" as const, promptKey: "antifraudPrompt" as const, icon: Shield },
+  { key: "logistics" as const, promptKey: "logisticsPrompt" as const, icon: Truck },
+  { key: "education" as const, promptKey: "educationPrompt" as const, icon: GraduationCap },
+  { key: "sustainability" as const, promptKey: "sustainabilityPrompt" as const, icon: Leaf },
 ];
 
 interface SuggestionChipsProps {
@@ -44,6 +21,14 @@ interface SuggestionChipsProps {
 }
 
 export function SuggestionChips({ onSelect, variant = "default", disabled }: SuggestionChipsProps) {
+  const t = useTranslations("Suggestions");
+
+  const suggestions = SUGGESTION_ICONS.map((s) => ({
+    icon: s.icon,
+    label: t(s.key),
+    text: t(s.promptKey),
+  }));
+
   if (variant === "compact") {
     return (
       <motion.div

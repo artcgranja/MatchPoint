@@ -1,6 +1,7 @@
 "use client";
 
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import { LogIn } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,12 +10,14 @@ import { useLoginModalStore } from "@/stores/login-modal-store";
 import { getInitials } from "@/lib/utils/user";
 
 export function MinimalNavbar() {
+  const tNav = useTranslations("Navigation");
+  const tCommon = useTranslations("Common");
   const { user, isLoading } = useAuth();
 
   const initials = getInitials(user?.name);
 
   return (
-    <nav aria-label="Navegação principal" className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 py-5 sm:px-8">
+    <nav aria-label={tNav("mainNavigation")} className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-6 py-5 sm:px-8">
       <Link href="/" className="group flex items-center">
         <Image
           src="/astro-logo.svg"
@@ -48,7 +51,7 @@ export function MinimalNavbar() {
             className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-text backdrop-blur-sm transition-all duration-300 hover:border-white/20 hover:bg-white/10"
           >
             <LogIn className="h-3.5 w-3.5" />
-            Entrar
+            {tCommon("login")}
           </button>
         )
       )}

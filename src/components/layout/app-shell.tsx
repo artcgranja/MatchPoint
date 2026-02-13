@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/i18n/navigation";
 import { motion, MotionConfig } from "motion/react";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { useDiscoveryStore } from "@/stores/discovery-store";
