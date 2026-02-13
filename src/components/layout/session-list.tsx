@@ -1,6 +1,6 @@
 "use client";
 
-import { Trash2, MessageSquare, CheckCircle2, FileText, LogIn } from "lucide-react";
+import { Trash2, MessageSquare, Rocket, FileText, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSessions } from "@/hooks/use-sessions";
@@ -12,7 +12,7 @@ const STAGE_GROUPS: {
   icon: typeof MessageSquare;
   color: string;
 }[] = [
-  { stage: "results", label: "Resultados", icon: CheckCircle2, color: "text-green-500" },
+  { stage: "results", label: "Resultados", icon: Rocket, color: "text-green-500" },
   { stage: "analysis", label: "Análise", icon: FileText, color: "text-amber-400" },
   { stage: "discovery", label: "Descoberta", icon: MessageSquare, color: "text-blue-400" },
 ];
@@ -20,7 +20,7 @@ const STAGE_GROUPS: {
 const STAGE_ICON_MAP: Record<SessionPipelineStage, { icon: typeof MessageSquare; color: string }> = {
   discovery: { icon: MessageSquare, color: "text-blue-400" },
   analysis: { icon: FileText, color: "text-amber-400" },
-  results: { icon: CheckCircle2, color: "text-green-500" },
+  results: { icon: Rocket, color: "text-green-500" },
 };
 
 function getRelativeTime(dateStr: string): string {

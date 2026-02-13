@@ -5,9 +5,8 @@ import { motion, useReducedMotion } from "motion/react";
 import {
   MessageSquare,
   FileText,
-  CheckCircle2,
+  Rocket,
   Trash2,
-  ChevronDown,
 } from "lucide-react";
 import { WarpShaderBackground } from "@/components/ui/warp-shader-background";
 import { ChatInput } from "@/components/discovery/chat-input";
@@ -35,14 +34,14 @@ const STAGE_CONFIG: Record<
     badgeClass: "bg-amber-500/15 text-amber-400 border-amber-500/20",
   },
   results: {
-    label: "Resultados",
-    icon: CheckCircle2,
+    label: "Scout",
+    icon: Rocket,
     color: "text-green-400",
     badgeClass: "bg-green-500/15 text-green-400 border-green-500/20",
   },
 };
 
-const STAGES: SessionPipelineStage[] = ["discovery", "analysis", "results"];
+const STAGES: SessionPipelineStage[] = ["results", "analysis", "discovery"];
 
 function getRelativeTime(dateStr: string): string {
   const now = new Date();
@@ -125,8 +124,13 @@ export function ChatWelcome({
         )}
       </div>
 
-      {/* Hero section — first viewport, centered */}
-      <div className="relative z-10 flex min-h-full flex-col items-center justify-center">
+      {/* Hero section — shorter when sessions exist so modal peeks into view */}
+      <div
+        className={cn(
+          "relative z-10 flex flex-col items-center justify-center",
+          hasSessions ? "min-h-[85vh]" : "min-h-full"
+        )}
+      >
         <motion.div
           variants={staggerContainer}
           initial="hidden"
@@ -149,19 +153,6 @@ export function ChatWelcome({
               variant="hero"
             />
           </motion.div>
-
-          {/* Scroll hint */}
-          {hasSessions && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.8, duration: 0.5 }}
-              className="mt-8 flex flex-col items-center gap-1 text-foreground-muted/40"
-            >
-              <span className="text-xs">Seus chats anteriores</span>
-              <ChevronDown className="h-4 w-4 animate-bounce" />
-            </motion.div>
-          )}
         </motion.div>
       </div>
 
@@ -169,7 +160,7 @@ export function ChatWelcome({
       {hasSessions && (
         <div className="relative z-10 flex justify-center px-4 pb-8">
           <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-border/60 bg-background/80 shadow-2xl backdrop-blur-xl">
-            <Tabs defaultValue="discovery" className="flex flex-col">
+            <Tabs defaultValue="results" className="flex flex-col">
               {/* Header: title + tab triggers */}
               <div className="border-b border-border/40 px-6 pt-5 pb-3">
                 <h2 className="mb-4 text-base font-semibold text-foreground">

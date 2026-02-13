@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageSquare, FileText, CheckCircle2, Trash2 } from "lucide-react";
+import { MessageSquare, FileText, Rocket, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Drawer,
@@ -31,7 +31,7 @@ const STAGE_CONFIG: Record<
   },
   results: {
     label: "Resultados",
-    icon: CheckCircle2,
+    icon: Rocket,
     color: "text-green-400",
     badgeClass: "bg-green-500/15 text-green-400 border-green-500/20",
   },
