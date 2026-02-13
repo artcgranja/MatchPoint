@@ -1,7 +1,13 @@
-import { BaseAgent } from "./base";
+import { BaseAgent, type ToolStreamEvent } from "./base";
 import { NeedSummarySchema, type NeedSummary } from "./schemas";
 import { DISCOVERY_SYSTEM, DISCOVERY_EXTRACT_SYSTEM } from "./prompts/navigator";
+import { composeToolsForAgent } from "./skills/registry";
 import { prisma } from "@/lib/db";
+
+export type DiscoveryEvent =
+  | { type: "text"; text: string }
+  | { type: "tool_call"; name: string; input: Record<string, unknown> }
+  | { type: "done" };
 
 export class DiscoveryAgent extends BaseAgent {
   constructor() {
@@ -11,7 +17,7 @@ export class DiscoveryAgent extends BaseAgent {
   async *chat(
     sessionId: string,
     userMessage: string
-  ): AsyncGenerator<{ text?: string; done?: boolean }> {
+  ): AsyncGenerator<DiscoveryEvent> {
     // Fetch only the last 20 messages from DB (desc order), then reverse to chronological
     const recentMessages = await prisma.discoveryMessage.findMany({
       where: { sessionId },
@@ -26,24 +32,25 @@ export class DiscoveryAgent extends BaseAgent {
 
     historyMessages.push({ role: "user", content: userMessage });
 
-    let fullResponse = "";
-    for await (const chunk of this.stream(DISCOVERY_SYSTEM, historyMessages)) {
-      fullResponse += chunk;
-      yield { text: chunk };
+    const tools = composeToolsForAgent("discovery");
+    let discoveryComplete = false;
+
+    for await (const event of this.streamWithToolEvents(
+      DISCOVERY_SYSTEM,
+      historyMessages,
+      tools,
+      { maxIterations: 5 }
+    )) {
+      if (event.type === "text") {
+        yield { type: "text", text: event.text };
+      } else if (event.type === "tool_call" && event.name === "complete_discovery") {
+        discoveryComplete = true;
+        yield { type: "tool_call", name: event.name, input: event.input };
+      }
     }
 
-    // Check if discovery is complete
-    if (fullResponse.includes("[DISCOVERY_COMPLETE]")) {
-      const needSummary = await this.extractNeedSummary(sessionId);
-      await prisma.discoverySession.update({
-        where: { id: sessionId },
-        data: {
-          isComplete: true,
-          currentPhase: "complete",
-          bizPlan: JSON.parse(JSON.stringify(needSummary)),
-        },
-      });
-      yield { done: true };
+    if (discoveryComplete) {
+      yield { type: "done" };
     }
   }
 

@@ -31,7 +31,7 @@ export type ConductorEvent =
   | { type: "advisor_text"; text: string }
   | { type: "advisor_done" }
   | { type: "error"; message: string }
-  | { type: "status"; message: string };
+  | { type: "status"; message: string; key?: string; params?: Record<string, string | number> };
 
 // ═══════════════════════════════════════════
 // State Resolution (deterministic, no LLM)
@@ -115,14 +115,16 @@ export async function* handleMessage(
     case "analysis":
       yield {
         type: "status",
-        message: "Análise em andamento, aguarde...",
+        message: "Analysis in progress, please wait...",
+        key: "analysisInProgress",
       };
       break;
 
     case "scouting":
       yield {
         type: "status",
-        message: "Busca de startups em andamento, aguarde...",
+        message: "Startup search in progress, please wait...",
+        key: "scoutInProgress",
       };
       break;
   }
@@ -167,12 +169,14 @@ async function* handleDiscoveryMessage(
   let fullResponse = "";
   let discoveryDone = false;
 
-  for await (const chunk of discovery.chat(sessionId, message)) {
-    if (chunk.text) {
-      fullResponse += chunk.text;
-      yield { type: "text", text: chunk.text };
-    }
-    if (chunk.done) {
+  for await (const event of discovery.chat(sessionId, message)) {
+    if (event.type === "text") {
+      fullResponse += event.text;
+      yield { type: "text", text: event.text };
+    } else if (event.type === "tool_call") {
+      // complete_discovery tool call detected — side effects handled below
+      discoveryDone = true;
+    } else if (event.type === "done") {
       discoveryDone = true;
     }
   }
@@ -191,6 +195,17 @@ async function* handleDiscoveryMessage(
   });
 
   if (discoveryDone) {
+    // Extract NeedSummary and mark session complete
+    const needSummary = await discovery.extractNeedSummary(sessionId);
+    await prisma.discoverySession.update({
+      where: { id: sessionId },
+      data: {
+        isComplete: true,
+        currentPhase: "complete",
+        bizPlan: JSON.parse(JSON.stringify(needSummary)),
+      },
+    });
+
     // Create SearchExecution
     const search = await prisma.searchExecution.create({
       data: {
@@ -202,7 +217,7 @@ async function* handleDiscoveryMessage(
       },
     });
 
-    yield { type: "status", message: "Descoberta completa! Iniciando análise..." };
+    yield { type: "status", message: "Discovery complete! Starting analysis...", key: "discoveryComplete" };
 
     // Run analysis inline — same SSE stream
     for await (const event of runAnalysis(search.id)) {
