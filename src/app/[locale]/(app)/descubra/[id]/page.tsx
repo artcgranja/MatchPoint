@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { useParams } from "next/navigation";
 import { motion } from "motion/react";
 import {
@@ -15,6 +15,7 @@ import {
   CheckCircle,
   TrendingUp,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { apiGet } from "@/lib/api/client";
 import { fadeIn } from "@/lib/motion";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ import type { BrowseCompanyDetail } from "@/types";
 
 export default function DescubraDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const t = useTranslations("Browse");
   const [company, setCompany] = useState<BrowseCompanyDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export default function DescubraDetailPage() {
         if (!cancelled) setCompany(data);
       } catch (err) {
         if (!cancelled)
-          setError(err instanceof Error ? err.message : "Erro ao carregar");
+          setError(err instanceof Error ? err.message : t("errorLoading"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -49,7 +51,7 @@ export default function DescubraDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, t]);
 
   if (loading) {
     return (
@@ -66,13 +68,13 @@ export default function DescubraDetailPage() {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
         <p className="text-foreground-muted">
-          {error ?? "Startup nao encontrada"}
+          {error ?? t("startupNotFound")}
         </p>
         <Link
           href="/descubra"
           className="text-sm text-highlight hover:underline"
         >
-          Voltar para Descubra
+          {t("backToDiscover")}
         </Link>
       </div>
     );
@@ -86,7 +88,7 @@ export default function DescubraDetailPage() {
         className="flex items-center gap-1.5 text-sm text-foreground-muted hover:text-foreground transition-colors w-fit"
       >
         <ArrowLeft className="h-4 w-4" />
-        Voltar para Descubra
+        {t("backToDiscover")}
       </Link>
 
       <motion.div
@@ -130,7 +132,7 @@ export default function DescubraDetailPage() {
                   className="border-green-500/30 text-green-400"
                 >
                   <CheckCircle className="h-3 w-3" />
-                  Ativa
+                  {t("statusActive")}
                 </Badge>
               )}
               {company.status !== "Active" && (
@@ -163,7 +165,7 @@ export default function DescubraDetailPage() {
         {/* Description */}
         <div className="space-y-2">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-muted">
-            Sobre
+            {t("about")}
           </h2>
           <p className="text-sm leading-relaxed text-foreground/90">
             {company.longDescription}
@@ -179,7 +181,7 @@ export default function DescubraDetailPage() {
             <div className="flex items-center gap-1.5">
               <MapPin className="h-3.5 w-3.5 text-foreground-muted" />
               <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-                Localizacao
+                {t("location")}
               </h3>
             </div>
             <p className="text-sm text-foreground/90">
@@ -192,11 +194,11 @@ export default function DescubraDetailPage() {
             <div className="flex items-center gap-1.5">
               <Users className="h-3.5 w-3.5 text-foreground-muted" />
               <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-                Equipe
+                {t("team")}
               </h3>
             </div>
             <p className="text-sm text-foreground/90">
-              {company.teamSize} {company.teamSize === 1 ? "membro" : "membros"}
+              {t("memberCount", { count: company.teamSize })}
             </p>
           </div>
 
@@ -205,7 +207,7 @@ export default function DescubraDetailPage() {
             <div className="flex items-center gap-1.5">
               <Briefcase className="h-3.5 w-3.5 text-foreground-muted" />
               <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-                Industria
+                {t("industry")}
               </h3>
             </div>
             <p className="text-sm text-foreground/90">
@@ -220,7 +222,7 @@ export default function DescubraDetailPage() {
               <div className="flex items-center gap-1.5">
                 <Globe className="h-3.5 w-3.5 text-foreground-muted" />
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
-                  Regioes
+                  {t("regions")}
                 </h3>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -239,7 +241,7 @@ export default function DescubraDetailPage() {
         {/* Industries */}
         <div className="space-y-2">
           <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-muted">
-            Industrias
+            {t("industries")}
           </h2>
           <div className="flex flex-wrap gap-1.5">
             {company.industries.map((industry) => (
@@ -261,7 +263,7 @@ export default function DescubraDetailPage() {
               <div className="flex items-center gap-1.5">
                 <Tag className="h-3.5 w-3.5 text-foreground-muted" />
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground-muted">
-                  Tags
+                  {t("tags")}
                 </h2>
               </div>
               <div className="flex flex-wrap gap-1.5">
@@ -290,7 +292,7 @@ export default function DescubraDetailPage() {
               className="flex items-center gap-1.5 text-sm text-highlight hover:underline"
             >
               <Globe className="h-4 w-4" />
-              Website
+              {t("website")}
             </a>
           )}
           {company.ycUrl && (
@@ -301,7 +303,7 @@ export default function DescubraDetailPage() {
               className="flex items-center gap-1.5 text-sm text-highlight hover:underline"
             >
               <ExternalLink className="h-4 w-4" />
-              YC Profile
+              {t("ycProfile")}
             </a>
           )}
         </div>

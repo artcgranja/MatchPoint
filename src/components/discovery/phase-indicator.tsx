@@ -1,13 +1,14 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import type { SessionStage, AgentPanelTab } from "@/types";
 
-const STAGES: { key: SessionStage; label: string; panelTab?: AgentPanelTab }[] = [
-  { key: "discovery", label: "Discovery" },
-  { key: "analysis", label: "Analysis", panelTab: "analysis" },
-  { key: "scout", label: "Scout", panelTab: "scout" },
+const STAGES: { key: SessionStage; labelKey: "discovery" | "analysis" | "scout"; panelTab?: AgentPanelTab }[] = [
+  { key: "discovery", labelKey: "discovery" },
+  { key: "analysis", labelKey: "analysis", panelTab: "analysis" },
+  { key: "scout", labelKey: "scout", panelTab: "scout" },
 ];
 
 const STAGE_ORDER: SessionStage[] = ["discovery", "analysis", "scout", "complete", "advising"];
@@ -17,6 +18,7 @@ interface StageIndicatorProps {
 }
 
 export function StageIndicator({ currentStage }: StageIndicatorProps) {
+  const t = useTranslations("Stages");
   const currentIdx = STAGE_ORDER.indexOf(currentStage);
   const { analysisStatus, scoutStatus, setPanelOpen, setActiveTab } =
     useAgentPanelStore();
@@ -60,7 +62,7 @@ export function StageIndicator({ currentStage }: StageIndicatorProps) {
               !clickable && "cursor-default"
             )}
           >
-            {stage.label}
+            {t(stage.labelKey)}
           </button>
         );
       })}

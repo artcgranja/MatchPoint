@@ -2,12 +2,14 @@
 
 import { useRef, useEffect } from "react";
 import { Loader2, Rocket } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { ScoutProgressBar } from "./scout-progress-bar";
 import { ToolCallLog } from "./tool-call-log";
 import { ScoutCardGrid } from "./scout-card-grid";
 
 export function ScoutTab() {
+  const t = useTranslations("AgentPanel");
   const { scoutStatus, cards } = useAgentPanelStore();
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -25,7 +27,7 @@ export function ScoutTab() {
           <Rocket className="h-5 w-5 text-foreground-muted/40" />
         </div>
         <p className="text-xs text-foreground-muted/60">
-          A busca de startups iniciará após confirmar a análise.
+          {t("scoutWaiting")}
         </p>
       </div>
     );
@@ -44,7 +46,7 @@ export function ScoutTab() {
         {scoutStatus === "searching" && cards.length === 0 && (
           <div className="flex items-center justify-center gap-2 px-4 py-8 text-xs text-foreground-muted">
             <Loader2 className="h-3.5 w-3.5 animate-spin text-highlight" />
-            <span>Buscando startups...</span>
+            <span>{t("searchingStartups")}</span>
           </div>
         )}
       </div>

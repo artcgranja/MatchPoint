@@ -4,6 +4,7 @@ import { motion } from "motion/react";
 import { Info, Rocket } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { code } from "@streamdown/code";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { slideUp } from "@/lib/motion";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
@@ -19,6 +20,7 @@ function stripMarkers(text: string) {
 }
 
 export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
+  const t = useTranslations("Chat");
   const isUser = message.role === "user";
 
   // Stage update messages
@@ -55,7 +57,7 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
           className="flex items-center gap-2 rounded-full bg-background-secondary/60 px-4 py-1.5 text-xs text-foreground-muted hover:text-foreground transition-colors"
         >
           <Rocket className="h-3.5 w-3.5" />
-          {message.cards.length} startups encontradas — ver no painel →
+          {t("startupsFound", { count: message.cards.length })}
         </button>
       </motion.div>
     );

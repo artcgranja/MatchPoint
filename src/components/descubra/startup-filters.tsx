@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { Search, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,18 +14,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-const STATUS_OPTIONS = [
-  { value: "Active", label: "Ativa" },
-  { value: "Inactive", label: "Inativa" },
-  { value: "Acquired", label: "Adquirida" },
-  { value: "Public", label: "Publica" },
-];
-
-const STAGE_OPTIONS = [
-  { value: "Early", label: "Early Stage" },
-  { value: "Growth", label: "Growth" },
-];
 
 interface StartupFiltersProps {
   availableIndustries: string[];
@@ -39,6 +29,8 @@ export function StartupFilters({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [, startTransition] = useTransition();
+  const t = useTranslations("Browse");
+  const tCommon = useTranslations("Common");
 
   const query = searchParams.get("query") ?? "";
   const status = searchParams.get("status") ?? "";
@@ -49,6 +41,18 @@ export function StartupFilters({
   useEffect(() => {
     setSearchValue(query);
   }, [query]);
+
+  const STATUS_OPTIONS = [
+    { value: "Active", label: t("statusActive") },
+    { value: "Inactive", label: t("statusInactive") },
+    { value: "Acquired", label: t("statusAcquired") },
+    { value: "Public", label: t("statusPublic") },
+  ];
+
+  const STAGE_OPTIONS = [
+    { value: "Early", label: t("stageEarly") },
+    { value: "Growth", label: t("stageGrowth") },
+  ];
 
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
@@ -96,7 +100,7 @@ export function StartupFilters({
       <div className="relative w-full sm:w-64">
         <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground-muted" />
         <Input
-          placeholder="Buscar startups..."
+          placeholder={t("searchPlaceholder")}
           value={searchValue}
           onChange={(e) => setSearchValue(e.target.value)}
           className="pl-9 h-9 bg-background-secondary/50 border-border"
@@ -110,7 +114,7 @@ export function StartupFilters({
           onValueChange={(v) => updateParams({ industries: v })}
         >
           <SelectTrigger size="sm">
-            <SelectValue placeholder="Industria" />
+            <SelectValue placeholder={t("filterIndustry")} />
           </SelectTrigger>
           <SelectContent>
             {availableIndustries.map((ind) => (
@@ -129,7 +133,7 @@ export function StartupFilters({
           onValueChange={(v) => updateParams({ tags: v })}
         >
           <SelectTrigger size="sm">
-            <SelectValue placeholder="Tag" />
+            <SelectValue placeholder={t("filterTag")} />
           </SelectTrigger>
           <SelectContent>
             {availableTags.map((tag) => (
@@ -147,7 +151,7 @@ export function StartupFilters({
         onValueChange={(v) => updateParams({ status: v })}
       >
         <SelectTrigger size="sm">
-          <SelectValue placeholder="Status" />
+          <SelectValue placeholder={t("filterStatus")} />
         </SelectTrigger>
         <SelectContent>
           {STATUS_OPTIONS.map((opt) => (
@@ -164,7 +168,7 @@ export function StartupFilters({
         onValueChange={(v) => updateParams({ stage: v })}
       >
         <SelectTrigger size="sm">
-          <SelectValue placeholder="Estagio" />
+          <SelectValue placeholder={t("filterStage")} />
         </SelectTrigger>
         <SelectContent>
           {STAGE_OPTIONS.map((opt) => (
@@ -182,7 +186,7 @@ export function StartupFilters({
           onValueChange={(v) => updateParams({ regions: v })}
         >
           <SelectTrigger size="sm">
-            <SelectValue placeholder="Regiao" />
+            <SelectValue placeholder={t("filterRegion")} />
           </SelectTrigger>
           <SelectContent>
             {availableRegions.map((r) => (
@@ -203,7 +207,7 @@ export function StartupFilters({
           className="text-foreground-muted hover:text-foreground"
         >
           <X className="h-3.5 w-3.5 mr-1" />
-          Limpar
+          {tCommon("clear")}
         </Button>
       )}
     </div>

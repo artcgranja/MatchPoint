@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import type { SessionItem } from "@/types";
 import { useAuthStore } from "@/stores/auth-store";
 import { useDiscoveryStore } from "@/stores/discovery-store";

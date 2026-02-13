@@ -21,10 +21,12 @@ import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useLoginModalStore } from "@/stores/login-modal-store";
 import { useSessions } from "@/hooks/use-sessions";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 
 export default function HomePage() {
+  const t = useTranslations("Chat");
   const {
     sessionId,
     discoveryState,
@@ -60,7 +62,7 @@ export default function HomePage() {
   useEffect(() => {
     if (sessionId && discoveryState === "idle" && messages.length === 0) {
       loadSession(sessionId).catch(() => {
-        toast.error("Sessão não encontrada");
+        toast.error(t("sessionNotFound"));
         reset();
       });
     }
@@ -122,7 +124,7 @@ export default function HomePage() {
             className="flex h-full flex-col items-center justify-center gap-3"
           >
             <Loader2 className="h-6 w-6 animate-spin text-highlight" />
-            <p className="text-sm text-foreground-muted">Carregando chat...</p>
+            <p className="text-sm text-foreground-muted">{t("loadingChat")}</p>
           </motion.div>
         ) : isLoggedIn ? (
           <motion.div

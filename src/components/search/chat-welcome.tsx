@@ -8,6 +8,7 @@ import {
   Rocket,
   Trash2,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { WarpShaderBackground } from "@/components/ui/warp-shader-background";
 import { ChatInput } from "@/components/discovery/chat-input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,24 +18,18 @@ import { cn } from "@/lib/utils";
 import { slideUp, staggerContainer } from "@/lib/motion";
 import type { SessionItem, SessionPipelineStage, SessionStage } from "@/types";
 
-const STAGE_CONFIG: Record<
-  SessionPipelineStage,
-  { label: string; icon: typeof MessageSquare; color: string; badgeClass: string }
-> = {
+const STAGE_ICONS: Record<SessionPipelineStage, { icon: typeof MessageSquare; color: string; badgeClass: string }> = {
   discovery: {
-    label: "Descoberta",
     icon: MessageSquare,
     color: "text-blue-400",
     badgeClass: "bg-blue-500/15 text-blue-400 border-blue-500/20",
   },
   analysis: {
-    label: "Análise",
     icon: FileText,
     color: "text-amber-400",
     badgeClass: "bg-amber-500/15 text-amber-400 border-amber-500/20",
   },
   results: {
-    label: "Scout",
     icon: Rocket,
     color: "text-green-400",
     badgeClass: "bg-green-500/15 text-green-400 border-green-500/20",
@@ -42,22 +37,6 @@ const STAGE_CONFIG: Record<
 };
 
 const STAGES: SessionPipelineStage[] = ["results", "analysis", "discovery"];
-
-function getRelativeTime(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "agora";
-  if (diffMins < 60) return `${diffMins}m atrás`;
-  if (diffHours < 24) return `${diffHours}h atrás`;
-  if (diffDays === 1) return "ontem";
-  if (diffDays < 7) return `${diffDays}d atrás`;
-  return date.toLocaleDateString("pt-BR", { month: "short", day: "numeric" });
-}
 
 interface ChatWelcomeProps {
   onSendMessage: (text: string) => void;
@@ -80,10 +59,34 @@ export function ChatWelcome({
 }: ChatWelcomeProps) {
   const [isHovered, setIsHovered] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+  const t = useTranslations("Welcome");
+  const tHistory = useTranslations("ChatHistory");
+  const tTime = useTranslations("RelativeTime");
 
   const hasSessions = sessions.length > 0;
 
-  // Pre-compute grouped sessions once per sessions change
+  const stageLabels: Record<SessionPipelineStage, string> = {
+    discovery: tHistory("discovery"),
+    analysis: tHistory("analysis"),
+    results: tHistory("results"),
+  };
+
+  function getRelativeTime(dateStr: string): string {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return tTime("now");
+    if (diffMins < 60) return tTime("minutesAgo", { minutes: diffMins });
+    if (diffHours < 24) return tTime("hoursAgo", { hours: diffHours });
+    if (diffDays === 1) return tTime("yesterday");
+    if (diffDays < 7) return tTime("daysAgo", { days: diffDays });
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+
   const groupedSessions = useMemo(() => {
     const groups: Record<SessionPipelineStage, SessionItem[]> = {
       discovery: [],
@@ -113,7 +116,6 @@ export function ChatWelcome({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Shader background — sticky so it stays visible while scrolling, contained within main */}
       <div className="pointer-events-none sticky top-0 z-0 -mb-[100vh] h-screen w-full">
         {prefersReducedMotion ? (
           <div
@@ -140,7 +142,6 @@ export function ChatWelcome({
         )}
       </div>
 
-      {/* Hero section — shorter when sessions exist so modal peeks into view */}
       <div
         className={cn(
           "relative z-10 flex flex-col items-center justify-center",
@@ -157,8 +158,9 @@ export function ChatWelcome({
             variants={slideUp}
             className="mb-8 text-center font-heading text-3xl font-bold tracking-tight sm:text-4xl"
           >
-            O que vamos{" "}
-            <span className="text-gradient">resolver</span>?
+            {t.rich("title", {
+              gradient: (chunks) => <span className="text-gradient">{chunks}</span>,
+            })}
           </motion.h1>
 
           <motion.div variants={slideUp} className="w-full">
@@ -172,24 +174,22 @@ export function ChatWelcome({
         </motion.div>
       </div>
 
-      {/* History modal — slides up over the shader background */}
       {hasSessions && (
         <div className="relative z-10 flex justify-center px-4 pb-8">
           <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-border/60 bg-background/80 shadow-2xl backdrop-blur-xl">
             <Tabs defaultValue="results" className="flex flex-col">
-              {/* Header: title + tab triggers */}
               <div className="border-b border-border/40 px-6 pt-5 pb-3">
                 <h2 className="mb-4 text-base font-semibold text-foreground">
-                  Seus chats
+                  {t("yourChats")}
                 </h2>
                 <TabsList className="w-full">
                   {STAGES.map((stage) => {
-                    const config = STAGE_CONFIG[stage];
+                    const config = STAGE_ICONS[stage];
                     const count = countByStage(stage);
                     return (
                       <TabsTrigger key={stage} value={stage} className="flex-1 gap-2">
                         <config.icon className={cn("h-3.5 w-3.5", config.color)} />
-                        {config.label}
+                        {stageLabels[stage]}
                         {count > 0 && (
                           <Badge
                             variant="secondary"
@@ -204,7 +204,6 @@ export function ChatWelcome({
                 </TabsList>
               </div>
 
-              {/* Tab content */}
               <div className="py-4">
                 {STAGES.map((stage) => (
                   <TabsContent key={stage} value={stage} className="mt-0">
@@ -213,7 +212,7 @@ export function ChatWelcome({
                         {sessionsByStage(stage).length === 0 ? (
                           <div className="flex flex-col items-center justify-center py-12 text-center">
                             <p className="text-sm text-foreground-muted/50">
-                              Nenhum chat nessa etapa
+                              {t("noChatsInStage")}
                             </p>
                           </div>
                         ) : (
@@ -225,6 +224,11 @@ export function ChatWelcome({
                                 isActive={session.id === currentSessionId}
                                 onClick={() => onSelectSession(session.id)}
                                 onDelete={() => onDeleteSession(session.id)}
+                                stageLabel={stageLabels[session.pipelineStage]}
+                                badgeClass={STAGE_ICONS[session.pipelineStage].badgeClass}
+                                resultCountLabel={tHistory("resultCount", { count: session.resultCount })}
+                                deleteLabel={tHistory("deleteSession", { title: session.title })}
+                                relativeTime={getRelativeTime(session.updatedAt)}
                               />
                             ))}
                           </div>
@@ -247,14 +251,22 @@ function SessionCard({
   isActive,
   onClick,
   onDelete,
+  stageLabel,
+  badgeClass,
+  resultCountLabel,
+  deleteLabel,
+  relativeTime,
 }: {
   session: SessionItem;
   isActive: boolean;
   onClick: () => void;
   onDelete: () => void;
+  stageLabel: string;
+  badgeClass: string;
+  resultCountLabel: string;
+  deleteLabel: string;
+  relativeTime: string;
 }) {
-  const config = STAGE_CONFIG[session.pipelineStage];
-
   return (
     <div
       role="button"
@@ -279,7 +291,7 @@ function SessionCard({
             e.stopPropagation();
             onDelete();
           }}
-          aria-label={`Excluir: ${session.title}`}
+          aria-label={deleteLabel}
           className="shrink-0 rounded p-0.5 text-foreground-muted/40 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -293,16 +305,16 @@ function SessionCard({
       )}
 
       <div className="flex items-center gap-2">
-        <Badge variant="outline" className={cn("text-[10px]", config.badgeClass)}>
-          {config.label}
+        <Badge variant="outline" className={cn("text-[10px]", badgeClass)}>
+          {stageLabel}
         </Badge>
         {session.hasResults && session.resultCount > 0 && (
           <Badge variant="secondary" className="text-[10px]">
-            {session.resultCount} resultado{session.resultCount !== 1 ? "s" : ""}
+            {resultCountLabel}
           </Badge>
         )}
         <span className="ml-auto text-[10px] text-foreground-muted/40">
-          {getRelativeTime(session.updatedAt)}
+          {relativeTime}
         </span>
       </div>
     </div>
