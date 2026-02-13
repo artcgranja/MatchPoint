@@ -6,7 +6,6 @@ import {
   MessageSquare,
   FileText,
   Rocket,
-  Trash2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { WarpShaderBackground } from "@/components/ui/warp-shader-background";
@@ -14,26 +13,15 @@ import { ChatInput } from "@/components/discovery/chat-input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SessionCard } from "@/components/discovery/session-card";
 import { cn } from "@/lib/utils";
 import { slideUp, staggerContainer } from "@/lib/motion";
 import type { SessionItem, SessionPipelineStage, SessionStage } from "@/types";
 
-const STAGE_ICONS: Record<SessionPipelineStage, { icon: typeof MessageSquare; color: string; badgeClass: string }> = {
-  discovery: {
-    icon: MessageSquare,
-    color: "text-blue-400",
-    badgeClass: "bg-blue-500/15 text-blue-400 border-blue-500/20",
-  },
-  analysis: {
-    icon: FileText,
-    color: "text-amber-400",
-    badgeClass: "bg-amber-500/15 text-amber-400 border-amber-500/20",
-  },
-  results: {
-    icon: Rocket,
-    color: "text-green-400",
-    badgeClass: "bg-green-500/15 text-green-400 border-green-500/20",
-  },
+const STAGE_ICONS: Record<SessionPipelineStage, { icon: typeof MessageSquare; color: string }> = {
+  discovery: { icon: MessageSquare, color: "text-blue-400" },
+  analysis: { icon: FileText, color: "text-amber-400" },
+  results: { icon: Rocket, color: "text-green-400" },
 };
 
 const STAGES: SessionPipelineStage[] = ["results", "analysis", "discovery"];
@@ -216,7 +204,7 @@ export function ChatWelcome({
                             </p>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             {sessionsByStage(stage).map((session) => (
                               <SessionCard
                                 key={session.id}
@@ -224,11 +212,10 @@ export function ChatWelcome({
                                 isActive={session.id === currentSessionId}
                                 onClick={() => onSelectSession(session.id)}
                                 onDelete={() => onDeleteSession(session.id)}
-                                stageLabel={stageLabels[session.pipelineStage]}
-                                badgeClass={STAGE_ICONS[session.pipelineStage].badgeClass}
-                                resultCountLabel={tHistory("resultCount", { count: session.resultCount })}
                                 deleteLabel={tHistory("deleteSession", { title: session.title })}
+                                resultCountLabel={tHistory("resultCount", { count: session.resultCount })}
                                 relativeTime={getRelativeTime(session.updatedAt)}
+                                moreLabel={(count) => tHistory("moreStartups", { count })}
                               />
                             ))}
                           </div>
@@ -242,81 +229,6 @@ export function ChatWelcome({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function SessionCard({
-  session,
-  isActive,
-  onClick,
-  onDelete,
-  stageLabel,
-  badgeClass,
-  resultCountLabel,
-  deleteLabel,
-  relativeTime,
-}: {
-  session: SessionItem;
-  isActive: boolean;
-  onClick: () => void;
-  onDelete: () => void;
-  stageLabel: string;
-  badgeClass: string;
-  resultCountLabel: string;
-  deleteLabel: string;
-  relativeTime: string;
-}) {
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onClick}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") onClick();
-      }}
-      className={cn(
-        "group relative flex cursor-pointer flex-col gap-1.5 rounded-xl border p-3 transition-colors",
-        isActive
-          ? "border-highlight/30 bg-highlight/5"
-          : "border-border hover:border-foreground-muted/20 hover:bg-background-secondary"
-      )}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <h4 className="line-clamp-1 text-sm font-medium text-foreground">
-          {session.title}
-        </h4>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          aria-label={deleteLabel}
-          className="shrink-0 rounded p-0.5 text-foreground-muted/40 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
-      </div>
-
-      {session.preview && (
-        <p className="line-clamp-2 text-xs text-foreground-muted/60">
-          {session.preview}
-        </p>
-      )}
-
-      <div className="flex items-center gap-2">
-        <Badge variant="outline" className={cn("text-[10px]", badgeClass)}>
-          {stageLabel}
-        </Badge>
-        {session.hasResults && session.resultCount > 0 && (
-          <Badge variant="secondary" className="text-[10px]">
-            {resultCountLabel}
-          </Badge>
-        )}
-        <span className="ml-auto text-[10px] text-foreground-muted/40">
-          {relativeTime}
-        </span>
-      </div>
     </div>
   );
 }

@@ -37,15 +37,16 @@
     "sessionNotFound": "Session not found"
   },
   "ChatHistory": {
-    "yourChats": "Your chats",
+    "yourChats": "Your executions",
     "discovery": "Discovery",
     "analysis": "Analysis",
-    "results": "Results",
-    "noChatsInStage": "No chats in this stage",
+    "results": "Scout",
+    "noChatsInStage": "No executions in this stage",
     "loginToSeeHistory": "Sign in to see your history",
-    "noChatsYet": "No chats yet",
+    "noChatsYet": "No executions yet",
     "deleteSession": "Delete session: {title}",
-    "resultCount": "{count, plural, one {# result} other {# results}}"
+    "resultCount": "{count, plural, one {# result} other {# results}}",
+    "moreStartups": "+{count} more"
   },
   "RelativeTime": {
     "now": "now",
@@ -69,8 +70,8 @@
   },
   "Welcome": {
     "title": "What shall we <gradient>solve</gradient>?",
-    "yourChats": "Your chats",
-    "noChatsInStage": "No chats in this stage"
+    "yourChats": "Your executions",
+    "noChatsInStage": "No executions in this stage"
   },
   "Suggestions": {
     "retailAI": "Retail + AI",

@@ -10,6 +10,8 @@ export interface SessionItem {
   hasResults: boolean;
   resultCount: number;
   preview: string | null;
+  topStartups: string[] | null;
+  analysisPreview: string | null;
   createdAt: string;
   updatedAt: string;
 }

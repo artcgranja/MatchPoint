@@ -37,15 +37,16 @@
     "sessionNotFound": "Sessão não encontrada"
   },
   "ChatHistory": {
-    "yourChats": "Seus chats",
+    "yourChats": "Suas execuções",
     "discovery": "Descoberta",
     "analysis": "Análise",
-    "results": "Resultados",
-    "noChatsInStage": "Nenhum chat nessa etapa",
+    "results": "Scout",
+    "noChatsInStage": "Nenhuma execução nessa etapa",
     "loginToSeeHistory": "Entre para ver seu histórico",
-    "noChatsYet": "Nenhum chat ainda",
+    "noChatsYet": "Nenhuma execução ainda",
     "deleteSession": "Excluir sessão: {title}",
-    "resultCount": "{count, plural, one {# resultado} other {# resultados}}"
+    "resultCount": "{count, plural, one {# resultado} other {# resultados}}",
+    "moreStartups": "+{count} mais"
   },
   "RelativeTime": {
     "now": "agora",
@@ -69,8 +70,8 @@
   },
   "Welcome": {
     "title": "O que vamos <gradient>resolver</gradient>?",
-    "yourChats": "Seus chats",
-    "noChatsInStage": "Nenhum chat nessa etapa"
+    "yourChats": "Suas execuções",
+    "noChatsInStage": "Nenhuma execução nessa etapa"
   },
   "Suggestions": {
     "retailAI": "Varejo + IA",
