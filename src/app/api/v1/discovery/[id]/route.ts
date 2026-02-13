@@ -52,8 +52,8 @@ export async function GET(
     currentStage = "complete";
   } else if (search.status === "complete") {
     currentStage = "advising";
-  } else if (search.bizPlan && (search.status === "idle" || search.status === "running")) {
-    // BizPlan exists but scout hasn't completed — user needs to approve
+  } else if (search.bizPlan && search.status === "idle") {
+    // BizPlan exists but scout hasn't started — user needs to approve
     currentStage = "analysis";
     awaitingConfirmation = true;
   } else {
