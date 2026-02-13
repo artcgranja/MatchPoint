@@ -6,7 +6,7 @@ import { useSearchStore } from "@/stores/search-store";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { apiGet, apiPost } from "@/lib/api/client";
 import { createSseParser } from "@/lib/sse/parser";
-import type { DiscoveryMessage, DiscoverySession, SessionStage, StartupCard } from "@/types";
+import type { BizDevPlanStatus, DiscoveryMessage, DiscoverySession, SessionStage, StartupCard } from "@/types";
 
 export function useDiscoverySession() {
   const {
@@ -33,19 +33,7 @@ export function useDiscoverySession() {
   const { searchId, setSearchId, startPipeline, completePipeline, errorPipeline, resetPipeline } =
     useSearchStore();
 
-  const {
-    setPanelOpen,
-    setActiveTab,
-    setAnalysisStatus,
-    appendThinking,
-    appendPlanText,
-    setScoutStatus,
-    setScoutProgress,
-    addToolCall,
-    updateToolCall,
-    setCards,
-    reset: resetPanel,
-  } = useAgentPanelStore();
+  const resetPanel = useAgentPanelStore((s) => s.reset);
 
   const initSession = useCallback(async () => {
     const { id } = await apiPost<{ id: string }>("/discovery");
@@ -89,17 +77,23 @@ export function useDiscoverySession() {
 
           // Restore analysis panel
           if (search.productDocument) {
-            appendPlanText(search.productDocument);
-            setAnalysisStatus("confirmed");
+            useAgentPanelStore.getState().batchUpdate({
+              planText: search.productDocument,
+              analysisStatus: "confirmed",
+            });
           }
 
           // Restore scout cards
           if (search.cards.length > 0) {
-            setCards(search.cards, search.scoutSummary ?? "");
-            setScoutStatus("complete");
-            setScoutProgress(100, "Busca concluída");
-            setPanelOpen(true);
-            setActiveTab("scout");
+            useAgentPanelStore.getState().batchUpdate({
+              cards: search.cards,
+              scoutSummary: search.scoutSummary ?? "",
+              scoutStatus: "complete",
+              scoutProgress: 100,
+              scoutMessage: "Busca concluída",
+              panelOpen: true,
+              activeTab: "scout",
+            });
 
             // Add cards message to chat
             msgs.push({
@@ -156,53 +150,65 @@ export function useDiscoverySession() {
       setDiscoveryState,
       setIsLoadingSession,
       setSearchId,
-      appendPlanText,
-      setAnalysisStatus,
-      setCards,
-      setScoutStatus,
-      setScoutProgress,
-      setPanelOpen,
-      setActiveTab,
       completePipeline,
     ]
   );
 
   // ═══════════════════════════════════════════
-  // Process Analysis events from SSE stream
+  // Process Analysis events from SSE stream (batched)
   // ═══════════════════════════════════════════
   const processAnalysisEvents = useCallback(
     (sseEvents: Array<{ event: string; data: string }>) => {
+      const store = useAgentPanelStore.getState();
+      let thinkingAccum = "";
+      let planAccum = "";
+      let newStatus: BizDevPlanStatus | null = null;
+      let shouldOpenPanel = false;
+      let shouldSetTab = false;
+
       for (const sse of sseEvents) {
         try {
           const data = JSON.parse(sse.data);
 
           if (sse.event === "analysis_thinking") {
-            setPanelOpen(true);
-            setActiveTab("analysis");
-            setAnalysisStatus("thinking");
+            shouldOpenPanel = true;
+            shouldSetTab = true;
+            newStatus = "thinking";
             const text = data.data?.text ?? "";
-            if (text) appendThinking(text);
+            if (text) thinkingAccum += text;
           }
 
           if (sse.event === "analysis_text") {
-            setAnalysisStatus("writing");
+            newStatus = "writing";
             const text = data.data?.text ?? "";
-            if (text) appendPlanText(text);
+            if (text) planAccum += text;
           }
 
           if (sse.event === "analysis_complete") {
-            setAnalysisStatus("complete");
+            newStatus = "complete";
           }
         } catch (err) {
           console.warn("[SSE] Malformed analysis event:", err);
         }
       }
+
+      // Single batch update for all accumulated changes
+      const batch: Record<string, unknown> = {};
+      if (shouldOpenPanel) batch.panelOpen = true;
+      if (shouldSetTab) batch.activeTab = "analysis";
+      if (newStatus) batch.analysisStatus = newStatus;
+      if (thinkingAccum) batch.thinkingText = store.thinkingText + thinkingAccum;
+      if (planAccum) batch.planText = store.planText + planAccum;
+
+      if (Object.keys(batch).length > 0) {
+        useAgentPanelStore.getState().batchUpdate(batch);
+      }
     },
-    [setPanelOpen, setActiveTab, setAnalysisStatus, appendThinking, appendPlanText]
+    []
   );
 
   // ═══════════════════════════════════════════
-  // Process Scout events — cards go to panel
+  // Process Scout events — cards go to panel (batched)
   // ═══════════════════════════════════════════
   const processScoutNamedEvents = useCallback(
     (events: Array<{ event: string; data: string }>) => {
@@ -218,31 +224,45 @@ export function useDiscoverySession() {
             if (stage && sse.event === "stage_update") {
               if (data.progress === 0) {
                 setCurrentStage(stage);
-                setActiveTab("scout");
-                setPanelOpen(true);
-                setScoutStatus("searching");
+                // Batch panel open + tab + status + progress
+                useAgentPanelStore.getState().batchUpdate({
+                  activeTab: "scout",
+                  panelOpen: true,
+                  scoutStatus: "searching",
+                  scoutProgress: data.progress,
+                  scoutMessage: data.message ?? "",
+                });
+              } else {
+                useAgentPanelStore.getState().batchUpdate({
+                  scoutProgress: data.progress,
+                  scoutMessage: data.message ?? "",
+                });
               }
-              setScoutProgress(data.progress, data.message ?? "");
             }
           }
 
           // Tool call events
           if (sse.event === "scout_tool_call") {
-            addToolCall({
-              id: data.data?.toolCallId ?? data.data?.id ?? crypto.randomUUID(),
-              toolName: data.data?.toolName ?? "unknown",
-              input: data.data?.input ?? {},
-              status: "running",
-              timestamp: Date.now(),
+            const store = useAgentPanelStore.getState();
+            useAgentPanelStore.getState().batchUpdate({
+              toolCalls: [...store.toolCalls, {
+                id: data.data?.toolCallId ?? data.data?.id ?? crypto.randomUUID(),
+                toolName: data.data?.toolName ?? "unknown",
+                input: data.data?.input ?? {},
+                status: "running" as const,
+                timestamp: Date.now(),
+              }],
             });
           }
 
           if (sse.event === "scout_tool_result") {
             const toolCallId = data.data?.toolCallId ?? data.data?.id;
             if (toolCallId) {
-              updateToolCall(toolCallId, {
-                status: "complete",
-                resultSummary: data.data?.resultSummary,
+              const store = useAgentPanelStore.getState();
+              useAgentPanelStore.getState().batchUpdate({
+                toolCalls: store.toolCalls.map((tc) =>
+                  tc.id === toolCallId ? { ...tc, status: "complete" as const, resultSummary: data.data?.resultSummary } : tc
+                ),
               });
             }
           }
@@ -254,10 +274,14 @@ export function useDiscoverySession() {
             const cards = payload?.cards ?? [];
             const summary = payload?.summary ?? "";
 
-            // Cards go to the agent panel, not chat
-            setCards(cards, summary);
-            setScoutStatus("complete");
-            setScoutProgress(100, "Busca concluída");
+            // Batch all agent-panel mutations into one set()
+            useAgentPanelStore.getState().batchUpdate({
+              cards,
+              scoutSummary: summary,
+              scoutStatus: "complete",
+              scoutProgress: 100,
+              scoutMessage: "Busca concluída",
+            });
 
             if (cards.length > 0) {
               addMessage({
@@ -286,7 +310,7 @@ export function useDiscoverySession() {
               content: `Erro no pipeline: ${data.message}`,
               type: "stage-update",
             });
-            setScoutStatus("error");
+            useAgentPanelStore.getState().batchUpdate({ scoutStatus: "error" });
             setCurrentStage("complete");
             setDiscoveryState("complete");
             errorPipeline();
@@ -296,20 +320,7 @@ export function useDiscoverySession() {
         }
       }
     },
-    [
-      addMessage,
-      completePipeline,
-      errorPipeline,
-      setCurrentStage,
-      setDiscoveryState,
-      setActiveTab,
-      setPanelOpen,
-      setScoutStatus,
-      setScoutProgress,
-      addToolCall,
-      updateToolCall,
-      setCards,
-    ]
+    [addMessage, completePipeline, errorPipeline, setCurrentStage, setDiscoveryState]
   );
 
   // ═══════════════════════════════════════════
@@ -321,9 +332,12 @@ export function useDiscoverySession() {
     if (!activeSessionId || !activeSearchId) return;
 
     useAgentPanelStore.getState().confirmPlan();
-    setActiveTab("scout");
-    setScoutStatus("searching");
-    setScoutProgress(0, "Iniciando busca...");
+    useAgentPanelStore.getState().batchUpdate({
+      activeTab: "scout",
+      scoutStatus: "searching",
+      scoutProgress: 0,
+      scoutMessage: "Iniciando busca...",
+    });
     setCurrentStage("scout");
     addMessage({
       role: "assistant",
@@ -389,7 +403,7 @@ export function useDiscoverySession() {
         content: "Erro de conexão com o pipeline. Tente novamente.",
         type: "stage-update",
       });
-      setScoutStatus("error");
+      useAgentPanelStore.getState().batchUpdate({ scoutStatus: "error" });
       setCurrentStage("complete");
       setDiscoveryState("complete");
       errorPipeline();
@@ -400,9 +414,6 @@ export function useDiscoverySession() {
     errorPipeline,
     setCurrentStage,
     setDiscoveryState,
-    setActiveTab,
-    setScoutStatus,
-    setScoutProgress,
     addMessage,
     processScoutNamedEvents,
   ]);
@@ -440,6 +451,11 @@ export function useDiscoverySession() {
         const decoder = new TextDecoder();
         const sseParser = createSseParser();
         let assistantMsg = "";
+        let textRafId: number | null = null;
+        const flushText = () => {
+          updateLastAssistantMessage(assistantMsg);
+          textRafId = null;
+        };
 
         while (true) {
           const { done, value } = await reader.read();
@@ -462,7 +478,10 @@ export function useDiscoverySession() {
 
               if (data.text) {
                 assistantMsg += data.text;
-                updateLastAssistantMessage(assistantMsg);
+                // Debounce text updates to once per animation frame
+                if (textRafId === null) {
+                  textRafId = requestAnimationFrame(flushText);
+                }
               }
 
               if (data.status) {
@@ -495,6 +514,10 @@ export function useDiscoverySession() {
             }
           }
         }
+
+        // Final flush to ensure last chunk is rendered
+        if (textRafId !== null) cancelAnimationFrame(textRafId);
+        if (assistantMsg) updateLastAssistantMessage(assistantMsg);
 
         setIsStreaming(false);
       } catch (error) {

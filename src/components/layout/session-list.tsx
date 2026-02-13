@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Trash2, MessageSquare, Rocket, FileText, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -57,6 +58,8 @@ export function SessionList() {
     deleteSession,
   } = useSessions();
 
+  const grouped = useMemo(() => groupByStage(sessions), [sessions]);
+
   if (!user) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-2 px-4 py-6 text-center">
@@ -75,8 +78,6 @@ export function SessionList() {
       </div>
     );
   }
-
-  const grouped = groupByStage(sessions);
 
   return (
     <ScrollArea className="flex-1 px-2 pt-2">

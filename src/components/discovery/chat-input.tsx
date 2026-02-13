@@ -56,7 +56,7 @@ export function ChatInput({ onSend, disabled, currentStage, variant = "default" 
 
   return (
     <div className={cn(
-      "relative rounded-2xl transition-colors",
+      "chat-input-container relative rounded-2xl transition-colors",
       variant === "hero"
         ? "border border-background bg-background-secondary shadow-2xl shadow-black/20 focus-within:shadow-[0_8px_40px_rgba(0,0,0,0.3)]"
         : variant === "welcome"

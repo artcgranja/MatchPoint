@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 interface SpotlightCardProps {
@@ -10,14 +10,32 @@ interface SpotlightCardProps {
 
 export function SpotlightCard({ children, className }: SpotlightCardProps) {
   const ref = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
+    };
+  }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = ref.current?.getBoundingClientRect();
-    if (!rect) return;
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    ref.current?.style.setProperty("--mouse-x", `${x}%`);
-    ref.current?.style.setProperty("--mouse-y", `${y}%`);
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+
+    if (rafRef.current !== null) return;
+
+    rafRef.current = requestAnimationFrame(() => {
+      const rect = ref.current?.getBoundingClientRect();
+      if (!rect) {
+        rafRef.current = null;
+        return;
+      }
+      const x = ((clientX - rect.left) / rect.width) * 100;
+      const y = ((clientY - rect.top) / rect.height) * 100;
+      ref.current?.style.setProperty("--mouse-x", `${x}%`);
+      ref.current?.style.setProperty("--mouse-y", `${y}%`);
+      rafRef.current = null;
+    });
   };
 
   return (
