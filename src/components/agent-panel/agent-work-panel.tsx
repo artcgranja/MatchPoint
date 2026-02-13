@@ -1,8 +1,7 @@
 "use client";
 
-import { Brain, X, Check, Loader2, Rocket } from "lucide-react";
+import { Brain, Check, Loader2, Rocket } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { AnalysisTab } from "./analysis-tab";
@@ -13,7 +12,6 @@ const EASE_OUT_EXPO: [number, number, number, number] = [0.16, 1, 0.3, 1];
 
 interface AgentWorkPanelProps {
   onConfirm: () => void;
-  onClose: () => void;
 }
 
 function AnalysisStatusDot() {
@@ -43,47 +41,30 @@ function ScoutStatusDot() {
   return null;
 }
 
-export function AgentWorkPanel({ onConfirm, onClose }: AgentWorkPanelProps) {
+export function AgentWorkPanel({ onConfirm }: AgentWorkPanelProps) {
   const { activeTab, setActiveTab } = useAgentPanelStore();
 
   return (
-    <div className="flex h-full flex-col overflow-hidden border-l border-border bg-background">
-      {/* Header */}
-      <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-highlight/10">
-            <Brain className="h-4 w-4 text-highlight" />
-          </div>
-          <h3 className="text-sm font-semibold">Painel de Agentes</h3>
-        </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7"
-          onClick={onClose}
-        >
-          <X className="h-3.5 w-3.5" />
-        </Button>
-      </div>
-
-      {/* Tabs */}
+    <div className="flex h-full flex-col overflow-hidden bg-background">
       <Tabs
         value={activeTab}
         onValueChange={(v) => setActiveTab(v as AgentPanelTab)}
         className="flex min-h-0 flex-1 flex-col"
       >
-        <TabsList variant="line" className="w-full shrink-0 border-b border-border px-4">
-          <TabsTrigger value="analysis" className="gap-1.5">
-            <Brain className="h-3.5 w-3.5" />
-            Análise
-            <AnalysisStatusDot />
-          </TabsTrigger>
-          <TabsTrigger value="scout" className="gap-1.5">
-            <Rocket className="h-3.5 w-3.5" />
-            Scout
-            <ScoutStatusDot />
-          </TabsTrigger>
-        </TabsList>
+        <div className="shrink-0 border-b border-border px-3 pt-1">
+          <TabsList variant="line" className="w-full">
+            <TabsTrigger value="analysis" className="gap-1.5">
+              <Brain className="h-3.5 w-3.5" />
+              Análise
+              <AnalysisStatusDot />
+            </TabsTrigger>
+            <TabsTrigger value="scout" className="gap-1.5">
+              <Rocket className="h-3.5 w-3.5" />
+              Scout
+              <ScoutStatusDot />
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <AnimatePresence mode="wait">
           <motion.div

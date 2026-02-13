@@ -2,9 +2,9 @@
 
 import { useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { RotateCcw, Brain, Rocket, Loader2 } from "lucide-react";
-import type { PanelImperativeHandle } from "react-resizable-panels";
+import { Loader2, PanelRightOpen, PanelRightClose } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { PanelImperativeHandle } from "react-resizable-panels";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -44,10 +44,10 @@ export default function HomePage() {
     setPanelOpen,
     analysisStatus,
     scoutStatus,
-    cards,
   } = useAgentPanelStore();
   const user = useAuthStore((s) => s.user);
   const agentPanelRef = useRef<PanelImperativeHandle>(null);
+  const isAnimatingRef = useRef(false);
   const {
     sessions,
     currentSessionId: hookSessionId,
@@ -73,9 +73,13 @@ export default function HomePage() {
 
     try {
       if (panelOpen && panel.isCollapsed()) {
+        isAnimatingRef.current = true;
         panel.expand();
+        setTimeout(() => { isAnimatingRef.current = false; }, 350);
       } else if (!panelOpen && !panel.isCollapsed()) {
+        isAnimatingRef.current = true;
         panel.collapse();
+        setTimeout(() => { isAnimatingRef.current = false; }, 350);
       }
     } catch {
       // Panel not yet registered with group — ignore
@@ -98,26 +102,9 @@ export default function HomePage() {
     [user, sessionId, initSession, sendMessage]
   );
 
-  const handleNewDiscovery = useCallback(() => {
-    reset();
-  }, [reset]);
-
-  const handleClosePanel = useCallback(() => {
-    setPanelOpen(false);
-  }, [setPanelOpen]);
-
   const isIdle = discoveryState === "idle";
   const isLoggedIn = !!user;
   const showPanel = panelOpen || analysisStatus !== "idle" || scoutStatus !== "idle";
-  const showPanelToggle = !panelOpen && (analysisStatus !== "idle" || scoutStatus !== "idle");
-
-  const toggleLabel = scoutStatus !== "idle" && cards.length > 0
-    ? `Resultados (${cards.length})`
-    : analysisStatus !== "idle"
-      ? "Análise"
-      : "Painel";
-
-  const ToggleIcon = scoutStatus !== "idle" && cards.length > 0 ? Rocket : Brain;
 
   return (
   <>
@@ -179,30 +166,23 @@ export default function HomePage() {
             <ResizablePanel defaultSize={65} minSize={40}>
               <div className="flex h-full flex-col">
                 {/* Header */}
-                <div className="flex items-center justify-between border-b border-border px-4 py-2">
+                <div className="relative flex items-center justify-center border-b border-border px-4 py-2">
                   <StageIndicator currentStage={currentStage} />
-                  <div className="flex items-center gap-2">
-                    {showPanelToggle && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPanelOpen(true)}
-                        className="gap-2 text-foreground-muted"
-                      >
-                        <ToggleIcon className="h-3.5 w-3.5" />
-                        {toggleLabel}
-                      </Button>
-                    )}
+                  {showPanel && (
                     <Button
                       variant="ghost"
-                      size="sm"
-                      onClick={handleNewDiscovery}
-                      className="gap-2 text-foreground-muted"
+                      size="icon"
+                      className="absolute right-2 h-7 w-7 text-foreground-muted transition-colors hover:text-foreground"
+                      onClick={() => setPanelOpen(!panelOpen)}
+                      aria-label={panelOpen ? "Fechar painel" : "Abrir painel"}
                     >
-                      <RotateCcw className="h-3.5 w-3.5" />
-                      Nova Busca
+                      {panelOpen ? (
+                        <PanelRightClose className="h-4 w-4" />
+                      ) : (
+                        <PanelRightOpen className="h-4 w-4" />
+                      )}
                     </Button>
-                  </div>
+                  )}
                 </div>
 
                 {/* Messages + input */}
@@ -230,15 +210,13 @@ export default function HomePage() {
                   collapsible
                   collapsedSize={0}
                   onResize={(size) => {
+                    if (isAnimatingRef.current) return;
                     const collapsed = size.asPercentage === 0;
                     if (collapsed && panelOpen) setPanelOpen(false);
                     if (!collapsed && !panelOpen) setPanelOpen(true);
                   }}
                 >
-                  <AgentWorkPanel
-                    onConfirm={confirmPlan}
-                    onClose={handleClosePanel}
-                  />
+                  <AgentWorkPanel onConfirm={confirmPlan} />
                 </ResizablePanel>
               </>
             )}

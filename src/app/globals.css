@@ -607,6 +607,18 @@ section[id] {
   }
 }
 
+/* Resizable panel transitions — smooth collapse/expand */
+[data-panel] {
+  transition: flex-basis 300ms cubic-bezier(0.16, 1, 0.3, 1),
+              flex-grow 300ms cubic-bezier(0.16, 1, 0.3, 1),
+              flex-shrink 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Disable transitions during manual drag to avoid lag */
+[data-panel-group]:has([data-resize-handle-state="drag"]) [data-panel] {
+  transition: none;
+}
+
 /* Resize handle transitions */
 [data-panel-group-direction="horizontal"] > [data-resize-handle] {
   transition: background-color 0.15s ease;
