@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
   MessageSquare,
@@ -83,13 +83,29 @@ export function ChatWelcome({
 
   const hasSessions = sessions.length > 0;
 
+  // Pre-compute grouped sessions once per sessions change
+  const groupedSessions = useMemo(() => {
+    const groups: Record<SessionPipelineStage, SessionItem[]> = {
+      discovery: [],
+      analysis: [],
+      results: [],
+    };
+    for (const s of sessions) {
+      groups[s.pipelineStage]?.push(s);
+    }
+    for (const stage of Object.keys(groups) as SessionPipelineStage[]) {
+      groups[stage].sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+    }
+    return groups;
+  }, [sessions]);
+
   const countByStage = (stage: SessionPipelineStage) =>
-    sessions.filter((s) => s.pipelineStage === stage).length;
+    groupedSessions[stage].length;
 
   const sessionsByStage = (stage: SessionPipelineStage) =>
-    sessions
-      .filter((s) => s.pipelineStage === stage)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    groupedSessions[stage];
 
   return (
     <div

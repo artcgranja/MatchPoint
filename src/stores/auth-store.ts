@@ -22,10 +22,6 @@ export const useAuthStore = create<AuthStore>()((set) => ({
   setUser: (user) => set({ user }),
 
   fetchUser: async () => {
-    const currentUser = useAuthStore.getState().user;
-    if (!currentUser) {
-      set({ isLoading: true });
-    }
     try {
       const res = await fetch("/api/v1/auth/me");
       if (res.ok) {

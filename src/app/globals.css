@@ -333,15 +333,19 @@
 @utility glass {
   background: var(--glass-bg);
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  will-change: transform;
+  contain: layout style paint;
 }
 
 @utility glass-strong {
   background: var(--glass-strong-bg);
   border: 1px solid var(--glass-border-strong);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  will-change: transform;
+  contain: layout style paint;
 }
 
 @utility grid-bg {
@@ -402,9 +406,11 @@ section[id] {
 /* Glass Card - strong variant */
 .glass-card-strong {
   background: var(--glass-strong-bg);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border-strong);
+  will-change: transform;
+  contain: layout style paint;
 }
 
 /* Noise/Grain Texture */
@@ -527,7 +533,9 @@ section[id] {
   );
   pointer-events: none;
   z-index: 0;
-  filter: blur(60px);
+  filter: blur(40px);
+  will-change: transform;
+  contain: strict;
 }
 
 :root .welcome-glow::before {
@@ -612,6 +620,16 @@ section[id] {
   transition: flex-basis 300ms cubic-bezier(0.16, 1, 0.3, 1),
               flex-grow 300ms cubic-bezier(0.16, 1, 0.3, 1),
               flex-shrink 300ms cubic-bezier(0.16, 1, 0.3, 1);
+  contain: layout style paint;
+}
+
+/* Chat region containment — isolate layout recalcs */
+.chat-message-list {
+  contain: layout style paint;
+}
+
+.chat-input-container {
+  contain: layout style paint;
 }
 
 /* Disable transitions during manual drag to avoid lag */

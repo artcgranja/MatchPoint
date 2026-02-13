@@ -12,12 +12,14 @@ export class DiscoveryAgent extends BaseAgent {
     sessionId: string,
     userMessage: string
   ): AsyncGenerator<{ text?: string; done?: boolean }> {
-    const session = await prisma.discoverySession.findUniqueOrThrow({
-      where: { id: sessionId },
-      include: { messages: { orderBy: { createdAt: "asc" } } },
+    // Fetch only the last 20 messages from DB (desc order), then reverse to chronological
+    const recentMessages = await prisma.discoveryMessage.findMany({
+      where: { sessionId },
+      orderBy: { createdAt: "desc" },
+      take: 20,
     });
 
-    const historyMessages = session.messages.slice(-20).map((m) => ({
+    const historyMessages = recentMessages.reverse().map((m) => ({
       role: m.role as "user" | "assistant",
       content: m.content,
     }));
@@ -46,12 +48,13 @@ export class DiscoveryAgent extends BaseAgent {
   }
 
   async extractNeedSummary(sessionId: string): Promise<NeedSummary> {
-    const session = await prisma.discoverySession.findUniqueOrThrow({
-      where: { id: sessionId },
-      include: { messages: { orderBy: { createdAt: "asc" } } },
+    const allMessages = await prisma.discoveryMessage.findMany({
+      where: { sessionId },
+      orderBy: { createdAt: "asc" },
+      take: 200,
     });
 
-    const conversation = session.messages
+    const conversation = allMessages
       .map((m) => `${m.role.toUpperCase()}: ${m.content}`)
       .join("\n\n");
 

@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { getAuthUser } from "@/lib/auth";
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await getAuthUser();
+  if (!auth) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
 
   const search = await prisma.searchExecution.findUnique({
@@ -22,6 +28,10 @@ export async function GET(
 
   if (!search) {
     return NextResponse.json({ error: "Search not found" }, { status: 404 });
+  }
+
+  if (search.userId !== auth.userId) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const cards = search.results.map((r) => ({

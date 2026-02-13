@@ -63,6 +63,7 @@ export interface DiscoverySession {
   id: string;
   title?: string | null;
   currentStage: SessionStage;
+  awaitingConfirmation?: boolean;
   isComplete: boolean;
   needSummary?: Record<string, unknown>;
   messages: DiscoveryMessage[];
