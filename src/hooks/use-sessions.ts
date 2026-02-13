@@ -68,6 +68,32 @@ export function useSessions() {
     [currentSessionId, resetDiscovery, resetPanel, resetPipeline, setIsLoadingSession, setSessionId, pathname, router]
   );
 
+  const renameSession = useCallback(
+    async (sessionId: string, newTitle: string) => {
+      try {
+        const res = await fetch(`/api/v1/sessions/${sessionId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: newTitle }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setSessions((prev) =>
+            prev.map((s) => (s.id === sessionId ? { ...s, title: data.title } : s))
+          );
+          if (sessionId === currentSessionId) {
+            useDiscoveryStore.getState().setSessionTitle(data.title);
+          }
+          return data.title as string;
+        }
+      } catch (err) {
+        console.error("Failed to rename session:", err);
+      }
+      return null;
+    },
+    [currentSessionId]
+  );
+
   const deleteSession = useCallback(
     async (sessionId: string) => {
       try {
@@ -96,6 +122,7 @@ export function useSessions() {
     user,
     fetchSessions,
     handleSelect,
+    renameSession,
     deleteSession,
   };
 }

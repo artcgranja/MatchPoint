@@ -12,6 +12,7 @@ import {
   LogIn,
   Moon,
   Sun,
+  Monitor,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
@@ -160,16 +161,30 @@ export function AppSidebar() {
                   Configurações
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              >
-                {theme === "dark" ? (
-                  <Sun className="h-4 w-4" />
-                ) : (
-                  <Moon className="h-4 w-4" />
-                )}
-                {theme === "dark" ? "Modo Claro" : "Modo Escuro"}
-              </DropdownMenuItem>
+              <div className="mx-1 my-1 flex items-center gap-1 rounded-lg bg-background-secondary/50 p-1">
+                {([
+                  { value: "system", icon: Monitor },
+                  { value: "light", icon: Sun },
+                  { value: "dark", icon: Moon },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setTheme(opt.value);
+                    }}
+                    className={cn(
+                      "flex flex-1 items-center justify-center rounded-md p-1.5 transition-all duration-300",
+                      theme === opt.value
+                        ? "bg-highlight/15 text-highlight shadow-[0_0_12px_rgba(59,130,246,0.15)]"
+                        : "text-foreground-muted/40 hover:text-foreground-muted"
+                    )}
+                  >
+                    <opt.icon className="h-3.5 w-3.5" />
+                  </button>
+                ))}
+              </div>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={logout}>
                 <LogOut className="h-4 w-4" />

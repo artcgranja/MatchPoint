@@ -4,13 +4,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { LogIn } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuth } from "@/components/providers/auth-provider";
 import { useLoginModalStore } from "@/stores/login-modal-store";
 import { getInitials } from "@/lib/utils/user";
 
 export function MinimalNavbar() {
-  const user = useAuthStore((s) => s.user);
-  const isLoading = useAuthStore((s) => s.isLoading);
+  const { user, isLoading } = useAuth();
 
   const initials = getInitials(user?.name);
 

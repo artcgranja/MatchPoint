@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { getAuthUser } from "@/lib/auth";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { AppShell } from "@/components/layout/app-shell";
+import type { AuthUser } from "@/stores/auth-store";
 
 export const metadata: Metadata = {
   title: {
@@ -10,9 +12,14 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const jwtPayload = await getAuthUser();
+  const initialUser: AuthUser | null = jwtPayload
+    ? { id: jwtPayload.userId, email: jwtPayload.email, name: null, avatarUrl: null }
+    : null;
+
   return (
-    <AuthProvider>
+    <AuthProvider initialUser={initialUser}>
       <AppShell>{children}</AppShell>
     </AuthProvider>
   );

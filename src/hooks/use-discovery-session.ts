@@ -22,6 +22,7 @@ export function useDiscoverySession() {
     addMessage,
     updateLastAssistantMessage,
     setIsStreaming,
+    setSessionTitle,
     setIsLoadingSession,
     setMessages,
     reset: resetDiscovery,
@@ -49,10 +50,11 @@ export function useDiscoverySession() {
   const initSession = useCallback(async () => {
     const { id } = await apiPost<{ id: string }>("/discovery");
     setSessionId(id);
+    setSessionTitle(null);
     setCurrentStage("discovery");
     setDiscoveryState("chatting");
     return id;
-  }, [setSessionId, setCurrentStage, setDiscoveryState]);
+  }, [setSessionId, setSessionTitle, setCurrentStage, setDiscoveryState]);
 
   const loadSession = useCallback(
     async (id: string) => {
@@ -69,6 +71,7 @@ export function useDiscoverySession() {
         if (abortController.signal.aborted) return;
 
         setSessionId(session.id);
+        setSessionTitle(session.title ?? null);
         setCurrentStage(session.currentStage);
 
         // Build messages array from discovery messages
@@ -147,6 +150,7 @@ export function useDiscoverySession() {
     },
     [
       setSessionId,
+      setSessionTitle,
       setCurrentStage,
       setMessages,
       setDiscoveryState,
@@ -412,6 +416,9 @@ export function useDiscoverySession() {
       if (!activeSessionId) return;
 
       addMessage({ role: "user", content: text });
+      if (!useDiscoveryStore.getState().sessionTitle) {
+        setSessionTitle(text.slice(0, 60));
+      }
       setIsStreaming(true);
 
       try {
@@ -505,6 +512,7 @@ export function useDiscoverySession() {
       addMessage,
       updateLastAssistantMessage,
       setIsStreaming,
+      setSessionTitle,
       setDiscoveryState,
       setCurrentStage,
       setSearchId,

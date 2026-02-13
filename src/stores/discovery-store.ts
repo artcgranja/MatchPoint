@@ -11,6 +11,7 @@ export type DiscoveryState =
 
 interface DiscoveryStore {
   sessionId: string | null;
+  sessionTitle: string | null;
   discoveryState: DiscoveryState;
   currentStage: SessionStage;
   messages: DiscoveryMessage[];
@@ -18,6 +19,7 @@ interface DiscoveryStore {
   isLoadingSession: boolean;
 
   setSessionId: (id: string | null) => void;
+  setSessionTitle: (title: string | null) => void;
   setDiscoveryState: (state: DiscoveryState) => void;
   setCurrentStage: (stage: SessionStage) => void;
   addMessage: (message: DiscoveryMessage) => void;
@@ -32,6 +34,7 @@ export const useDiscoveryStore = create<DiscoveryStore>()(
   persist(
     (set) => ({
       sessionId: null,
+      sessionTitle: null,
       discoveryState: "idle",
       currentStage: "discovery",
       messages: [],
@@ -39,6 +42,8 @@ export const useDiscoveryStore = create<DiscoveryStore>()(
       isLoadingSession: false,
 
       setSessionId: (sessionId) => set({ sessionId }),
+
+      setSessionTitle: (sessionTitle) => set({ sessionTitle }),
 
       setDiscoveryState: (discoveryState) => set({ discoveryState }),
 
@@ -70,6 +75,7 @@ export const useDiscoveryStore = create<DiscoveryStore>()(
       reset: () =>
         set({
           sessionId: null,
+          sessionTitle: null,
           discoveryState: "idle",
           currentStage: "discovery",
           messages: [],

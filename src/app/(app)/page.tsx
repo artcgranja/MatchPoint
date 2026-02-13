@@ -2,8 +2,7 @@
 
 import { useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Loader2, PanelRightOpen, PanelRightClose } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import {
   ResizablePanelGroup,
@@ -14,11 +13,12 @@ import { HeroChatSection } from "@/components/home/hero-chat-section";
 import { ChatWelcome } from "@/components/search/chat-welcome";
 import { ChatMessageList } from "@/components/discovery/chat-message-list";
 import { ChatInput } from "@/components/discovery/chat-input";
-import { StageIndicator } from "@/components/discovery/phase-indicator";
+import { ChatNavbar } from "@/components/layout/chat-navbar";
 import { AgentWorkPanel } from "@/components/agent-panel/agent-work-panel";
 import { useDiscoverySession } from "@/hooks/use-discovery-session";
+import { useDiscoveryStore } from "@/stores/discovery-store";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
-import { useAuthStore } from "@/stores/auth-store";
+import { useAuth } from "@/components/providers/auth-provider";
 import { useLoginModalStore } from "@/stores/login-modal-store";
 import { useSessions } from "@/hooks/use-sessions";
 import { toast } from "sonner";
@@ -45,13 +45,15 @@ export default function HomePage() {
     analysisStatus,
     scoutStatus,
   } = useAgentPanelStore();
-  const user = useAuthStore((s) => s.user);
+  const { user } = useAuth();
   const agentPanelRef = useRef<PanelImperativeHandle>(null);
   const isAnimatingRef = useRef(false);
+  const sessionTitle = useDiscoveryStore((s) => s.sessionTitle);
   const {
     sessions,
     currentSessionId: hookSessionId,
     handleSelect: handleSessionSelect,
+    renameSession,
     deleteSession,
   } = useSessions();
 
@@ -166,24 +168,15 @@ export default function HomePage() {
             <ResizablePanel defaultSize={65} minSize={40}>
               <div className="flex h-full flex-col">
                 {/* Header */}
-                <div className="relative flex items-center justify-center border-b border-border px-4 py-2">
-                  <StageIndicator currentStage={currentStage} />
-                  {showPanel && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-2 h-7 w-7 text-foreground-muted transition-colors hover:text-foreground"
-                      onClick={() => setPanelOpen(!panelOpen)}
-                      aria-label={panelOpen ? "Fechar painel" : "Abrir painel"}
-                    >
-                      {panelOpen ? (
-                        <PanelRightClose className="h-4 w-4" />
-                      ) : (
-                        <PanelRightOpen className="h-4 w-4" />
-                      )}
-                    </Button>
-                  )}
-                </div>
+                <ChatNavbar
+                  sessionId={sessionId!}
+                  sessionTitle={sessionTitle}
+                  currentStage={currentStage}
+                  showPanel={showPanel}
+                  panelOpen={panelOpen}
+                  onTogglePanel={() => setPanelOpen(!panelOpen)}
+                  onRename={renameSession}
+                />
 
                 {/* Messages + input */}
                 <div className="flex min-h-0 flex-1 flex-col">
