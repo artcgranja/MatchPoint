@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { motion } from "motion/react";
 import { MapPin, ExternalLink, Users } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cardEntrance } from "@/lib/motion";
 import { Badge } from "@/components/ui/badge";
 import type { BrowseCompany } from "@/types";
@@ -13,6 +14,7 @@ interface StartupBrowseCardProps {
 }
 
 export function StartupBrowseCard({ company }: StartupBrowseCardProps) {
+  const t = useTranslations("Browse");
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const rect = e.currentTarget.getBoundingClientRect();
@@ -110,7 +112,7 @@ export function StartupBrowseCard({ company }: StartupBrowseCardProps) {
               variant="outline"
               className="text-[10px] px-1.5 py-0 border-green-500/30 text-green-400"
             >
-              Ativa
+              {t("statusActive")}
             </Badge>
           )}
           {company.stage && (

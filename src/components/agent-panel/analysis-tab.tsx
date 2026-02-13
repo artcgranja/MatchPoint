@@ -3,6 +3,7 @@
 import { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { BizDevThinkingBlock } from "@/components/bizdev/bizdev-thinking-block";
@@ -15,6 +16,7 @@ interface AnalysisTabProps {
 }
 
 export function AnalysisTab({ onConfirm }: AnalysisTabProps) {
+  const t = useTranslations("AgentPanel");
   const analysisStatus = useAgentPanelStore((s) => s.analysisStatus);
   const thinkingText = useAgentPanelStore((s) => s.thinkingText);
   const planText = useAgentPanelStore((s) => s.planText);
@@ -58,7 +60,7 @@ export function AnalysisTab({ onConfirm }: AnalysisTabProps) {
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-highlight [animation-delay:150ms]" />
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-highlight [animation-delay:300ms]" />
             </div>
-            <span>Pensando profundamente...</span>
+            <span>{t("thinkingDeeply")}</span>
           </div>
         )}
       </div>
@@ -77,7 +79,7 @@ export function AnalysisTab({ onConfirm }: AnalysisTabProps) {
               className="w-full gap-2 bg-highlight text-white hover:bg-highlight/90"
             >
               <Check className="h-4 w-4" />
-              Confirmar e Buscar Startups
+              {t("confirmAndSearch")}
             </Button>
           </motion.div>
         )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { motion, useReducedMotion } from "motion/react";
 import { WarpShaderBackground } from "@/components/ui/warp-shader-background";
 import { ChatInput } from "@/components/discovery/chat-input";
@@ -23,11 +24,12 @@ export function HeroChatSection({
   isStreaming,
   currentStage,
 }: HeroChatSectionProps) {
+  const t = useTranslations("Landing");
   const [isHovered, setIsHovered] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
   return (
-    <section aria-label="Início" className="relative flex min-h-screen flex-col">
+    <section aria-label={t("heroLabel")} className="relative flex min-h-screen flex-col">
       {/* Full-viewport hero area */}
       <div
         className="relative flex min-h-screen flex-col items-center justify-center"
@@ -74,7 +76,7 @@ export function HeroChatSection({
             variants={slideUp}
             className="mb-6 font-mono text-xs uppercase tracking-[0.3em] text-text-muted"
           >
-            Matching de Startups com IA
+            {t("heroBadge")}
           </motion.p>
 
           {/* Headline */}
@@ -82,8 +84,11 @@ export function HeroChatSection({
             variants={slideUp}
             className="mb-3 text-center font-heading text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl"
           >
-            Encontre a startup ideal para sua{" "}
-            <span className="text-gradient">empresa</span>
+            {t.rich("heroTitle", {
+              highlight: (chunks) => (
+                <span className="text-gradient">{chunks}</span>
+              ),
+            })}
           </motion.h1>
 
           {/* Subtitle */}
@@ -91,8 +96,7 @@ export function HeroChatSection({
             variants={slideUp}
             className="mb-10 max-w-lg text-center text-base text-text/60 sm:text-lg"
           >
-            Descreva seu desafio e nossos agentes de IA encontram as melhores
-            startups para sua empresa.
+            {t("heroDescription")}
           </motion.p>
 
           {/* Chat input */}

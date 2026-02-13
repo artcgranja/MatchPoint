@@ -7,6 +7,7 @@ import {
   FileText,
   Rocket,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { WarpShaderBackground } from "@/components/ui/warp-shader-background";
 import { ChatInput } from "@/components/discovery/chat-input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -17,13 +18,10 @@ import { cn } from "@/lib/utils";
 import { slideUp, staggerContainer } from "@/lib/motion";
 import type { SessionItem, SessionPipelineStage, SessionStage } from "@/types";
 
-const STAGE_CONFIG: Record<
-  SessionPipelineStage,
-  { label: string; icon: typeof MessageSquare; color: string }
-> = {
-  discovery: { label: "Descoberta", icon: MessageSquare, color: "text-blue-400" },
-  analysis: { label: "Análise", icon: FileText, color: "text-amber-400" },
-  results: { label: "Scout", icon: Rocket, color: "text-green-400" },
+const STAGE_ICONS: Record<SessionPipelineStage, { icon: typeof MessageSquare; color: string }> = {
+  discovery: { icon: MessageSquare, color: "text-blue-400" },
+  analysis: { icon: FileText, color: "text-amber-400" },
+  results: { icon: Rocket, color: "text-green-400" },
 };
 
 const STAGES: SessionPipelineStage[] = ["results", "analysis", "discovery"];
@@ -49,8 +47,33 @@ export function ChatWelcome({
 }: ChatWelcomeProps) {
   const [isHovered, setIsHovered] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+  const t = useTranslations("Welcome");
+  const tHistory = useTranslations("ChatHistory");
+  const tTime = useTranslations("RelativeTime");
 
   const hasSessions = sessions.length > 0;
+
+  const stageLabels: Record<SessionPipelineStage, string> = {
+    discovery: tHistory("discovery"),
+    analysis: tHistory("analysis"),
+    results: tHistory("results"),
+  };
+
+  function getRelativeTime(dateStr: string): string {
+    const now = new Date();
+    const date = new Date(dateStr);
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return tTime("now");
+    if (diffMins < 60) return tTime("minutesAgo", { minutes: diffMins });
+    if (diffHours < 24) return tTime("hoursAgo", { hours: diffHours });
+    if (diffDays === 1) return tTime("yesterday");
+    if (diffDays < 7) return tTime("daysAgo", { days: diffDays });
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
 
   const groupedSessions = useMemo(() => {
     const groups: Record<SessionPipelineStage, SessionItem[]> = {
@@ -81,7 +104,6 @@ export function ChatWelcome({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Shader background */}
       <div className="pointer-events-none sticky top-0 z-0 -mb-[100vh] h-screen w-full">
         {prefersReducedMotion ? (
           <div
@@ -108,7 +130,6 @@ export function ChatWelcome({
         )}
       </div>
 
-      {/* Hero section */}
       <div
         className={cn(
           "relative z-10 flex flex-col items-center justify-center",
@@ -125,8 +146,9 @@ export function ChatWelcome({
             variants={slideUp}
             className="mb-8 text-center font-heading text-3xl font-bold tracking-tight sm:text-4xl"
           >
-            O que vamos{" "}
-            <span className="text-gradient">resolver</span>?
+            {t.rich("title", {
+              gradient: (chunks) => <span className="text-gradient">{chunks}</span>,
+            })}
           </motion.h1>
 
           <motion.div variants={slideUp} className="w-full">
@@ -140,23 +162,22 @@ export function ChatWelcome({
         </motion.div>
       </div>
 
-      {/* Sessions panel */}
       {hasSessions && (
         <div className="relative z-10 flex justify-center px-4 pb-8">
           <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-border/60 bg-background/80 shadow-2xl backdrop-blur-xl">
             <Tabs defaultValue="results" className="flex flex-col">
               <div className="border-b border-border/40 px-6 pt-5 pb-3">
                 <h2 className="mb-4 text-base font-semibold text-foreground">
-                  Suas execuções
+                  {t("yourChats")}
                 </h2>
                 <TabsList className="w-full">
                   {STAGES.map((stage) => {
-                    const config = STAGE_CONFIG[stage];
+                    const config = STAGE_ICONS[stage];
                     const count = countByStage(stage);
                     return (
                       <TabsTrigger key={stage} value={stage} className="flex-1 gap-2">
                         <config.icon className={cn("h-3.5 w-3.5", config.color)} />
-                        {config.label}
+                        {stageLabels[stage]}
                         {count > 0 && (
                           <Badge
                             variant="secondary"
@@ -179,7 +200,7 @@ export function ChatWelcome({
                         {sessionsByStage(stage).length === 0 ? (
                           <div className="flex flex-col items-center justify-center py-12 text-center">
                             <p className="text-sm text-foreground-muted/50">
-                              Nenhuma execução nessa etapa
+                              {t("noChatsInStage")}
                             </p>
                           </div>
                         ) : (
@@ -191,6 +212,10 @@ export function ChatWelcome({
                                 isActive={session.id === currentSessionId}
                                 onClick={() => onSelectSession(session.id)}
                                 onDelete={() => onDeleteSession(session.id)}
+                                deleteLabel={tHistory("deleteSession", { title: session.title })}
+                                resultCountLabel={tHistory("resultCount", { count: session.resultCount })}
+                                relativeTime={getRelativeTime(session.updatedAt)}
+                                moreLabel={(count) => tHistory("moreStartups", { count })}
                               />
                             ))}
                           </div>

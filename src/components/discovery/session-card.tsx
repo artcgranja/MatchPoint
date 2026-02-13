@@ -14,7 +14,6 @@ import type { SessionItem, SessionPipelineStage } from "@/types";
 const STAGE_CONFIG: Record<
   SessionPipelineStage,
   {
-    label: string;
     icon: typeof MessageSquare;
     color: string;
     iconBg: string;
@@ -22,43 +21,24 @@ const STAGE_CONFIG: Record<
   }
 > = {
   discovery: {
-    label: "Descoberta",
     icon: MessageSquare,
     color: "text-blue-400",
     iconBg: "bg-blue-500/10",
     borderAccent: "border-l-blue-500/50",
   },
   analysis: {
-    label: "Análise",
     icon: FileText,
     color: "text-amber-400",
     iconBg: "bg-amber-500/10",
     borderAccent: "border-l-amber-500/50",
   },
   results: {
-    label: "Scout",
     icon: Rocket,
     color: "text-green-400",
     iconBg: "bg-green-500/10",
     borderAccent: "border-l-green-500/50",
   },
 };
-
-function getRelativeTime(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return "agora";
-  if (diffMins < 60) return `${diffMins}m atrás`;
-  if (diffHours < 24) return `${diffHours}h atrás`;
-  if (diffDays === 1) return "ontem";
-  if (diffDays < 7) return `${diffDays}d atrás`;
-  return date.toLocaleDateString("pt-BR", { month: "short", day: "numeric" });
-}
 
 function DiscoveryPreview({ preview }: { preview: string | null }) {
   if (!preview) return null;
@@ -83,9 +63,11 @@ function AnalysisPreview({ preview }: { preview: string | null }) {
 function ScoutPreview({
   topStartups,
   resultCount,
+  moreLabel,
 }: {
   topStartups: string[] | null;
   resultCount: number;
+  moreLabel: (count: number) => string;
 }) {
   if (!topStartups || topStartups.length === 0) return null;
   const remaining = resultCount - topStartups.length;
@@ -104,7 +86,7 @@ function ScoutPreview({
       ))}
       {remaining > 0 && (
         <span className="pl-7 text-[10px] text-foreground-muted/40">
-          +{remaining} mais
+          {moreLabel(remaining)}
         </span>
       )}
     </div>
@@ -116,6 +98,10 @@ interface SessionCardProps {
   isActive: boolean;
   onClick: () => void;
   onDelete: () => void;
+  deleteLabel: string;
+  resultCountLabel: string;
+  relativeTime: string;
+  moreLabel: (count: number) => string;
 }
 
 export function SessionCard({
@@ -123,6 +109,10 @@ export function SessionCard({
   isActive,
   onClick,
   onDelete,
+  deleteLabel,
+  resultCountLabel,
+  relativeTime,
+  moreLabel,
 }: SessionCardProps) {
   const config = STAGE_CONFIG[session.pipelineStage];
   const Icon = config.icon;
@@ -158,7 +148,7 @@ export function SessionCard({
             {session.title}
           </h4>
           <span className="text-[10px] text-foreground-muted/40">
-            {getRelativeTime(session.updatedAt)}
+            {relativeTime}
           </span>
         </div>
         <button
@@ -166,7 +156,7 @@ export function SessionCard({
             e.stopPropagation();
             onDelete();
           }}
-          aria-label={`Excluir: ${session.title}`}
+          aria-label={deleteLabel}
           className="shrink-0 rounded p-0.5 text-foreground-muted/30 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -178,6 +168,7 @@ export function SessionCard({
         <ScoutPreview
           topStartups={session.topStartups}
           resultCount={session.resultCount}
+          moreLabel={moreLabel}
         />
       ) : session.pipelineStage === "analysis" ? (
         <AnalysisPreview preview={session.analysisPreview} />
@@ -192,8 +183,7 @@ export function SessionCard({
             variant="secondary"
             className="text-[10px] text-green-400/80"
           >
-            {session.resultCount} resultado
-            {session.resultCount !== 1 ? "s" : ""}
+            {resultCountLabel}
           </Badge>
         </div>
       )}

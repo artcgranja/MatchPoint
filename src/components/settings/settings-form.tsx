@@ -1,6 +1,8 @@
 "use client";
 
 import { useTheme } from "next-themes";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter, usePathname } from "@/i18n/navigation";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -15,6 +17,10 @@ import { useSettingsStore } from "@/stores/settings-store";
 
 export function SettingsForm() {
   const { setTheme, theme } = useTheme();
+  const t = useTranslations("Settings");
+  const locale = useLocale();
+  const router = useRouter();
+  const pathname = usePathname();
   const {
     notificationsEnabled,
     compactView,
@@ -25,29 +31,47 @@ export function SettingsForm() {
   return (
     <div className="space-y-6 max-w-2xl">
       <SettingsSection
-        title="Appearance"
-        description="Customize how MatchPoint looks."
+        title={t("appearance")}
+        description={t("appearanceDescription")}
       >
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <Label htmlFor="theme">Theme</Label>
+            <Label htmlFor="theme">{t("theme")}</Label>
             <Select value={theme} onValueChange={setTheme}>
               <SelectTrigger className="w-40" id="theme">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="light">Light</SelectItem>
-                <SelectItem value="dark">Dark</SelectItem>
-                <SelectItem value="system">System</SelectItem>
+                <SelectItem value="light">{t("themeLight")}</SelectItem>
+                <SelectItem value="dark">{t("themeDark")}</SelectItem>
+                <SelectItem value="system">{t("themeSystem")}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <Label htmlFor="language">{t("language")}</Label>
+            <Select
+              value={locale}
+              onValueChange={(newLocale) => {
+                router.replace(pathname, { locale: newLocale as "en" | "pt-BR" });
+              }}
+            >
+              <SelectTrigger className="w-40" id="language">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">{t("languageEN")}</SelectItem>
+                <SelectItem value="pt-BR">{t("languagePTBR")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="compact">Compact View</Label>
+              <Label htmlFor="compact">{t("compactView")}</Label>
               <p className="text-xs text-foreground-muted">
-                Show more items with less spacing
+                {t("compactViewDescription")}
               </p>
             </div>
             <Switch
@@ -60,14 +84,14 @@ export function SettingsForm() {
       </SettingsSection>
 
       <SettingsSection
-        title="Notifications"
-        description="Configure how you receive updates."
+        title={t("notifications")}
+        description={t("notificationsDescription")}
       >
         <div className="flex items-center justify-between">
           <div>
-            <Label htmlFor="notifications">Enable Notifications</Label>
+            <Label htmlFor="notifications">{t("enableNotifications")}</Label>
             <p className="text-xs text-foreground-muted">
-              Get notified when searches complete
+              {t("enableNotificationsDescription")}
             </p>
           </div>
           <Switch
@@ -79,12 +103,11 @@ export function SettingsForm() {
       </SettingsSection>
 
       <SettingsSection
-        title="Search Defaults"
-        description="Set default filters for new searches."
+        title={t("searchDefaults")}
+        description={t("searchDefaultsDescription")}
       >
         <p className="text-sm text-foreground-muted">
-          Default filter configuration will be applied automatically when you
-          start a new search. You can customize these on the Search page.
+          {t("searchDefaultsHint")}
         </p>
       </SettingsSection>
     </div>

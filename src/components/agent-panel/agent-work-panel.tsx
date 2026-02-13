@@ -2,6 +2,7 @@
 
 import { Brain, Check, Loader2, Rocket } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { useTranslations } from "next-intl";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { AnalysisTab } from "./analysis-tab";
@@ -43,6 +44,7 @@ function ScoutStatusDot() {
 }
 
 export function AgentWorkPanel({ onConfirm }: AgentWorkPanelProps) {
+  const t = useTranslations("AgentPanel");
   const activeTab = useAgentPanelStore((s) => s.activeTab);
   const setActiveTab = useAgentPanelStore((s) => s.setActiveTab);
 
@@ -57,12 +59,12 @@ export function AgentWorkPanel({ onConfirm }: AgentWorkPanelProps) {
           <TabsList variant="line" className="w-full">
             <TabsTrigger value="analysis" className="gap-1.5">
               <Brain className="h-3.5 w-3.5" />
-              Análise
+              {t("analysis")}
               <AnalysisStatusDot />
             </TabsTrigger>
             <TabsTrigger value="scout" className="gap-1.5">
               <Rocket className="h-3.5 w-3.5" />
-              Scout
+              {t("scout")}
               <ScoutStatusDot />
             </TabsTrigger>
           </TabsList>

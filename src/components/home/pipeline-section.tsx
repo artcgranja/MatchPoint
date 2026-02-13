@@ -1,3 +1,6 @@
+"use client";
+
+import { useTranslations } from "next-intl";
 import { MessageSquare, FileText, Rocket } from "lucide-react";
 import { slideUp, staggerContainer } from "@/lib/motion";
 import {
@@ -5,14 +8,13 @@ import {
   AnimateOnScrollItem,
 } from "@/components/ui/animate-on-scroll";
 
-const steps = [
+const stepConfigs = [
   {
     number: "01",
     icon: MessageSquare,
-    title: "Discovery",
-    model: "Sonnet 4.5",
-    description:
-      "Converse naturalmente com nosso agente Navigator. Ele entende seu contexto, problema e objetivos sem formulários rígidos.",
+    titleKey: "step01Title" as const,
+    modelKey: "step01Model" as const,
+    descriptionKey: "step01Description" as const,
     color: "text-highlight",
     bg: "bg-highlight/10",
     border: "border-highlight/20",
@@ -20,10 +22,9 @@ const steps = [
   {
     number: "02",
     icon: FileText,
-    title: "Analysis",
-    model: "Opus 4.6",
-    description:
-      "O agente BizDev analisa toda a conversa e produz um documento de produto estruturado com suas necessidades mapeadas.",
+    titleKey: "step02Title" as const,
+    modelKey: "step02Model" as const,
+    descriptionKey: "step02Description" as const,
     color: "text-sage",
     bg: "bg-sage/10",
     border: "border-sage/20",
@@ -31,10 +32,9 @@ const steps = [
   {
     number: "03",
     icon: Rocket,
-    title: "Scout",
-    model: "Haiku 4.5",
-    description:
-      "O agente Scout busca em nossa base de startups, avalia cada candidata e retorna os melhores matches com justificativas.",
+    titleKey: "step03Title" as const,
+    modelKey: "step03Model" as const,
+    descriptionKey: "step03Description" as const,
     color: "text-amber-400",
     bg: "bg-amber-400/10",
     border: "border-amber-400/20",
@@ -42,6 +42,8 @@ const steps = [
 ];
 
 export function PipelineSection() {
+  const t = useTranslations("Landing");
+
   return (
     <section id="pipeline" className="relative py-24" aria-label="Pipeline">
       {/* Ambient sage glow */}
@@ -55,19 +57,21 @@ export function PipelineSection() {
         <AnimateOnScroll variants={staggerContainer} className="mb-16 text-center">
           <AnimateOnScrollItem variants={slideUp}>
             <p className="mb-3 font-mono text-xs uppercase tracking-[0.25em] text-sage">
-              Pipeline
+              {t("pipelineLabel")}
             </p>
           </AnimateOnScrollItem>
           <AnimateOnScrollItem variants={slideUp}>
             <h2 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">
-              Três etapas,{" "}
-              <span className="text-gradient">uma conversa</span>
+              {t.rich("pipelineTitle", {
+                highlight: (chunks) => (
+                  <span className="text-gradient">{chunks}</span>
+                ),
+              })}
             </h2>
           </AnimateOnScrollItem>
           <AnimateOnScrollItem variants={slideUp}>
             <p className="mx-auto mt-4 max-w-2xl text-base text-foreground-muted">
-              Cada etapa usa um modelo Claude especializado. Você acompanha
-              tudo em tempo real no painel lateral.
+              {t("pipelineDescription")}
             </p>
           </AnimateOnScrollItem>
         </AnimateOnScroll>
@@ -78,7 +82,7 @@ export function PipelineSection() {
           <div className="absolute left-6 top-0 bottom-0 hidden w-px bg-gradient-to-b from-highlight via-sage to-amber-400/40 md:left-1/2 md:block" />
 
           <div className="flex flex-col gap-12 md:gap-16">
-            {steps.map((step, i) => (
+            {stepConfigs.map((step, i) => (
               <AnimateOnScrollItem
                 key={step.number}
                 variants={slideUp}
@@ -112,15 +116,15 @@ export function PipelineSection() {
                         <span className="font-mono text-xs text-foreground-muted">
                           {step.number}
                         </span>
-                        <h3 className="text-lg font-semibold">{step.title}</h3>
+                        <h3 className="text-lg font-semibold">{t(step.titleKey)}</h3>
                       </div>
                       <p className="font-mono text-[10px] uppercase tracking-wider text-foreground-muted">
-                        Claude {step.model}
+                        Claude {t(step.modelKey)}
                       </p>
                     </div>
                   </div>
                   <p className="text-sm leading-relaxed text-foreground-muted">
-                    {step.description}
+                    {t(step.descriptionKey)}
                   </p>
                 </div>
               </AnimateOnScrollItem>

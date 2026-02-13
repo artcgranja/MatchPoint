@@ -2,17 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ArrowUp } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { SessionStage } from "@/types";
-
-const STAGE_PLACEHOLDERS: Record<SessionStage, string> = {
-  discovery: "Conte sobre sua empresa e o desafio que enfrenta...",
-  analysis: "Analisando suas necessidades…",
-  scout: "Buscando startups…",
-  complete: "Pergunte sobre as startups encontradas...",
-  advising: "Pergunte sobre as startups encontradas...",
-};
 
 interface ChatInputProps {
   onSend: (text: string) => void;
@@ -22,11 +15,20 @@ interface ChatInputProps {
 }
 
 export function ChatInput({ onSend, disabled, currentStage, variant = "default" }: ChatInputProps) {
+  const t = useTranslations("Chat");
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isProcessing = currentStage === "analysis" || currentStage === "scout";
   const isDisabled = disabled || isProcessing;
+
+  const STAGE_PLACEHOLDERS: Record<SessionStage, string> = {
+    discovery: t("placeholderDiscovery"),
+    analysis: t("placeholderAnalysis"),
+    scout: t("placeholderScout"),
+    complete: t("placeholderAdvisor"),
+    advising: t("placeholderAdvisor"),
+  };
 
   const adjustHeight = useCallback(() => {
     const textarea = textareaRef.current;
@@ -82,7 +84,7 @@ export function ChatInput({ onSend, disabled, currentStage, variant = "default" 
           onClick={handleSend}
           disabled={!value.trim() || isDisabled}
           size="icon"
-          aria-label="Enviar mensagem"
+          aria-label={t("sendMessage")}
           className="h-8 w-8 rounded-lg"
         >
           <ArrowUp className="h-4 w-4" />

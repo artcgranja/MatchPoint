@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import {
   Compass,
   ChevronDown,
@@ -14,6 +14,7 @@ import {
   Moon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -90,12 +91,14 @@ export function ChatNavbar({
   onRename,
 }: ChatNavbarProps) {
   const router = useRouter();
+  const t = useTranslations("Chat");
+  const tCommon = useTranslations("Common");
   const [isRenameOpen, setIsRenameOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [isRenaming, setIsRenaming] = useState(false);
   const renameInputRef = useRef<HTMLInputElement>(null);
 
-  const displayTitle = sessionTitle ?? "Novo Chat";
+  const displayTitle = sessionTitle ?? t("newChat");
 
   const handleHomeClick = () => {
     useDiscoveryStore.getState().reset();
@@ -143,11 +146,11 @@ export function ChatNavbar({
             <DropdownMenuContent align="start" className="w-56">
               <DropdownMenuItem onClick={handleHomeClick}>
                 <Home className="h-4 w-4" />
-                Voltar ao Inicio
+                {t("backToHome")}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleOpenRename}>
                 <Pencil className="h-4 w-4" />
-                Renomear projeto
+                {t("renameProject")}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <ThemeControl />
@@ -168,7 +171,7 @@ export function ChatNavbar({
               size="icon"
               className="h-7 w-7 text-foreground-muted transition-colors hover:text-foreground"
               onClick={onTogglePanel}
-              aria-label={panelOpen ? "Fechar painel" : "Abrir painel"}
+              aria-label={panelOpen ? t("closePanel") : t("openPanel")}
             >
               {panelOpen ? (
                 <PanelRightClose className="h-4 w-4" />
@@ -184,7 +187,7 @@ export function ChatNavbar({
       <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Renomear projeto</DialogTitle>
+            <DialogTitle>{t("renameProject")}</DialogTitle>
           </DialogHeader>
           <Input
             ref={renameInputRef}
@@ -194,7 +197,7 @@ export function ChatNavbar({
               if (e.key === "Enter") handleRename();
             }}
             maxLength={120}
-            placeholder="Nome do projeto"
+            placeholder={t("projectName")}
           />
           <DialogFooter>
             <Button
@@ -202,10 +205,10 @@ export function ChatNavbar({
               onClick={() => setIsRenameOpen(false)}
               disabled={isRenaming}
             >
-              Cancelar
+              {tCommon("cancel")}
             </Button>
             <Button onClick={handleRename} disabled={isRenaming}>
-              {isRenaming ? "Salvando..." : "Salvar"}
+              {isRenaming ? tCommon("saving") : tCommon("save")}
             </Button>
           </DialogFooter>
         </DialogContent>
