@@ -211,6 +211,26 @@
     "notFoundDescription": "The page you're looking for may have been moved or doesn't exist. Let's get you back on track.",
     "backToHome": "Back to home"
   },
+  "Pipeline": {
+    "discoveryComplete": "Discovery complete! Starting analysis...",
+    "analysisInProgress": "Analysis in progress, please wait...",
+    "scoutInProgress": "Startup search in progress, please wait...",
+    "preparingAnalysis": "Preparing BizDev plan...",
+    "searchingStartups": "Searching startups...",
+    "searchingDatabase": "Searching database...",
+    "analyzingDetails": "Analyzing details...",
+    "analysisComplete": "BizDev plan complete",
+    "startupsFound": "{count, plural, one {# startup found} other {# startups found}}",
+    "planConfirmed": "Plan confirmed! Searching startups...",
+    "startingSearch": "Starting search...",
+    "searchComplete": "Search complete",
+    "startupsFoundChat": "{count, plural, one {# startup found! See results in the panel.} other {# startups found! See results in the panel.}}",
+    "noStartupsFound": "No startups found for the defined criteria. Try adjusting your search.",
+    "connectionError": "Connection error. Check your network and try again.",
+    "pipelineConnectionError": "Pipeline connection error. Try again.",
+    "pipelineError": "Pipeline error: {message}",
+    "error": "Error: {message}"
+  },
   "Metadata": {
     "title": "MatchPoint — Startup Matching with AI",
     "titleTemplate": "%s | MatchPoint",

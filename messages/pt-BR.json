@@ -211,6 +211,26 @@
     "notFoundDescription": "A página que você procura pode ter sido movida ou não existe. Vamos te colocar de volta no caminho certo.",
     "backToHome": "Voltar ao início"
   },
+  "Pipeline": {
+    "discoveryComplete": "Descoberta concluída! Iniciando análise...",
+    "analysisInProgress": "Análise em andamento, por favor aguarde...",
+    "scoutInProgress": "Busca de startups em andamento, por favor aguarde...",
+    "preparingAnalysis": "Preparando plano BizDev...",
+    "searchingStartups": "Buscando startups...",
+    "searchingDatabase": "Buscando no banco de dados...",
+    "analyzingDetails": "Analisando detalhes...",
+    "analysisComplete": "Plano BizDev concluído",
+    "startupsFound": "{count, plural, one {# startup encontrada} other {# startups encontradas}}",
+    "planConfirmed": "Plano confirmado! Buscando startups...",
+    "startingSearch": "Iniciando busca...",
+    "searchComplete": "Busca concluída",
+    "startupsFoundChat": "{count, plural, one {# startup encontrada! Veja os resultados no painel.} other {# startups encontradas! Veja os resultados no painel.}}",
+    "noStartupsFound": "Nenhuma startup encontrada para os critérios definidos. Tente ajustar sua busca.",
+    "connectionError": "Erro de conexão. Verifique sua rede e tente novamente.",
+    "pipelineConnectionError": "Erro de conexão com o pipeline. Tente novamente.",
+    "pipelineError": "Erro no pipeline: {message}",
+    "error": "Erro: {message}"
+  },
   "Metadata": {
     "title": "MatchPoint — Matching de Startups com IA",
     "titleTemplate": "%s | MatchPoint",
