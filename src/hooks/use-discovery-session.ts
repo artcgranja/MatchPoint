@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useDiscoveryStore } from "@/stores/discovery-store";
 import { useSearchStore } from "@/stores/search-store";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
@@ -9,6 +10,8 @@ import { createSseParser } from "@/lib/sse/parser";
 import type { BizDevPlanStatus, DiscoveryMessage, DiscoverySession, SessionStage, StartupCard } from "@/types";
 
 export function useDiscoverySession() {
+  const tPipeline = useTranslations("Pipeline");
+
   const {
     sessionId,
     discoveryState,
@@ -101,7 +104,7 @@ export function useDiscoverySession() {
               scoutSummary: search.scoutSummary ?? "",
               scoutStatus: "complete",
               scoutProgress: 100,
-              scoutMessage: "Busca concluída",
+              scoutMessage: tPipeline("searchComplete"),
               panelOpen: true,
               activeTab: "scout",
             });
@@ -109,7 +112,7 @@ export function useDiscoverySession() {
             // Add cards message to chat
             msgs.push({
               role: "assistant",
-              content: `${search.cards.length} startups encontradas! Veja os resultados no painel.`,
+              content: tPipeline("startupsFoundChat", { count: search.cards.length }),
               type: "cards",
               cards: search.cards,
             });
@@ -164,6 +167,7 @@ export function useDiscoverySession() {
       setIsLoadingSession,
       setSearchId,
       completePipeline,
+      tPipeline,
     ]
   );
 
@@ -234,6 +238,9 @@ export function useDiscoverySession() {
               Scout: "scout",
             };
             const stage = stageMap[data.agentName];
+            const resolvedMessage = data.key
+              ? tPipeline(data.key as Parameters<typeof tPipeline>[0], data.params ?? {})
+              : (data.message ?? "");
             if (stage && sse.event === "stage_update") {
               if (data.progress === 0) {
                 setCurrentStage(stage);
@@ -243,12 +250,12 @@ export function useDiscoverySession() {
                   panelOpen: true,
                   scoutStatus: "searching",
                   scoutProgress: data.progress,
-                  scoutMessage: data.message ?? "",
+                  scoutMessage: resolvedMessage,
                 });
               } else {
                 useAgentPanelStore.getState().batchUpdate({
                   scoutProgress: data.progress,
-                  scoutMessage: data.message ?? "",
+                  scoutMessage: resolvedMessage,
                 });
               }
             }
@@ -293,13 +300,13 @@ export function useDiscoverySession() {
               scoutSummary: summary,
               scoutStatus: "complete",
               scoutProgress: 100,
-              scoutMessage: "Busca concluída",
+              scoutMessage: data.key ? tPipeline(data.key as Parameters<typeof tPipeline>[0], data.params ?? {}) : tPipeline("searchComplete"),
             });
 
             if (cards.length > 0) {
               addMessage({
                 role: "assistant",
-                content: `${cards.length} startups encontradas! Veja os resultados no painel.`,
+                content: tPipeline("startupsFoundChat", { count: cards.length }),
                 type: "cards",
                 cards,
               });
@@ -308,7 +315,7 @@ export function useDiscoverySession() {
                 role: "assistant",
                 content:
                   summary ||
-                  "Nenhuma startup encontrada para os critérios definidos. Tente ajustar sua busca.",
+                  tPipeline("noStartupsFound"),
               });
             }
 
@@ -320,7 +327,7 @@ export function useDiscoverySession() {
           if (sse.event === "error") {
             addMessage({
               role: "assistant",
-              content: `Erro no pipeline: ${data.message}`,
+              content: tPipeline("pipelineError", { message: data.message }),
               type: "stage-update",
             });
             useAgentPanelStore.getState().batchUpdate({ scoutStatus: "error" });
@@ -333,7 +340,7 @@ export function useDiscoverySession() {
         }
       }
     },
-    [addMessage, completePipeline, errorPipeline, setCurrentStage, setDiscoveryState]
+    [addMessage, completePipeline, errorPipeline, setCurrentStage, setDiscoveryState, tPipeline]
   );
 
   // ═══════════════════════════════════════════
@@ -349,12 +356,12 @@ export function useDiscoverySession() {
       activeTab: "scout",
       scoutStatus: "searching",
       scoutProgress: 0,
-      scoutMessage: "Iniciando busca...",
+      scoutMessage: tPipeline("startingSearch"),
     });
     setCurrentStage("scout");
     addMessage({
       role: "assistant",
-      content: "Plano confirmado! Buscando startups...",
+      content: tPipeline("planConfirmed"),
       type: "stage-update",
     });
 
@@ -399,7 +406,7 @@ export function useDiscoverySession() {
             if (data.error) {
               addMessage({
                 role: "assistant",
-                content: `Erro: ${data.error}`,
+                content: tPipeline("error", { message: data.error }),
                 type: "stage-update",
               });
               errorPipeline();
@@ -413,7 +420,7 @@ export function useDiscoverySession() {
       console.error("Scout stream error:", error);
       addMessage({
         role: "assistant",
-        content: "Erro de conexão com o pipeline. Tente novamente.",
+        content: tPipeline("pipelineConnectionError"),
         type: "stage-update",
       });
       useAgentPanelStore.getState().batchUpdate({ scoutStatus: "error" });
@@ -429,6 +436,7 @@ export function useDiscoverySession() {
     setDiscoveryState,
     addMessage,
     processScoutNamedEvents,
+    tPipeline,
   ]);
 
   // ═══════════════════════════════════════════
@@ -464,8 +472,10 @@ export function useDiscoverySession() {
         const decoder = new TextDecoder();
         const sseParser = createSseParser();
         let assistantMsg = "";
+        let textFinalized = false;
         let textRafId: number | null = null;
         const flushText = () => {
+          if (textFinalized) return;
           updateLastAssistantMessage(assistantMsg);
           textRafId = null;
         };
@@ -498,9 +508,20 @@ export function useDiscoverySession() {
               }
 
               if (data.status) {
+                if (!textFinalized && assistantMsg) {
+                  if (textRafId !== null) {
+                    cancelAnimationFrame(textRafId);
+                    textRafId = null;
+                  }
+                  updateLastAssistantMessage(assistantMsg);
+                  textFinalized = true;
+                }
+                const statusContent = data.statusKey
+                  ? tPipeline(data.statusKey as Parameters<typeof tPipeline>[0], data.statusParams ?? {})
+                  : data.status;
                 addMessage({
                   role: "assistant",
-                  content: data.status,
+                  content: statusContent,
                   type: "stage-update",
                 });
               }
@@ -515,9 +536,17 @@ export function useDiscoverySession() {
               }
 
               if (data.error) {
+                if (!textFinalized && assistantMsg) {
+                  if (textRafId !== null) {
+                    cancelAnimationFrame(textRafId);
+                    textRafId = null;
+                  }
+                  updateLastAssistantMessage(assistantMsg);
+                  textFinalized = true;
+                }
                 addMessage({
                   role: "assistant",
-                  content: `Erro: ${data.error}`,
+                  content: tPipeline("error", { message: data.error }),
                   type: "stage-update",
                 });
                 errorPipeline();
@@ -530,14 +559,14 @@ export function useDiscoverySession() {
 
         // Final flush to ensure last chunk is rendered
         if (textRafId !== null) cancelAnimationFrame(textRafId);
-        if (assistantMsg) updateLastAssistantMessage(assistantMsg);
+        if (assistantMsg && !textFinalized) updateLastAssistantMessage(assistantMsg);
 
         setIsStreaming(false);
       } catch (error) {
         console.error("Session error:", error);
         addMessage({
           role: "assistant",
-          content: "Erro de conexão. Verifique sua rede e tente novamente.",
+          content: tPipeline("connectionError"),
           type: "stage-update",
         });
         setIsStreaming(false);
@@ -555,6 +584,7 @@ export function useDiscoverySession() {
       startPipeline,
       errorPipeline,
       processAnalysisEvents,
+      tPipeline,
     ]
   );
 

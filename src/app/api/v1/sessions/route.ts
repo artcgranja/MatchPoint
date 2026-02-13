@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
+import { stripMarkdown } from "@/lib/utils";
 
 export async function GET() {
   const auth = await getAuthUser();
@@ -72,13 +73,14 @@ export async function GET() {
     } else if (pipelineStage === "analysis" && search?.bizPlan) {
       // Extract a snippet from the product document
       const plan = search.bizPlan as Record<string, unknown>;
-      const planText =
-        typeof plan === "string" ? plan : (plan.summary as string) ?? (plan.overview as string) ?? null;
-      analysisPreview = typeof planText === "string" ? planText.slice(0, 150) : null;
-      if (!analysisPreview) {
-        // Fallback: stringify first 150 chars
-        const raw = JSON.stringify(plan);
-        analysisPreview = raw.length > 10 ? raw.slice(0, 150) : null;
+      const rawText =
+        typeof plan === "string"
+          ? plan
+          : typeof plan.productDocument === "string"
+            ? plan.productDocument
+            : null;
+      if (rawText) {
+        analysisPreview = stripMarkdown(rawText).slice(0, 200);
       }
     } else {
       // Discovery: last assistant message

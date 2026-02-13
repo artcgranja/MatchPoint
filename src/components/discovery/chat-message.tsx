@@ -15,10 +15,6 @@ interface ChatMessageProps {
   isStreaming?: boolean;
 }
 
-function stripMarkers(text: string) {
-  return text.replace(/\[DISCOVERY_COMPLETE\]/g, "").trim();
-}
-
 export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
   const t = useTranslations("Chat");
   const isUser = message.role === "user";
@@ -64,7 +60,7 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
   }
 
   // Regular text messages
-  const displayContent = stripMarkers(message.content);
+  const displayContent = message.content;
 
   if (isUser) {
     return (
