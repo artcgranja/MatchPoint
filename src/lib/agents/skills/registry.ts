@@ -1,9 +1,10 @@
 import type { BetaRunnableTool } from "@anthropic-ai/sdk/lib/tools/BetaRunnableTool";
 import type { Skill, SkillModule } from "./types";
 import { startupDataSkill } from "./startup-data";
+import { discoveryControlSkill } from "./discovery-control";
 
 /** All registered skills. Add new skills here. */
-const SKILL_MODULES: SkillModule[] = [startupDataSkill];
+const SKILL_MODULES: SkillModule[] = [startupDataSkill, discoveryControlSkill];
 
 function resolve(mod: SkillModule): Skill {
   return {
