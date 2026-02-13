@@ -29,14 +29,26 @@ export async function GET() {
   const result = sessions.map((s) => {
     const firstMessage = s.messages[0]?.content ?? null;
     const search = s.searches[0] ?? null;
+    const hasResults = search?.status === "complete";
+
+    // Compute granular pipeline stage
+    let pipelineStage: "discovery" | "analysis" | "results";
+    if (!s.isComplete) {
+      pipelineStage = "discovery";
+    } else if (hasResults) {
+      pipelineStage = "results";
+    } else {
+      pipelineStage = "analysis";
+    }
 
     return {
       id: s.id,
       title: s.title ?? (firstMessage ? firstMessage.slice(0, 60) : "New Chat"),
-      currentStage: s.isComplete ? "complete" : "discovery",
+      pipelineStage,
       isComplete: s.isComplete,
-      hasResults: search?.status === "complete",
+      hasResults,
       resultCount: search?.resultCount ?? 0,
+      preview: firstMessage ? firstMessage.slice(0, 120) : null,
       createdAt: s.createdAt.toISOString(),
       updatedAt: s.updatedAt.toISOString(),
     };

@@ -20,6 +20,7 @@ import { useDiscoverySession } from "@/hooks/use-discovery-session";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLoginModalStore } from "@/stores/login-modal-store";
+import { useSessions } from "@/hooks/use-sessions";
 import { toast } from "sonner";
 import { EASE_OUT_EXPO } from "@/lib/motion";
 
@@ -47,6 +48,12 @@ export default function HomePage() {
   } = useAgentPanelStore();
   const user = useAuthStore((s) => s.user);
   const agentPanelRef = useRef<PanelImperativeHandle>(null);
+  const {
+    sessions,
+    currentSessionId: hookSessionId,
+    handleSelect: handleSessionSelect,
+    deleteSession,
+  } = useSessions();
 
   useEffect(() => {
     if (sessionId && discoveryState === "idle" && messages.length === 0) {
@@ -113,6 +120,7 @@ export default function HomePage() {
   const ToggleIcon = scoutStatus !== "idle" && cards.length > 0 ? Rocket : Brain;
 
   return (
+  <>
     <AnimatePresence mode="wait" initial={false}>
       {isIdle ? (
         isLoadingSession ? (
@@ -138,6 +146,10 @@ export default function HomePage() {
               onSendMessage={handleSendMessage}
               isStreaming={isStreaming}
               currentStage={currentStage}
+              sessions={sessions}
+              currentSessionId={hookSessionId}
+              onSelectSession={handleSessionSelect}
+              onDeleteSession={deleteSession}
             />
           </motion.div>
         ) : (
@@ -234,5 +246,7 @@ export default function HomePage() {
         </motion.div>
       )}
     </AnimatePresence>
+
+  </>
   );
 }

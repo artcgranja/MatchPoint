@@ -16,7 +16,6 @@ import {
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/utils/user";
-import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -66,11 +65,30 @@ export function AppSidebar() {
         collapsed ? "w-16" : "w-60"
       )}
     >
-      {/* Logo */}
-      <div className="flex items-center gap-2 px-4 pt-4 pb-2">
-        <Compass className="h-6 w-6 shrink-0 text-highlight" />
-        {!collapsed && (
-          <span className="text-lg font-bold font-heading">MatchPoint</span>
+      {/* Header: logo + collapse toggle */}
+      <div className={cn(
+        "flex items-center px-4 pt-4 pb-2",
+        collapsed ? "justify-center" : "justify-between"
+      )}>
+        {collapsed ? (
+          <button
+            onClick={toggleCollapsed}
+            aria-label="Expandir barra lateral"
+            className="rounded-lg p-1 text-foreground-muted transition-colors hover:bg-background-secondary hover:text-foreground"
+          >
+            <PanelLeft className="h-5 w-5" />
+          </button>
+        ) : (
+          <>
+            <Compass className="h-6 w-6 shrink-0 text-highlight" />
+            <button
+              onClick={toggleCollapsed}
+              aria-label="Recolher barra lateral"
+              className="rounded-lg p-1 text-foreground-muted transition-colors hover:bg-background-secondary hover:text-foreground"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
+          </>
         )}
       </div>
 
@@ -173,20 +191,6 @@ export function AppSidebar() {
           </button>
         )}
 
-        {/* Collapse toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={toggleCollapsed}
-          aria-label={collapsed ? "Expandir barra lateral" : "Recolher barra lateral"}
-          className="w-full"
-        >
-          {collapsed ? (
-            <PanelLeft className="h-4 w-4" />
-          ) : (
-            <PanelLeftClose className="h-4 w-4" />
-          )}
-        </Button>
       </div>
     </aside>
   );

@@ -2,82 +2,302 @@
 
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
+import {
+  MessageSquare,
+  FileText,
+  CheckCircle2,
+  Trash2,
+  ChevronDown,
+} from "lucide-react";
 import { WarpShaderBackground } from "@/components/ui/warp-shader-background";
 import { ChatInput } from "@/components/discovery/chat-input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
 import { slideUp, staggerContainer } from "@/lib/motion";
-import type { SessionStage } from "@/types";
+import type { SessionItem, SessionPipelineStage, SessionStage } from "@/types";
+
+const STAGE_CONFIG: Record<
+  SessionPipelineStage,
+  { label: string; icon: typeof MessageSquare; color: string; badgeClass: string }
+> = {
+  discovery: {
+    label: "Descoberta",
+    icon: MessageSquare,
+    color: "text-blue-400",
+    badgeClass: "bg-blue-500/15 text-blue-400 border-blue-500/20",
+  },
+  analysis: {
+    label: "Análise",
+    icon: FileText,
+    color: "text-amber-400",
+    badgeClass: "bg-amber-500/15 text-amber-400 border-amber-500/20",
+  },
+  results: {
+    label: "Resultados",
+    icon: CheckCircle2,
+    color: "text-green-400",
+    badgeClass: "bg-green-500/15 text-green-400 border-green-500/20",
+  },
+};
+
+const STAGES: SessionPipelineStage[] = ["discovery", "analysis", "results"];
+
+function getRelativeTime(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "agora";
+  if (diffMins < 60) return `${diffMins}m atrás`;
+  if (diffHours < 24) return `${diffHours}h atrás`;
+  if (diffDays === 1) return "ontem";
+  if (diffDays < 7) return `${diffDays}d atrás`;
+  return date.toLocaleDateString("pt-BR", { month: "short", day: "numeric" });
+}
 
 interface ChatWelcomeProps {
   onSendMessage: (text: string) => void;
   isStreaming: boolean;
   currentStage: SessionStage;
+  sessions: SessionItem[];
+  currentSessionId: string | null;
+  onSelectSession: (sessionId: string) => void;
+  onDeleteSession: (sessionId: string) => void;
 }
 
 export function ChatWelcome({
   onSendMessage,
   isStreaming,
   currentStage,
+  sessions,
+  currentSessionId,
+  onSelectSession,
+  onDeleteSession,
 }: ChatWelcomeProps) {
   const [isHovered, setIsHovered] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
+  const hasSessions = sessions.length > 0;
+
+  const countByStage = (stage: SessionPipelineStage) =>
+    sessions.filter((s) => s.pipelineStage === stage).length;
+
+  const sessionsByStage = (stage: SessionPipelineStage) =>
+    sessions
+      .filter((s) => s.pipelineStage === stage)
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
   return (
     <div
-      className="relative flex min-h-full flex-1 flex-col items-center justify-center overflow-hidden"
+      className="relative flex-1 overflow-y-auto"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Shader — same effect as landing page */}
-      {prefersReducedMotion ? (
-        <div
-          className="absolute inset-0 z-0"
-          style={{
-            background:
-              "radial-gradient(ellipse at 50% 80%, hsl(217, 91%, 20%) 0%, hsl(215, 50%, 10%) 40%, transparent 70%)",
-          }}
-        />
-      ) : (
-        <div
-          className="absolute inset-0 z-0"
-          style={{
-            maskImage:
-              "linear-gradient(to bottom, transparent 0%, transparent 38%, rgba(0,0,0,0.08) 48%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0.5) 63%, rgba(0,0,0,0.75) 72%, black 82%, black 100%), radial-gradient(ellipse 130% 55% at 50% 100%, black 0%, black 75%, transparent 100%)",
-            WebkitMaskImage:
-              "linear-gradient(to bottom, transparent 0%, transparent 38%, rgba(0,0,0,0.08) 48%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0.5) 63%, rgba(0,0,0,0.75) 72%, black 82%, black 100%), radial-gradient(ellipse 130% 55% at 50% 100%, black 0%, black 75%, transparent 100%)",
-            maskComposite: "intersect",
-            WebkitMaskComposite: "source-in",
-          }}
+      {/* Shader background — sticky so it stays visible while scrolling, contained within main */}
+      <div className="pointer-events-none sticky top-0 z-0 -mb-[100vh] h-screen w-full">
+        {prefersReducedMotion ? (
+          <div
+            className="h-screen w-full"
+            style={{
+              background:
+                "radial-gradient(ellipse at 50% 80%, hsl(217, 91%, 20%) 0%, hsl(215, 50%, 10%) 40%, transparent 70%)",
+            }}
+          />
+        ) : (
+          <div
+            className="h-screen w-full"
+            style={{
+              maskImage:
+                "linear-gradient(to bottom, transparent 0%, transparent 38%, rgba(0,0,0,0.08) 48%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0.5) 63%, rgba(0,0,0,0.75) 72%, black 82%, black 100%), radial-gradient(ellipse 130% 55% at 50% 100%, black 0%, black 75%, transparent 100%)",
+              WebkitMaskImage:
+                "linear-gradient(to bottom, transparent 0%, transparent 38%, rgba(0,0,0,0.08) 48%, rgba(0,0,0,0.25) 55%, rgba(0,0,0,0.5) 63%, rgba(0,0,0,0.75) 72%, black 82%, black 100%), radial-gradient(ellipse 130% 55% at 50% 100%, black 0%, black 75%, transparent 100%)",
+              maskComposite: "intersect",
+              WebkitMaskComposite: "source-in",
+            }}
+          >
+            <WarpShaderBackground isHovered={isHovered} />
+          </div>
+        )}
+      </div>
+
+      {/* Hero section — first viewport, centered */}
+      <div className="relative z-10 flex min-h-full flex-col items-center justify-center">
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="flex w-full max-w-2xl flex-col items-center px-6"
         >
-          <WarpShaderBackground isHovered={isHovered} />
+          <motion.h1
+            variants={slideUp}
+            className="mb-8 text-center font-heading text-3xl font-bold tracking-tight sm:text-4xl"
+          >
+            O que vamos{" "}
+            <span className="text-gradient">resolver</span>?
+          </motion.h1>
+
+          <motion.div variants={slideUp} className="w-full">
+            <ChatInput
+              onSend={onSendMessage}
+              disabled={isStreaming}
+              currentStage={currentStage}
+              variant="hero"
+            />
+          </motion.div>
+
+          {/* Scroll hint */}
+          {hasSessions && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.8, duration: 0.5 }}
+              className="mt-8 flex flex-col items-center gap-1 text-foreground-muted/40"
+            >
+              <span className="text-xs">Seus chats anteriores</span>
+              <ChevronDown className="h-4 w-4 animate-bounce" />
+            </motion.div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* History modal — slides up over the shader background */}
+      {hasSessions && (
+        <div className="relative z-10 flex justify-center px-4 pb-8">
+          <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-border/60 bg-background/80 shadow-2xl backdrop-blur-xl">
+            <Tabs defaultValue="discovery" className="flex flex-col">
+              {/* Header: title + tab triggers */}
+              <div className="border-b border-border/40 px-6 pt-5 pb-3">
+                <h2 className="mb-4 text-base font-semibold text-foreground">
+                  Seus chats
+                </h2>
+                <TabsList className="w-full">
+                  {STAGES.map((stage) => {
+                    const config = STAGE_CONFIG[stage];
+                    const count = countByStage(stage);
+                    return (
+                      <TabsTrigger key={stage} value={stage} className="flex-1 gap-2">
+                        <config.icon className={cn("h-3.5 w-3.5", config.color)} />
+                        {config.label}
+                        {count > 0 && (
+                          <Badge
+                            variant="secondary"
+                            className="ml-1 h-5 min-w-5 px-1.5 text-[10px]"
+                          >
+                            {count}
+                          </Badge>
+                        )}
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+              </div>
+
+              {/* Tab content */}
+              <div className="py-4">
+                {STAGES.map((stage) => (
+                  <TabsContent key={stage} value={stage} className="mt-0">
+                    <ScrollArea className="max-h-[50vh]">
+                      <div className="px-6">
+                        {sessionsByStage(stage).length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-12 text-center">
+                            <p className="text-sm text-foreground-muted/50">
+                              Nenhum chat nessa etapa
+                            </p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {sessionsByStage(stage).map((session) => (
+                              <SessionCard
+                                key={session.id}
+                                session={session}
+                                isActive={session.id === currentSessionId}
+                                onClick={() => onSelectSession(session.id)}
+                                onDelete={() => onDeleteSession(session.id)}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </TabsContent>
+                ))}
+              </div>
+            </Tabs>
+          </div>
         </div>
       )}
+    </div>
+  );
+}
 
-      {/* Content — same max-w-2xl and hero chat size as landing */}
-      <motion.div
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-        className="relative z-10 flex w-full max-w-2xl flex-col items-center px-6"
-      >
-        {/* Title */}
-        <motion.h1
-          variants={slideUp}
-          className="mb-8 text-center font-heading text-3xl font-bold tracking-tight sm:text-4xl"
+function SessionCard({
+  session,
+  isActive,
+  onClick,
+  onDelete,
+}: {
+  session: SessionItem;
+  isActive: boolean;
+  onClick: () => void;
+  onDelete: () => void;
+}) {
+  const config = STAGE_CONFIG[session.pipelineStage];
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") onClick();
+      }}
+      className={cn(
+        "group relative flex cursor-pointer flex-col gap-1.5 rounded-xl border p-3 transition-colors",
+        isActive
+          ? "border-highlight/30 bg-highlight/5"
+          : "border-border hover:border-foreground-muted/20 hover:bg-background-secondary"
+      )}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <h4 className="line-clamp-1 text-sm font-medium text-foreground">
+          {session.title}
+        </h4>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete();
+          }}
+          aria-label={`Excluir: ${session.title}`}
+          className="shrink-0 rounded p-0.5 text-foreground-muted/40 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
         >
-          O que vamos{" "}
-          <span className="text-gradient">resolver</span>?
-        </motion.h1>
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
 
-        {/* Chat input — hero variant: same size/style as landing */}
-        <motion.div variants={slideUp} className="w-full">
-          <ChatInput
-            onSend={onSendMessage}
-            disabled={isStreaming}
-            currentStage={currentStage}
-            variant="hero"
-          />
-        </motion.div>
-      </motion.div>
+      {session.preview && (
+        <p className="line-clamp-2 text-xs text-foreground-muted/60">
+          {session.preview}
+        </p>
+      )}
+
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className={cn("text-[10px]", config.badgeClass)}>
+          {config.label}
+        </Badge>
+        {session.hasResults && session.resultCount > 0 && (
+          <Badge variant="secondary" className="text-[10px]">
+            {session.resultCount} resultado{session.resultCount !== 1 ? "s" : ""}
+          </Badge>
+        )}
+        <span className="ml-auto text-[10px] text-foreground-muted/40">
+          {getRelativeTime(session.updatedAt)}
+        </span>
+      </div>
     </div>
   );
 }

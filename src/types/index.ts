@@ -1,5 +1,19 @@
 export type PipelineStatus = "idle" | "running" | "complete" | "error";
 
+export type SessionPipelineStage = "discovery" | "analysis" | "results";
+
+export interface SessionItem {
+  id: string;
+  title: string;
+  pipelineStage: SessionPipelineStage;
+  isComplete: boolean;
+  hasResults: boolean;
+  resultCount: number;
+  preview: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type AgentName = "Analysis" | "Scout";
 
 export type SessionStage = "discovery" | "analysis" | "scout" | "complete" | "advising";
