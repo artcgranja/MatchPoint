@@ -1,10 +1,8 @@
 import type { Viewport } from "next";
-import { Suspense } from "react";
 import { Space_Grotesk, Fira_Code } from "next/font/google";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { LoginModalProvider } from "@/components/auth/login-modal-provider";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -82,9 +80,7 @@ export default async function RootLayout({
       >
         <ThemeProvider>
           <TooltipProvider>
-            <Suspense fallback={null}>
-              <LoginModalProvider>{children}</LoginModalProvider>
-            </Suspense>
+            {children}
           </TooltipProvider>
           <Toaster richColors position="bottom-right" />
         </ThemeProvider>

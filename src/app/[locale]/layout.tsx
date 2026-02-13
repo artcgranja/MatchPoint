@@ -1,8 +1,10 @@
+import { Suspense } from "react";
 import { hasLocale } from "next-intl";
 import { setRequestLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { NextIntlClientProvider } from "next-intl";
+import { LoginModalProvider } from "@/components/auth/login-modal-provider";
 
 type Props = {
   children: React.ReactNode;
@@ -33,7 +35,9 @@ export default async function LocaleLayout({ children, params }: Props) {
       >
         {t("skipToContent")}
       </a>
-      {children}
+      <Suspense fallback={null}>
+        <LoginModalProvider>{children}</LoginModalProvider>
+      </Suspense>
     </NextIntlClientProvider>
   );
 }
