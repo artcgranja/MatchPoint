@@ -56,7 +56,7 @@ Four agents in `/src/lib/agents/`:
 
 | Agent | Model | File | Purpose |
 |-------|-------|------|---------|
-| Discovery | Sonnet 4.5 | `navigator.ts` | Natural conversation, extracts `NeedSummary` |
+| Discovery | Sonnet 4.5 | `navigator.ts` | Natural conversation, calls `complete_discovery` tool when done, triggers `NeedSummary` extraction |
 | Analysis | Opus 4.6 | `bizdev.ts` | Produces product document from conversation transcript |
 | Scout | Haiku 4.5 | `scout.ts` | Searches DB with tools → returns startup cards with `whyRelevant` |
 | Advisor | Haiku 4.5 | `advisor.ts` | Post-pipeline Q&A with tool access to startup data |
@@ -77,14 +77,14 @@ Agent tools are organized as **skills** — self-contained modules that bundle t
 
 | Skill | Tools | Used By | Directory |
 |-------|-------|---------|-----------|
+| discovery-control | `complete_discovery` | Discovery | `skills/discovery-control/` |
 | startup-data | `search_companies`, `get_company_details` | Scout, Advisor | `skills/startup-data/` |
 
 Each skill contains:
-- `SKILL.md` — documentation with YAML frontmatter (source of truth)
 - `tools.ts` — canonical `betaZodTool` definitions (single source, shared by all agents)
-- `queries.ts` — raw DB query functions
 - `instructions.ts` — runtime export of tool usage instructions (injected into agent prompts)
 - `index.ts` — re-exports as `SkillModule`
+- `queries.ts` — raw DB query functions (optional, for data-access skills)
 
 **Registry** (`skills/registry.ts`) provides:
 - `composeToolsForAgent(agentName)` — returns all `BetaRunnableTool[]` for an agent
@@ -94,9 +94,11 @@ Each skill contains:
 
 ### Discovery Flow
 
-The Discovery agent conducts a natural conversation (no rigid phases). When it has enough information, it emits `[DISCOVERY_COMPLETE]` marker (stripped from UI). On completion, the conversation is synthesized into a structured `NeedSummary` (5 fields: companyContext, coreProblem, desiredOutcome, constraints[], preferences[]).
+The Discovery agent conducts a natural conversation (no rigid phases). When it has enough information, it calls the `complete_discovery` tool (from the `discovery-control` skill) to signal completion. The state machine detects the tool call event, extracts a structured `NeedSummary` (5 fields: companyContext, coreProblem, desiredOutcome, constraints[], preferences[]), and transitions to analysis.
 
-**API flow**: `POST /discovery` → session created → `POST /sessions/[id]/message` (SSE stream) → Discovery conversation → `[DISCOVERY_COMPLETE]` → extract NeedSummary → Analysis runs inline (same SSE) → product document → user confirms → Scout runs → startup cards appear in chat.
+Discovery uses `streamWithToolEvents()` (not `stream()`) so tool calls are detected as structured `ToolStreamEvent` objects — no text parsing or markers involved. The tool itself is a pure control signal (returns a success string); all side effects (NeedSummary extraction, DB update, SearchExecution creation) are handled by the state machine.
+
+**API flow**: `POST /discovery` → session created → `POST /sessions/[id]/message` (SSE stream) → Discovery conversation → `complete_discovery` tool call → state machine extracts NeedSummary → Analysis runs inline (same SSE) → product document → user confirms → Scout runs → startup cards appear in chat.
 
 All stages flow through the unified `POST /sessions/[sessionId]/message` endpoint.
 
@@ -199,7 +201,7 @@ When creating or modifying agents:
 4. **Prompts go in `/src/lib/agents/prompts/`** — one file per agent, export named constants for each system prompt variant
 5. **Schemas go in `/src/lib/agents/schemas.ts`** — all Zod schemas for structured agent outputs, centralized
 6. **Analysis is the only Opus agent** — Discovery uses Sonnet, Scout and Advisor use Haiku. Only promote to Opus if the task requires complex reasoning
-7. **Discovery is natural conversation** — no rigid phases. The agent emits `[DISCOVERY_COMPLETE]` when it has enough info
+7. **Discovery signals completion via tool call** — no text markers. The agent calls `complete_discovery` (from the `discovery-control` skill) when it has enough info. The state machine detects the tool call event and handles all side effects.
 8. **NeedSummary drives everything downstream** — Analysis and Scout both receive the NeedSummary. Changes to the schema affect the entire pipeline
 9. **Pipeline stages log to `PipelineStageLog`** — every stage records input/output data, token usage, and duration for observability
 10. **Startup cards render in chat** — Scout results are sent as `pipeline_complete` event data and rendered as cards inline in the chat
