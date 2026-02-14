@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { randomBytes } from "crypto";
 
 if (!process.env.JWT_SECRET) {
   throw new Error("JWT_SECRET environment variable is required");
@@ -9,6 +10,7 @@ const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 export interface JWTPayload {
   userId: string;
   email: string;
+  role: "seeker" | "builder";
 }
 
 export async function signToken(payload: JWTPayload): Promise<string> {
@@ -39,4 +41,8 @@ export async function getUserIdOrThrow(): Promise<string> {
   const user = await getAuthUser();
   if (!user) throw new Error("Unauthorized");
   return user.userId;
+}
+
+export function generateMagicLinkToken(): string {
+  return randomBytes(32).toString("base64url");
 }

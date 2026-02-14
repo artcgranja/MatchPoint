@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SaveButton } from "@/components/saved/save-button";
+import { ConnectButton } from "@/components/connections/connect-button";
 import {
   Dialog,
   DialogContent,
@@ -84,13 +85,18 @@ export function CompanyModal({
               />
             )}
             <div className="min-w-0 flex-1 space-y-2">
-              {/* Title row with SaveButton */}
+              {/* Title row with action buttons */}
               <div className="flex items-center gap-2">
                 <DialogTitle className="font-heading text-lg text-foreground">
                   {company.name}
                 </DialogTitle>
                 <SaveButton companyId={company.id} size="sm" />
               </div>
+
+              {/* Connect button */}
+              {!isBrowseMode && (
+                <ConnectButton companyId={company.id} variant="full" />
+              )}
 
               {/* Description and Badge row */}
               <div className="flex items-start justify-between gap-3">

@@ -47,3 +47,17 @@ export const ScoutResultSchema = z.object({
 });
 
 export type ScoutResult = z.infer<typeof ScoutResultSchema>;
+
+export const OutreachEmailSchema = z.object({
+  subject: z
+    .string()
+    .describe("Email subject line, under 60 chars, direct and compelling"),
+  body: z
+    .string()
+    .describe("Email body in plain text, under 250 words, professional and concise"),
+  seekerProblemSummary: z
+    .string()
+    .describe("One-sentence summary of the seeker's problem for internal tracking"),
+});
+
+export type OutreachEmail = z.infer<typeof OutreachEmailSchema>;

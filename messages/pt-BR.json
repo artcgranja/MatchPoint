@@ -150,7 +150,19 @@
     "loginUnexpectedError": "Ocorreu um erro inesperado. Tente novamente.",
     "continueWithGitHub": "Continuar com GitHub",
     "loginPageTitle": "Entrar",
-    "loginPageDescription": "Entre com sua conta GitHub para acessar o MatchPoint."
+    "loginPageDescription": "Entre com sua conta GitHub para acessar o MatchPoint.",
+    "or": "ou",
+    "emailPlaceholder": "seu@email.com",
+    "sendMagicLink": "Enviar link",
+    "checkYourEmail": "Verifique seu email para o link de acesso",
+    "invalidToken": "Link inválido ou expirado. Solicite um novo."
+  },
+  "Connections": {
+    "connect": "Conectar",
+    "sending": "Enviando...",
+    "emailSent": "Email enviado",
+    "connected": "Conectado",
+    "noEmail": "Sem email de contato"
   },
   "Browse": {
     "title": "Descubra",
@@ -244,6 +256,20 @@
     "notFoundMessage": "Página não encontrada",
     "notFoundDescription": "A página que você procura pode ter sido movida ou não existe. Vamos te colocar de volta no caminho certo.",
     "backToHome": "Voltar ao início"
+  },
+  "Questions": {
+    "submit": "Enviar",
+    "other": "Outro",
+    "otherPlaceholder": "Digite sua resposta...",
+    "answersSubmitted": "Respostas enviadas",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "reviewTitle": "Revise Suas Respostas",
+    "reviewDescription": "Confira se está tudo certo antes de enviar.",
+    "stepOf": "Pergunta {current} de {total}",
+    "answerQuestions": "{count, plural, one {Responder # pergunta} other {Responder # perguntas}}",
+    "editAnswer": "Editar",
+    "preparingQuestions": "Preparando perguntas..."
   },
   "Pipeline": {
     "discoveryComplete": "Descoberta concluída! Iniciando análise...",

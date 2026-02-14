@@ -126,7 +126,7 @@ export async function GET(request: Request) {
   }
 
   // Issue JWT and redirect to home
-  const token = await signToken({ userId: user.id, email: user.email });
+  const token = await signToken({ userId: user.id, email: user.email, role: user.role as "seeker" | "builder" });
 
   const response = NextResponse.redirect(`${appUrl}/`);
 

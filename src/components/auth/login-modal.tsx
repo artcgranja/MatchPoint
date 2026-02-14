@@ -1,6 +1,7 @@
 "use client";
 
-import { Compass } from "lucide-react";
+import { useState } from "react";
+import { Compass, Mail, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useTranslations } from "next-intl";
 import {
@@ -11,6 +12,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useLoginModalStore } from "@/stores/login-modal-store";
 import { slideUp } from "@/lib/motion";
 
@@ -29,6 +31,9 @@ function GitHubIcon({ className }: { className?: string }) {
 export function LoginModal() {
   const { open, error, closeLoginModal } = useLoginModalStore();
   const t = useTranslations("Auth");
+  const [magicEmail, setMagicEmail] = useState("");
+  const [magicSending, setMagicSending] = useState(false);
+  const [magicSent, setMagicSent] = useState(false);
 
   const ERROR_MESSAGES: Record<string, string> = {
     invalid_state: t("loginError"),
@@ -80,6 +85,57 @@ export function LoginModal() {
               {t("continueWithGitHub")}
             </a>
           </Button>
+
+          {/* Divider */}
+          <div className="flex items-center gap-3">
+            <div className="h-px flex-1 bg-divider" />
+            <span className="text-xs text-foreground-muted">{t("or")}</span>
+            <div className="h-px flex-1 bg-divider" />
+          </div>
+
+          {/* Magic Link */}
+          {magicSent ? (
+            <div className="rounded-lg bg-highlight/10 border border-highlight/20 px-4 py-3 text-sm text-highlight text-center">
+              <Mail className="h-4 w-4 inline-block mr-2" />
+              {t("checkYourEmail")}
+            </div>
+          ) : (
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!magicEmail.trim() || magicSending) return;
+                setMagicSending(true);
+                try {
+                  await fetch("/api/v1/auth/magic-link", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email: magicEmail.trim() }),
+                  });
+                  setMagicSent(true);
+                } finally {
+                  setMagicSending(false);
+                }
+              }}
+              className="flex gap-2"
+            >
+              <Input
+                type="email"
+                placeholder={t("emailPlaceholder")}
+                value={magicEmail}
+                onChange={(e) => setMagicEmail(e.target.value)}
+                required
+                className="flex-1"
+              />
+              <Button type="submit" variant="outline" disabled={magicSending} className="gap-2 shrink-0">
+                {magicSending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Mail className="h-4 w-4" />
+                )}
+                {t("sendMagicLink")}
+              </Button>
+            </form>
+          )}
         </div>
       </DialogContent>
     </Dialog>

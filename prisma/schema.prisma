@@ -22,18 +22,34 @@ enum ScopePhase {
   complete
 }
 
+enum UserRole {
+  seeker
+  builder
+}
+
+enum ConnectionStatus {
+  pending
+  email_sent
+  clicked
+  accepted
+}
+
 model User {
   id                String              @id @default(uuid())
   email             String              @unique
   name              String?
   avatarUrl         String?
-  githubId          Int                 @unique
+  githubId          Int?                @unique
+  role              UserRole            @default(seeker)
+  companyId         Int?                @unique
+  company           Company?            @relation("BuilderCompany", fields: [companyId], references: [id])
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   settings          Json?
   searchExecutions  SearchExecution[]
   discoverySessions DiscoverySession[]
   savedStartups     SavedStartup[]
+  connectionsSent   Connection[]        @relation("ConnectionSeeker")
 }
 
 model Company {
@@ -60,8 +76,11 @@ model Company {
   launchedAt      Int?
   ycUrl           String
   syncedAt        DateTime       @default(now())
+  contactEmail    String?
   searchResults   SearchResult[]
   savedStartups   SavedStartup[]
+  connections     Connection[]
+  builderUser     User?          @relation("BuilderCompany")
 }
 
 model DiscoverySession {
@@ -145,6 +164,7 @@ model SearchResult {
   aiAnalysis        Json
   rank              Int
   createdAt         DateTime        @default(now())
+  connections       Connection[]
 }
 
 model SavedStartup {
@@ -165,4 +185,39 @@ model Report {
   searchQueryId String
   sections      Json
   createdAt     DateTime @default(now())
+}
+
+model MagicLinkToken {
+  id           String    @id @default(uuid())
+  email        String
+  token        String    @unique
+  expiresAt    DateTime
+  usedAt       DateTime?
+  connectionId String?
+  createdAt    DateTime  @default(now())
+
+  @@index([token])
+  @@index([email])
+}
+
+model Connection {
+  id             String           @id @default(uuid())
+  seekerId       String
+  seeker         User             @relation("ConnectionSeeker", fields: [seekerId], references: [id])
+  companyId      Int
+  company        Company          @relation(fields: [companyId], references: [id])
+  searchResultId String?
+  searchResult   SearchResult?    @relation(fields: [searchResultId], references: [id])
+  status         ConnectionStatus @default(pending)
+  emailSubject   String
+  emailBody      String
+  emailSentAt    DateTime?
+  resendEmailId  String?
+  builderEmail   String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@unique([seekerId, companyId])
+  @@index([seekerId])
+  @@index([companyId])
 }

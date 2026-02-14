@@ -150,7 +150,19 @@
     "loginUnexpectedError": "An unexpected error occurred. Please try again.",
     "continueWithGitHub": "Continue with GitHub",
     "loginPageTitle": "Sign in",
-    "loginPageDescription": "Sign in with your GitHub account to access MatchPoint."
+    "loginPageDescription": "Sign in with your GitHub account to access MatchPoint.",
+    "or": "or",
+    "emailPlaceholder": "your@email.com",
+    "sendMagicLink": "Send link",
+    "checkYourEmail": "Check your email for the sign-in link",
+    "invalidToken": "Invalid or expired link. Please request a new one."
+  },
+  "Connections": {
+    "connect": "Connect",
+    "sending": "Sending...",
+    "emailSent": "Email sent",
+    "connected": "Connected",
+    "noEmail": "No contact email"
   },
   "Browse": {
     "title": "Discover",
@@ -244,6 +256,20 @@
     "notFoundMessage": "Page not found",
     "notFoundDescription": "The page you're looking for may have been moved or doesn't exist. Let's get you back on track.",
     "backToHome": "Back to home"
+  },
+  "Questions": {
+    "submit": "Submit",
+    "other": "Other",
+    "otherPlaceholder": "Type your answer...",
+    "answersSubmitted": "Answers submitted",
+    "next": "Next",
+    "previous": "Previous",
+    "reviewTitle": "Review Your Answers",
+    "reviewDescription": "Make sure everything looks right before submitting.",
+    "stepOf": "Question {current} of {total}",
+    "answerQuestions": "{count, plural, one {Answer # question} other {Answer # questions}}",
+    "editAnswer": "Edit",
+    "preparingQuestions": "Preparing questions..."
   },
   "Pipeline": {
     "discoveryComplete": "Discovery complete! Starting analysis...",
