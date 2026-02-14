@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "@/i18n/navigation";
 import { motion } from "motion/react";
-import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
+import { Bookmark, ChevronLeft, ChevronRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { apiGet } from "@/lib/api/client";
 import { cardStagger } from "@/lib/motion";
@@ -89,7 +89,7 @@ function SalvosContent() {
   if (!user) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <Heart className="h-12 w-12 text-foreground-muted/30" />
+        <Bookmark className="h-12 w-12 text-foreground-muted/30" />
         <p className="text-foreground-muted">{t("loginToSave")}</p>
         <Button onClick={() => useLoginModalStore.getState().openLoginModal()}>
           {t("loginButton")}
@@ -130,7 +130,7 @@ function SalvosContent() {
 
       {!loading && data && data.data.length === 0 && (
         <EmptyState
-          icon={Heart}
+          icon={Bookmark}
           title={t("noSavedStartups")}
           description={t("noSavedHint")}
           action={

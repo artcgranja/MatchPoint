@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Heart } from "lucide-react";
+import { Bookmark } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/stores/auth-store";
@@ -50,12 +50,12 @@ export function SaveButton({ companyId, size = "default", className }: SaveButto
         "rounded-lg transition-colors",
         padding,
         isSaved
-          ? "text-red-400 hover:text-red-300"
+          ? "text-highlight hover:text-highlight/80"
           : "text-foreground-muted/40 hover:text-foreground-muted",
         className
       )}
     >
-      <Heart
+      <Bookmark
         className={cn(iconSize, isSaved && "fill-current")}
       />
     </motion.button>
