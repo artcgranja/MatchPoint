@@ -7,7 +7,8 @@ import { useSearchStore } from "@/stores/search-store";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { apiGet, apiPost } from "@/lib/api/client";
 import { createSseParser } from "@/lib/sse/parser";
-import type { BizDevPlanStatus, DiscoveryMessage, DiscoverySession, SessionStage, StartupCard } from "@/types";
+import { useQuestionWizardStore } from "@/stores/question-wizard-store";
+import type { BizDevPlanStatus, DiscoveryMessage, DiscoverySession, QuestionAnswer, QuestionData, SessionStage, StartupCard } from "@/types";
 
 export function useDiscoverySession() {
   const tPipeline = useTranslations("Pipeline");
@@ -66,12 +67,32 @@ export function useDiscoverySession() {
         setCurrentStage(session.currentStage);
 
         // Build messages array from discovery messages
-        const msgs: DiscoveryMessage[] = session.messages.map((m) => ({
-          id: m.id,
-          role: m.role as "user" | "assistant",
-          content: m.content,
-          createdAt: m.createdAt,
-        }));
+        // API may return extended fields (type, questions, etc.) not in the base DiscoveryMessage type
+        const msgs: DiscoveryMessage[] = [];
+        for (const m of session.messages) {
+          const raw = m as unknown as Record<string, unknown>;
+
+          // Skip silent question_answers user messages (no chat bubble)
+          if (raw.type === "question_answers") continue;
+
+          const msg: DiscoveryMessage = {
+            id: m.id,
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            createdAt: m.createdAt,
+          };
+
+          // Restore questions metadata from DB
+          if (raw.type === "questions") {
+            msg.type = "questions";
+            msg.questions = raw.questions as DiscoveryMessage["questions"];
+            msg.questionsContext = raw.questionsContext as string | undefined;
+            msg.questionsAnswered = raw.questionsAnswered as boolean | undefined;
+            msg.questionsAnswers = raw.questionsAnswers as DiscoveryMessage["questionsAnswers"];
+          }
+
+          msgs.push(msg);
+        }
 
         // Restore search execution state if it exists
         const search = session.searchExecution;
@@ -136,6 +157,17 @@ export function useDiscoverySession() {
         }
 
         setMessages(msgs);
+
+        // Reopen wizard for unanswered questions
+        const unanswered = msgs.findLast(
+          (m) => m.type === "questions" && !m.questionsAnswered
+        );
+        if (unanswered?.questions) {
+          useQuestionWizardStore.getState().openWizard(
+            unanswered.questions,
+            unanswered.questionsContext
+          );
+        }
 
         // Set discovery state based on stage
         if (session.awaitingConfirmation) {
@@ -440,6 +472,155 @@ export function useDiscoverySession() {
   ]);
 
   // ═══════════════════════════════════════════
+  // Shared SSE stream processor (used by sendMessage and submitQuestionAnswers)
+  // ═══════════════════════════════════════════
+  const processDiscoveryStream = useCallback(
+    async (res: Response) => {
+      if (!res.body) return;
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      const sseParser = createSseParser();
+      let assistantMsg = "";
+      let textFinalized = false;
+      let textRafId: number | null = null;
+      const flushText = () => {
+        if (textFinalized) return;
+        updateLastAssistantMessage(assistantMsg);
+        textRafId = null;
+      };
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const sseEvents = sseParser.feed(chunk);
+
+        // Named events → analysis handler + questions
+        const namedEvents = sseEvents.filter((e) => e.event !== "message");
+        if (namedEvents.length > 0) {
+          const questionEvents = namedEvents.filter((e) => e.event === "interactive_questions");
+          const analysisEvents = namedEvents.filter((e) => e.event !== "interactive_questions");
+
+          if (analysisEvents.length > 0) {
+            processAnalysisEvents(analysisEvents);
+          }
+
+          for (const qe of questionEvents) {
+            try {
+              const parsed = JSON.parse(qe.data);
+              const payload = parsed.data as { questions: unknown[]; context?: string };
+              if (!textFinalized && assistantMsg) {
+                if (textRafId !== null) {
+                  cancelAnimationFrame(textRafId);
+                  textRafId = null;
+                }
+                updateLastAssistantMessage(assistantMsg);
+                textFinalized = true;
+              }
+
+              // Auto-open the drawer wizard
+              useQuestionWizardStore.getState().openWizard(
+                payload.questions as QuestionData[],
+                payload.context
+              );
+
+              // Track the questions message in chat (renders as answered card later)
+              addMessage({
+                role: "assistant",
+                content: "",
+                type: "questions",
+                questions: payload.questions as DiscoveryMessage["questions"],
+                questionsContext: payload.context,
+              });
+            } catch (err) {
+              console.warn("[SSE] Malformed questions event:", err);
+            }
+          }
+        }
+
+        // Unnamed events (text chunks, done, status, error)
+        for (const sse of sseEvents) {
+          if (sse.event !== "message") continue;
+          try {
+            const data = JSON.parse(sse.data);
+
+            if (data.text) {
+              assistantMsg += data.text;
+              if (textRafId === null) {
+                textRafId = requestAnimationFrame(flushText);
+              }
+            }
+
+            if (data.status) {
+              if (!textFinalized && assistantMsg) {
+                if (textRafId !== null) {
+                  cancelAnimationFrame(textRafId);
+                  textRafId = null;
+                }
+                updateLastAssistantMessage(assistantMsg);
+                textFinalized = true;
+              }
+              const statusContent = data.statusKey
+                ? tPipeline(data.statusKey as Parameters<typeof tPipeline>[0], data.statusParams ?? {})
+                : data.status;
+              addMessage({
+                role: "assistant",
+                content: statusContent,
+                type: "stage-update",
+              });
+            }
+
+            if (data.done) {
+              if (data.transition === "awaiting_confirmation" && data.searchId) {
+                setDiscoveryState("processing");
+                setCurrentStage("analysis");
+                setSearchId(data.searchId);
+                startPipeline();
+              }
+            }
+
+            if (data.error) {
+              if (!textFinalized && assistantMsg) {
+                if (textRafId !== null) {
+                  cancelAnimationFrame(textRafId);
+                  textRafId = null;
+                }
+                updateLastAssistantMessage(assistantMsg);
+                textFinalized = true;
+              }
+              addMessage({
+                role: "assistant",
+                content: tPipeline("error", { message: data.error }),
+                type: "stage-update",
+              });
+              errorPipeline();
+            }
+          } catch (err) {
+            console.warn("[SSE] Malformed data line:", err);
+          }
+        }
+      }
+
+      // Final flush
+      if (textRafId !== null) cancelAnimationFrame(textRafId);
+      if (assistantMsg && !textFinalized) updateLastAssistantMessage(assistantMsg);
+    },
+    [
+      addMessage,
+      updateLastAssistantMessage,
+      setDiscoveryState,
+      setCurrentStage,
+      setSearchId,
+      startPipeline,
+      errorPipeline,
+      processAnalysisEvents,
+      tPipeline,
+    ]
+  );
+
+  // ═══════════════════════════════════════════
   // Unified sendMessage — routes through conductor
   // ═══════════════════════════════════════════
   const sendMessage = useCallback(
@@ -463,104 +644,7 @@ export function useDiscoverySession() {
           }
         );
 
-        if (!res.body) {
-          setIsStreaming(false);
-          return;
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        const sseParser = createSseParser();
-        let assistantMsg = "";
-        let textFinalized = false;
-        let textRafId: number | null = null;
-        const flushText = () => {
-          if (textFinalized) return;
-          updateLastAssistantMessage(assistantMsg);
-          textRafId = null;
-        };
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const sseEvents = sseParser.feed(chunk);
-
-          // Named events → analysis handler
-          const namedEvents = sseEvents.filter((e) => e.event !== "message");
-          if (namedEvents.length > 0) {
-            processAnalysisEvents(namedEvents);
-          }
-
-          // Unnamed events (text chunks, done, status, error)
-          for (const sse of sseEvents) {
-            if (sse.event !== "message") continue;
-            try {
-              const data = JSON.parse(sse.data);
-
-              if (data.text) {
-                assistantMsg += data.text;
-                // Debounce text updates to once per animation frame
-                if (textRafId === null) {
-                  textRafId = requestAnimationFrame(flushText);
-                }
-              }
-
-              if (data.status) {
-                if (!textFinalized && assistantMsg) {
-                  if (textRafId !== null) {
-                    cancelAnimationFrame(textRafId);
-                    textRafId = null;
-                  }
-                  updateLastAssistantMessage(assistantMsg);
-                  textFinalized = true;
-                }
-                const statusContent = data.statusKey
-                  ? tPipeline(data.statusKey as Parameters<typeof tPipeline>[0], data.statusParams ?? {})
-                  : data.status;
-                addMessage({
-                  role: "assistant",
-                  content: statusContent,
-                  type: "stage-update",
-                });
-              }
-
-              if (data.done) {
-                if (data.transition === "awaiting_confirmation" && data.searchId) {
-                  setDiscoveryState("processing");
-                  setCurrentStage("analysis");
-                  setSearchId(data.searchId);
-                  startPipeline();
-                }
-              }
-
-              if (data.error) {
-                if (!textFinalized && assistantMsg) {
-                  if (textRafId !== null) {
-                    cancelAnimationFrame(textRafId);
-                    textRafId = null;
-                  }
-                  updateLastAssistantMessage(assistantMsg);
-                  textFinalized = true;
-                }
-                addMessage({
-                  role: "assistant",
-                  content: tPipeline("error", { message: data.error }),
-                  type: "stage-update",
-                });
-                errorPipeline();
-              }
-            } catch (err) {
-              console.warn("[SSE] Malformed data line:", err);
-            }
-          }
-        }
-
-        // Final flush to ensure last chunk is rendered
-        if (textRafId !== null) cancelAnimationFrame(textRafId);
-        if (assistantMsg && !textFinalized) updateLastAssistantMessage(assistantMsg);
-
+        await processDiscoveryStream(res);
         setIsStreaming(false);
       } catch (error) {
         console.error("Session error:", error);
@@ -575,17 +659,78 @@ export function useDiscoverySession() {
     [
       sessionId,
       addMessage,
-      updateLastAssistantMessage,
       setIsStreaming,
       setSessionTitle,
-      setDiscoveryState,
-      setCurrentStage,
-      setSearchId,
-      startPipeline,
-      errorPipeline,
-      processAnalysisEvents,
+      processDiscoveryStream,
       tPipeline,
     ]
+  );
+
+  // ═══════════════════════════════════════════
+  // Silent answer submission (no user message bubble)
+  // ═══════════════════════════════════════════
+  const submitQuestionAnswers = useCallback(
+    async (answers: QuestionAnswer[]) => {
+      const activeSessionId = sessionId ?? useDiscoveryStore.getState().sessionId;
+      if (!activeSessionId) return;
+
+      // Build a rich format with original question text for each answer
+      const currentMessages = useDiscoveryStore.getState().messages;
+      const lastQ = currentMessages.findLast((m) => m.type === "questions" && !m.questionsAnswered);
+      const questionsMap = new Map(
+        (lastQ?.questions ?? []).map((q) => [q.id, q.question])
+      );
+
+      const formatted = answers
+        .map((a) => {
+          const label = questionsMap.get(a.questionId) ?? a.questionId;
+          const selected = a.selected.join(", ");
+          const custom = a.otherText ? ` (Custom: ${a.otherText})` : "";
+          return `**${label}**: ${selected}${custom}`;
+        })
+        .join("\n");
+
+      const text = `[Interactive Form Response]\n${formatted}`;
+
+      // Mark the last unanswered questions message as answered + store answers
+      const lastQIdx = currentMessages.findLastIndex(
+        (m) => m.type === "questions" && !m.questionsAnswered
+      );
+      if (lastQIdx >= 0) {
+        const updated = [...currentMessages];
+        updated[lastQIdx] = {
+          ...currentMessages[lastQIdx],
+          questionsAnswered: true,
+          questionsAnswers: answers,
+        };
+        useDiscoveryStore.getState().setMessages(updated);
+      }
+
+      // Send silently (no user bubble) and process the agent's response
+      setIsStreaming(true);
+      try {
+        const res = await fetch(
+          `/api/v1/sessions/${activeSessionId}/message`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text, answers }),
+          }
+        );
+
+        await processDiscoveryStream(res);
+        setIsStreaming(false);
+      } catch (error) {
+        console.error("Question answer submission error:", error);
+        addMessage({
+          role: "assistant",
+          content: tPipeline("connectionError"),
+          type: "stage-update",
+        });
+        setIsStreaming(false);
+      }
+    },
+    [sessionId, addMessage, setIsStreaming, processDiscoveryStream, tPipeline]
   );
 
   const reset = useCallback(() => {
@@ -605,6 +750,7 @@ export function useDiscoverySession() {
     loadSession,
     sendMessage,
     confirmPlan,
+    submitQuestionAnswers,
     reset,
   };
 }

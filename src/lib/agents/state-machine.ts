@@ -3,6 +3,7 @@ import { DiscoveryAgent } from "./navigator";
 import { AdvisorAgent } from "./advisor";
 import { runAnalysis, runScout, type PipelineEvent } from "./orchestrator";
 import { assembleSessionContext } from "./context";
+import type { QuestionAnswer, QuestionData } from "@/types";
 
 // ═══════════════════════════════════════════
 // Types
@@ -30,6 +31,7 @@ export type ConductorEvent =
   | { type: "scout_event"; event: PipelineEvent }
   | { type: "advisor_text"; text: string }
   | { type: "advisor_done" }
+  | { type: "questions"; questions: QuestionData[]; context?: string }
   | { type: "error"; message: string }
   | { type: "status"; message: string; key?: string; params?: Record<string, string | number> };
 
@@ -95,13 +97,14 @@ export async function getSessionState(
 
 export async function* handleMessage(
   sessionId: string,
-  message: string
+  message: string,
+  answers?: QuestionAnswer[]
 ): AsyncGenerator<ConductorEvent> {
   const state = await getSessionState(sessionId);
 
   switch (state.stage) {
     case "discovery":
-      yield* handleDiscoveryMessage(sessionId, message);
+      yield* handleDiscoveryMessage(sessionId, message, answers);
       break;
 
     case "awaiting_confirmation":
@@ -136,19 +139,65 @@ export async function* handleMessage(
 
 async function* handleDiscoveryMessage(
   sessionId: string,
-  message: string
+  message: string,
+  answers?: QuestionAnswer[]
 ): AsyncGenerator<ConductorEvent> {
   const session = await prisma.discoverySession.findUniqueOrThrow({
     where: { id: sessionId },
   });
 
-  // Save user message
+  // If answers are provided, mark the last questions message as answered
+  if (answers && answers.length > 0) {
+    // Find the latest message with metadata.type=questions, then check in code
+    const latestQuestionsMsg = await prisma.discoveryMessage.findFirst({
+      where: {
+        sessionId,
+        role: "assistant",
+        metadata: { path: ["type"], equals: "questions" },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (latestQuestionsMsg) {
+      const meta = latestQuestionsMsg.metadata as Record<string, unknown>;
+
+      // Only update if not already answered (check in code, not DB query)
+      if (!meta.answered) {
+        // Validate: check that answer questionIds match real questions
+        const originalQuestions = (meta.questions ?? []) as Array<{ id: string }>;
+        const validIds = new Set(originalQuestions.map((q) => q.id));
+        for (const a of answers) {
+          if (!validIds.has(a.questionId)) {
+            console.warn(
+              `[Discovery] Answer questionId "${a.questionId}" does not match any question in session ${sessionId}`
+            );
+          }
+        }
+
+        await prisma.discoveryMessage.update({
+          where: { id: latestQuestionsMsg.id },
+          data: {
+            metadata: JSON.parse(JSON.stringify({
+              ...meta,
+              answered: true,
+              answers,
+            })),
+          },
+        });
+      }
+    }
+  }
+
+  // Save user message (with question_answers metadata if applicable)
   await prisma.discoveryMessage.create({
     data: {
       sessionId,
       role: "user",
       content: message,
       phase: session.currentPhase,
+      ...(answers && answers.length > 0 && {
+        metadata: JSON.parse(JSON.stringify({ type: "question_answers" })),
+      }),
     },
   });
 
@@ -168,6 +217,7 @@ async function* handleDiscoveryMessage(
   const discovery = new DiscoveryAgent();
   let fullResponse = "";
   let discoveryDone = false;
+  let questionsPayload: { questions: QuestionData[]; context?: string } | null = null;
 
   for await (const event of discovery.chat(sessionId, message)) {
     if (event.type === "text") {
@@ -176,12 +226,14 @@ async function* handleDiscoveryMessage(
     } else if (event.type === "tool_call") {
       // complete_discovery tool call detected — side effects handled below
       discoveryDone = true;
+    } else if (event.type === "questions") {
+      questionsPayload = { questions: event.questions, context: event.context };
     } else if (event.type === "done") {
       discoveryDone = true;
     }
   }
 
-  // Save assistant message
+  // Save assistant message (with questions metadata embedded if applicable)
   const updatedSession = await prisma.discoverySession.findUnique({
     where: { id: sessionId },
   });
@@ -191,8 +243,19 @@ async function* handleDiscoveryMessage(
       role: "assistant",
       content: fullResponse,
       phase: updatedSession?.currentPhase ?? session.currentPhase,
+      ...(questionsPayload && {
+        metadata: JSON.parse(JSON.stringify({
+          type: "questions",
+          questions: questionsPayload.questions,
+          context: questionsPayload.context,
+        })),
+      }),
     },
   });
+
+  if (questionsPayload) {
+    yield { type: "questions", questions: questionsPayload.questions, context: questionsPayload.context };
+  }
 
   if (discoveryDone) {
     // Extract NeedSummary and mark session complete

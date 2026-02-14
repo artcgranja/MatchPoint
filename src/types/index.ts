@@ -43,12 +43,30 @@ export interface StartupCard {
   ycUrl: string;
 }
 
+export interface QuestionData {
+  id: string;
+  question: string;
+  type: "single_choice" | "multiple_choice";
+  options: string[];
+  required: boolean;
+}
+
+export interface QuestionAnswer {
+  questionId: string;
+  selected: string[];
+  otherText?: string;
+}
+
 export interface DiscoveryMessage {
   id?: string;
   role: "user" | "assistant";
   content: string;
-  type?: "text" | "cards" | "stage-update";
+  type?: "text" | "cards" | "stage-update" | "questions";
   cards?: StartupCard[];
+  questions?: QuestionData[];
+  questionsContext?: string;
+  questionsAnswered?: boolean;
+  questionsAnswers?: QuestionAnswer[];
   createdAt?: string;
 }
 

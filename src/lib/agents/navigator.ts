@@ -3,10 +3,12 @@ import { NeedSummarySchema, type NeedSummary } from "./schemas";
 import { DISCOVERY_SYSTEM, DISCOVERY_EXTRACT_SYSTEM } from "./prompts/navigator";
 import { composeToolsForAgent } from "./skills/registry";
 import { prisma } from "@/lib/db";
+import type { QuestionData } from "@/types";
 
 export type DiscoveryEvent =
   | { type: "text"; text: string }
   | { type: "tool_call"; name: string; input: Record<string, unknown> }
+  | { type: "questions"; questions: QuestionData[]; context?: string }
   | { type: "done" };
 
 export class DiscoveryAgent extends BaseAgent {
@@ -25,15 +27,19 @@ export class DiscoveryAgent extends BaseAgent {
       take: 20,
     });
 
-    const historyMessages = recentMessages.reverse().map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    }));
+    const historyMessages = recentMessages
+      .reverse()
+      .filter((m) => m.content.trim().length > 0)
+      .map((m) => ({
+        role: m.role as "user" | "assistant",
+        content: m.content,
+      }));
 
     historyMessages.push({ role: "user", content: userMessage });
 
     const tools = composeToolsForAgent("discovery");
     let discoveryComplete = false;
+    let questionsData: { questions: QuestionData[]; context?: string } | null = null;
 
     for await (const event of this.streamWithToolEvents(
       DISCOVERY_SYSTEM,
@@ -46,7 +52,13 @@ export class DiscoveryAgent extends BaseAgent {
       } else if (event.type === "tool_call" && event.name === "complete_discovery") {
         discoveryComplete = true;
         yield { type: "tool_call", name: event.name, input: event.input };
+      } else if (event.type === "tool_call" && event.name === "ask_questions") {
+        questionsData = event.input as { questions: QuestionData[]; context?: string };
       }
+    }
+
+    if (questionsData) {
+      yield { type: "questions", questions: questionsData.questions, context: questionsData.context };
     }
 
     if (discoveryComplete) {

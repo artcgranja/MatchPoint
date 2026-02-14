@@ -14,7 +14,7 @@ export async function POST(
 
   const { sessionId } = await params;
   const body = await req.json();
-  const { message } = body;
+  const { message, answers } = body;
 
   if (!message || typeof message !== "string") {
     return NextResponse.json(
@@ -79,7 +79,7 @@ export async function POST(
       };
 
       try {
-        for await (const event of handleMessage(sessionId, message)) {
+        for await (const event of handleMessage(sessionId, message, answers)) {
           if (signal.aborted) break;
 
           switch (event.type) {
@@ -109,6 +109,12 @@ export async function POST(
 
             case "analysis_complete":
               sendEvent("analysis_complete", { data: event.data });
+              break;
+
+            case "questions":
+              sendEvent("interactive_questions", {
+                data: { questions: event.questions, context: event.context },
+              });
               break;
 
             case "scout_event":

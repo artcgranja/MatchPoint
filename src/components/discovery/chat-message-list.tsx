@@ -66,7 +66,8 @@ export function ChatMessageList({
             index === messages.length - 1 &&
             message.role === "assistant" &&
             message.type !== "cards" &&
-            message.type !== "stage-update";
+            message.type !== "stage-update" &&
+            message.type !== "questions";
           return (
             <ChatMessage
               key={message.id ?? index}

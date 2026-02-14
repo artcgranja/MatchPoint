@@ -17,6 +17,7 @@ import { ChatMessageList } from "@/components/discovery/chat-message-list";
 import { ChatInput } from "@/components/discovery/chat-input";
 import { ChatNavbar } from "@/components/layout/chat-navbar";
 import { AgentWorkPanel } from "@/components/agent-panel/agent-work-panel";
+import { QuestionWizard } from "@/components/discovery/question-wizard";
 import { useDiscoverySession } from "@/hooks/use-discovery-session";
 import { useDiscoveryStore } from "@/stores/discovery-store";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
@@ -40,6 +41,7 @@ export default function HomePage() {
     loadSession,
     sendMessage,
     confirmPlan,
+    submitQuestionAnswers,
     reset,
   } = useDiscoverySession();
 
@@ -237,7 +239,7 @@ export default function HomePage() {
         </motion.div>
       )}
     </AnimatePresence>
-
+    <QuestionWizard onSubmit={submitQuestionAnswers} />
   </>
   );
 }

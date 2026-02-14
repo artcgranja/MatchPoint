@@ -83,12 +83,27 @@ export async function GET(
     awaitingConfirmation,
     isComplete: session.isComplete,
     needSummary: session.bizPlan,
-    messages: session.messages.map((m) => ({
-      id: m.id,
-      role: m.role,
-      content: m.content,
-      createdAt: m.createdAt.toISOString(),
-    })),
+    messages: session.messages.map((m) => {
+      const meta = m.metadata as Record<string, unknown> | null;
+      return {
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        createdAt: m.createdAt.toISOString(),
+        // Propagate questions metadata for session restore
+        ...(meta?.type === "questions" && {
+          type: "questions" as const,
+          questions: meta.questions,
+          questionsContext: meta.context,
+          questionsAnswered: !!meta.answered,
+          questionsAnswers: meta.answers,
+        }),
+        // Mark question_answers user messages so frontend can filter them
+        ...(meta?.type === "question_answers" && {
+          type: "question_answers" as const,
+        }),
+      };
+    }),
     searchExecution: search
       ? {
           id: search.id,
