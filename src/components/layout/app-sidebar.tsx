@@ -6,8 +6,8 @@ import {
   PanelLeftClose,
   PanelLeft,
   Compass,
-  Heart,
-  FolderOpen,
+  Bookmark,
+  LayoutGrid,
   Settings,
   LogOut,
   LogIn,
@@ -126,6 +126,14 @@ export function AppSidebar() {
           <Compass className="h-5 w-5 shrink-0" />
           {!collapsed && <span>{t("discover")}</span>}
         </Link>
+
+        {/* Processes section */}
+        {!collapsed && (
+          <span className="mt-4 mb-1 px-3 text-xs font-medium uppercase tracking-wider text-foreground-muted/50">
+            {t("processes")}
+          </span>
+        )}
+        {collapsed && <div className="my-2 mx-3 border-t border-border" />}
         <Link
           href="/salvos"
           className={cn(
@@ -135,7 +143,7 @@ export function AppSidebar() {
               : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
           )}
         >
-          <Heart className="h-5 w-5 shrink-0" />
+          <Bookmark className="h-5 w-5 shrink-0" />
           {!collapsed && <span>{t("saved")}</span>}
         </Link>
         <Link
@@ -147,7 +155,7 @@ export function AppSidebar() {
               : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
           )}
         >
-          <FolderOpen className="h-5 w-5 shrink-0" />
+          <LayoutGrid className="h-5 w-5 shrink-0" />
           {!collapsed && <span>{t("searches")}</span>}
         </Link>
       </nav>
