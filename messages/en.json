@@ -16,6 +16,7 @@
     "home": "Home",
     "discover": "Discover",
     "saved": "Saved",
+    "searches": "Searches",
     "settings": "Settings",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar",
@@ -38,7 +39,7 @@
     "sessionNotFound": "Session not found"
   },
   "ChatHistory": {
-    "yourChats": "Your executions",
+    "yourChats": "Recent executions",
     "discovery": "Discovery",
     "analysis": "Analysis",
     "results": "Scout",
@@ -71,7 +72,7 @@
   },
   "Welcome": {
     "title": "What shall we solve, {name}?",
-    "yourChats": "Your executions",
+    "yourChats": "Recent executions",
     "noChatsInStage": "No executions in this stage"
   },
   "Suggestions": {
@@ -190,6 +191,22 @@
     "startExploring": "Explore startups",
     "loginToSave": "Sign in to save startups",
     "loginButton": "Sign in"
+  },
+  "Searches": {
+    "title": "Searches",
+    "description": "View and manage all your search executions",
+    "recentSearches": "Recent Searches",
+    "seeAll": "See all",
+    "noSearchesYet": "No searches yet",
+    "startSearching": "Start a new discovery session to see your searches here",
+    "loading": "Loading...",
+    "resultCount": "{count, plural, one {# result} other {# results}}",
+    "stages": {
+      "all": "All",
+      "discovery": "Discovery",
+      "analysis": "Analysis",
+      "results": "Results"
+    }
   },
   "Settings": {
     "title": "Settings",

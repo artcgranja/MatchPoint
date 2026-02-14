@@ -16,6 +16,7 @@
     "home": "Home",
     "discover": "Descubra",
     "saved": "Salvos",
+    "searches": "Buscas",
     "settings": "Configurações",
     "expandSidebar": "Expandir barra lateral",
     "collapseSidebar": "Recolher barra lateral",
@@ -38,7 +39,7 @@
     "sessionNotFound": "Sessão não encontrada"
   },
   "ChatHistory": {
-    "yourChats": "Suas execuções",
+    "yourChats": "Execuções recentes",
     "discovery": "Descoberta",
     "analysis": "Análise",
     "results": "Scout",
@@ -71,7 +72,7 @@
   },
   "Welcome": {
     "title": "O que vamos resolver, {name}?",
-    "yourChats": "Suas execuções",
+    "yourChats": "Execuções recentes",
     "noChatsInStage": "Nenhuma execução nessa etapa"
   },
   "Suggestions": {
@@ -190,6 +191,22 @@
     "startExploring": "Explorar startups",
     "loginToSave": "Entre para salvar startups",
     "loginButton": "Entrar"
+  },
+  "Searches": {
+    "title": "Buscas",
+    "description": "Visualize e gerencie todas as suas execuções de busca",
+    "recentSearches": "Buscas Recentes",
+    "seeAll": "Ver todas",
+    "noSearchesYet": "Ainda não há buscas",
+    "startSearching": "Inicie uma nova sessão de descoberta para ver suas buscas aqui",
+    "loading": "Carregando...",
+    "resultCount": "{count, plural, one {# resultado} other {# resultados}}",
+    "stages": {
+      "all": "Todas",
+      "discovery": "Descoberta",
+      "analysis": "Análise",
+      "results": "Resultados"
+    }
   },
   "Settings": {
     "title": "Configurações",

@@ -1,7 +1,8 @@
 "use client";
 
-import { MessageSquare, FileText, Rocket } from "lucide-react";
+import { MessageSquare, FileText, Rocket, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import {
   Drawer,
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/drawer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SessionCard } from "@/components/discovery/session-card";
 import type { SessionItem, SessionPipelineStage } from "@/types";
@@ -40,6 +42,8 @@ export function ChatHistoryDrawer({
 }: ChatHistoryDrawerProps) {
   const tHistory = useTranslations("ChatHistory");
   const tTime = useTranslations("RelativeTime");
+  const tSearches = useTranslations("Searches");
+  const router = useRouter();
 
   const stages: SessionPipelineStage[] = ["discovery", "analysis", "results"];
 
@@ -78,11 +82,27 @@ export function ChatHistoryDrawer({
     onOpenChange(false);
   };
 
+  const handleSeeAll = () => {
+    onOpenChange(false);
+    router.push("/searches");
+  };
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[85vh]">
         <DrawerHeader>
-          <DrawerTitle>{tHistory("yourChats")}</DrawerTitle>
+          <div className="flex flex-row items-center justify-between">
+            <DrawerTitle>{tHistory("yourChats")}</DrawerTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSeeAll}
+              className="shrink-0"
+            >
+              {tSearches("seeAll")}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         </DrawerHeader>
 
         <Tabs defaultValue="discovery" className="flex min-h-0 flex-1 flex-col px-4 pb-4">

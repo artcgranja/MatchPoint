@@ -6,12 +6,15 @@ import {
   MessageSquare,
   FileText,
   Rocket,
+  ArrowRight,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import AnimatedGradientBackground from "@/components/ui/animated-gradient-background";
 import { ChatInput } from "@/components/discovery/chat-input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SessionCard } from "@/components/discovery/session-card";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -49,9 +52,11 @@ export function ChatWelcome({
   const [isHovered, setIsHovered] = useState(false);
   const prefersReducedMotion = useReducedMotion();
   const { user } = useAuth();
+  const router = useRouter();
   const t = useTranslations("Welcome");
   const tHistory = useTranslations("ChatHistory");
   const tTime = useTranslations("RelativeTime");
+  const tSearches = useTranslations("Searches");
 
   const hasSessions = sessions.length > 0;
 
@@ -168,9 +173,19 @@ export function ChatWelcome({
           <div className="w-full max-w-6xl overflow-hidden rounded-2xl border border-border/60 bg-background/80 shadow-2xl backdrop-blur-xl">
             <Tabs defaultValue="results" className="flex flex-col">
               <div className="border-b border-border/40 px-6 pt-5 pb-3">
-                <h2 className="mb-4 text-base font-semibold text-foreground">
-                  {t("yourChats")}
-                </h2>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-base font-semibold text-foreground">
+                    {t("yourChats")}
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => router.push("/searches")}
+                  >
+                    {tSearches("seeAll")}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </div>
                 <TabsList className="w-full">
                   {STAGES.map((stage) => {
                     const config = STAGE_ICONS[stage];
