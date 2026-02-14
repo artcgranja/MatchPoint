@@ -7,6 +7,7 @@ import { MapPin, ExternalLink, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cardEntrance } from "@/lib/motion";
 import { Badge } from "@/components/ui/badge";
+import { SaveButton } from "@/components/saved/save-button";
 import type { BrowseCompany } from "@/types";
 
 interface StartupBrowseCardProps {
@@ -37,10 +38,12 @@ export function StartupBrowseCard({ company }: StartupBrowseCardProps) {
         whileHover={{ y: -2 }}
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
         onMouseMove={handleMouseMove}
-        className="spotlight-card glass rounded-xl border border-border p-4 space-y-3 cursor-pointer transition-colors duration-200 hover:border-border-hover hover:bg-surface-hover h-full"
+        className="spotlight-card glass relative rounded-xl border border-border p-4 space-y-3 cursor-pointer transition-colors duration-200 hover:border-border-hover hover:bg-surface-hover h-full"
       >
+        <SaveButton companyId={company.id} size="sm" className="absolute top-2 right-2 z-10" />
+
         {/* Header: Logo + Name + Batch */}
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-3 pr-6">
           <div className="flex items-center gap-2.5 min-w-0">
             {company.smallLogoUrl && (
               <img

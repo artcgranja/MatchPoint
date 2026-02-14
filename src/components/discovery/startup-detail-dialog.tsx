@@ -1,6 +1,7 @@
 "use client";
 
 import { MapPin, ExternalLink, Sparkles, Tag } from "lucide-react";
+import { SaveButton } from "@/components/saved/save-button";
 import {
   Dialog,
   DialogContent,
@@ -28,9 +29,12 @@ export function StartupDetailDialog({
         <DialogHeader>
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
-              <DialogTitle className="font-heading text-lg text-foreground">
-                {card.name}
-              </DialogTitle>
+              <div className="flex items-center gap-2">
+                <DialogTitle className="font-heading text-lg text-foreground">
+                  {card.name}
+                </DialogTitle>
+                <SaveButton companyId={card.id} size="sm" />
+              </div>
               <DialogDescription className="mt-1 text-sm text-foreground-muted">
                 {card.oneLiner}
               </DialogDescription>

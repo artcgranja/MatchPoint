@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getAuthUser } from "@/lib/auth";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { SavedStartupsProvider } from "@/components/providers/saved-startups-provider";
 import { AppShell } from "@/components/layout/app-shell";
 import type { AuthUser } from "@/stores/auth-store";
 
@@ -20,7 +21,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <AuthProvider initialUser={initialUser}>
-      <AppShell>{children}</AppShell>
+      <SavedStartupsProvider>
+        <AppShell>{children}</AppShell>
+      </SavedStartupsProvider>
     </AuthProvider>
   );
 }

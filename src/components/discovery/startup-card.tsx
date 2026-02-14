@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { motion } from "motion/react";
 import { MapPin, ExternalLink } from "lucide-react";
 import { cardEntrance } from "@/lib/motion";
+import { SaveButton } from "@/components/saved/save-button";
 import { StartupDetailDialog } from "./startup-detail-dialog";
 import type { StartupCard as StartupCardType } from "@/types";
 
@@ -37,10 +38,12 @@ export function StartupCard({ card }: StartupCardProps) {
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
         onMouseMove={handleMouseMove}
         onClick={() => setDetailOpen(true)}
-        className="spotlight-card glass rounded-xl border border-border p-4 space-y-2.5 cursor-pointer transition-colors duration-200 hover:border-border-hover hover:bg-surface-hover"
+        className="spotlight-card glass relative rounded-xl border border-border p-4 space-y-2.5 cursor-pointer transition-colors duration-200 hover:border-border-hover hover:bg-surface-hover"
       >
+        <SaveButton companyId={card.id} size="sm" className="absolute top-2 right-2 z-10" />
+
         {/* Header: Name + Batch Badge */}
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start justify-between gap-3 pr-6">
           <div className="min-w-0">
             <h4 className="font-semibold text-sm truncate text-foreground">
               {card.name}

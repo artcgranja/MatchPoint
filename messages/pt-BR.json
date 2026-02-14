@@ -15,6 +15,7 @@
   "Navigation": {
     "home": "Home",
     "discover": "Descubra",
+    "saved": "Salvos",
     "settings": "Configurações",
     "expandSidebar": "Expandir barra lateral",
     "collapseSidebar": "Recolher barra lateral",
@@ -178,6 +179,17 @@
     "ycProfile": "YC Profile",
     "startupNotFound": "Startup não encontrada",
     "errorLoading": "Erro ao carregar"
+  },
+  "Saved": {
+    "title": "Salvos",
+    "description": "Startups que você salvou para acompanhar.",
+    "save": "Salvar",
+    "unsave": "Remover dos salvos",
+    "noSavedStartups": "Nenhuma startup salva ainda",
+    "noSavedHint": "Explore startups e clique no coração para salvá-las aqui.",
+    "startExploring": "Explorar startups",
+    "loginToSave": "Entre para salvar startups",
+    "loginButton": "Entrar"
   },
   "Settings": {
     "title": "Configurações",

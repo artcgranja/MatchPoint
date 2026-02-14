@@ -33,6 +33,7 @@ model User {
   settings          Json?
   searchExecutions  SearchExecution[]
   discoverySessions DiscoverySession[]
+  savedStartups     SavedStartup[]
 }
 
 model Company {
@@ -60,6 +61,7 @@ model Company {
   ycUrl           String
   syncedAt        DateTime       @default(now())
   searchResults   SearchResult[]
+  savedStartups   SavedStartup[]
 }
 
 model DiscoverySession {
@@ -143,6 +145,18 @@ model SearchResult {
   aiAnalysis        Json
   rank              Int
   createdAt         DateTime        @default(now())
+}
+
+model SavedStartup {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, companyId])
+  @@index([userId])
 }
 
 model Report {

@@ -6,6 +6,8 @@ import {
   PanelLeftClose,
   PanelLeft,
   Compass,
+  Heart,
+  FolderOpen,
   Settings,
   LogOut,
   LogIn,
@@ -32,7 +34,7 @@ import { useSearchStore } from "@/stores/search-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLoginModalStore } from "@/stores/login-modal-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import { SessionList } from "@/components/layout/session-list";
+import { useSearchesModalStore } from "@/stores/searches-modal-store";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -51,6 +53,8 @@ export function AppSidebar() {
   const isOnChat = pathname === "/" || pathname === "/search";
   const isHomeActive = isOnChat && !currentSessionId;
   const isDescubraActive = pathname.startsWith("/descubra");
+  const isSalvosActive = pathname.startsWith("/salvos");
+  const isSearchesActive = pathname.startsWith("/searches");
 
   const handleHomeClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -123,13 +127,34 @@ export function AppSidebar() {
           <Compass className="h-5 w-5 shrink-0" />
           {!collapsed && <span>{t("discover")}</span>}
         </Link>
+        <Link
+          href="/salvos"
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+            isSalvosActive
+              ? "bg-highlight/10 text-highlight"
+              : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+          )}
+        >
+          <Heart className="h-5 w-5 shrink-0" />
+          {!collapsed && <span>{t("saved")}</span>}
+        </Link>
+        <button
+          onClick={() => useSearchesModalStore.getState().openModal()}
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+            isSearchesActive
+              ? "bg-highlight/10 text-highlight"
+              : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+          )}
+        >
+          <FolderOpen className="h-5 w-5 shrink-0" />
+          {!collapsed && <span>{t("searches")}</span>}
+        </button>
       </nav>
 
-      {/* Session history */}
-      {!collapsed && <SessionList />}
-
-      {/* Spacer (only when collapsed or no session list) */}
-      {collapsed && <div className="flex-1" />}
+      {/* Spacer */}
+      <div className="flex-1" />
 
       {/* Footer: avatar + collapse */}
       <div className="flex flex-col gap-2 border-t border-border p-2">
