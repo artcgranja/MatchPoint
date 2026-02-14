@@ -163,8 +163,7 @@
     "connect": "Connect",
     "sending": "Sending...",
     "emailSent": "Email sent",
-    "connected": "Connected",
-    "noEmail": "No contact email"
+    "connected": "Connected"
   },
   "Browse": {
     "title": "Discover",
@@ -340,6 +339,16 @@
     "statusEmailSent": "Email Sent",
     "statusClicked": "Clicked",
     "statusAccepted": "Accepted"
+  },
+  "SeekerConnections": {
+    "title": "Connections",
+    "description": "Track outreach emails sent to startups.",
+    "empty": "No connections yet",
+    "emptyHint": "When you connect with a startup, your outreach history will appear here.",
+    "startExploring": "Explore startups",
+    "loginRequired": "Sign in to see your connections",
+    "loginButton": "Sign in",
+    "emailSent": "Email sent"
   },
   "Metadata": {
     "title": "MatchPoint — Startup Matching with AI",

@@ -34,7 +34,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Company not found" }, { status: 404 });
   }
 
-  if (!company.contactEmail) {
+  const contactEmail = company.contactEmail || process.env.FALLBACK_CONTACT_EMAIL;
+  if (!contactEmail) {
     return NextResponse.json({ error: "Company has no contact email" }, { status: 422 });
   }
 
@@ -142,7 +143,7 @@ export async function POST(request: Request) {
       status: "pending",
       emailSubject: email.subject,
       emailBody: email.body,
-      builderEmail: company.contactEmail,
+      builderEmail: contactEmail,
     },
   });
 
@@ -150,7 +151,7 @@ export async function POST(request: Request) {
   const token = generateMagicLinkToken();
   await prisma.magicLinkToken.create({
     data: {
-      email: company.contactEmail,
+      email: contactEmail,
       token,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days for invites
       connectionId: connection.id,
@@ -163,7 +164,7 @@ export async function POST(request: Request) {
   // Send email
   try {
     const resendId = await sendConnectionInvite({
-      to: company.contactEmail,
+      to: contactEmail,
       startupName: company.name,
       subject: email.subject,
       body: email.body,

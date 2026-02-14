@@ -11,7 +11,6 @@ import { useLoginModalStore } from "@/stores/login-modal-store";
 interface ConnectButtonProps {
   companyId: number;
   searchResultId?: string;
-  hasContactEmail?: boolean;
   variant?: "icon" | "full";
   className?: string;
 }
@@ -19,7 +18,6 @@ interface ConnectButtonProps {
 export function ConnectButton({
   companyId,
   searchResultId,
-  hasContactEmail = true,
   variant = "icon",
   className,
 }: ConnectButtonProps) {
@@ -38,7 +36,7 @@ export function ConnectButton({
       return;
     }
 
-    if (status || isLoading || !hasContactEmail) return;
+    if (status || isLoading) return;
 
     createConnection(companyId, searchResultId);
   };
@@ -52,10 +50,10 @@ export function ConnectButton({
         type="button"
         whileTap={{ scale: 0.97 }}
         onClick={handleClick}
-        disabled={!!status || isLoading || !hasContactEmail}
+        disabled={!!status || isLoading}
         className={cn(
           "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
-          !status && !isLoading && hasContactEmail
+          !status && !isLoading
             ? "bg-highlight text-white hover:bg-highlight/90"
             : isSent
               ? "bg-highlight/10 text-highlight border border-highlight/20"
@@ -80,11 +78,6 @@ export function ConnectButton({
             <Mail className="h-4 w-4" />
             {t("emailSent")}
           </>
-        ) : !hasContactEmail ? (
-          <>
-            <Send className="h-4 w-4" />
-            {t("noEmail")}
-          </>
         ) : (
           <>
             <Send className="h-4 w-4" />
@@ -101,18 +94,16 @@ export function ConnectButton({
       type="button"
       whileTap={{ scale: 0.85 }}
       onClick={handleClick}
-      disabled={!!status || isLoading || !hasContactEmail}
+      disabled={!!status || isLoading}
       aria-label={
         isAccepted ? t("connected") : isSent ? t("emailSent") : t("connect")
       }
       title={
-        !hasContactEmail
-          ? t("noEmail")
-          : isAccepted
-            ? t("connected")
-            : isSent
-              ? t("emailSent")
-              : t("connect")
+        isAccepted
+          ? t("connected")
+          : isSent
+            ? t("emailSent")
+            : t("connect")
       }
       className={cn(
         "rounded-lg p-1 transition-colors",
@@ -122,9 +113,7 @@ export function ConnectButton({
             ? "text-green-400"
             : isSent
               ? "text-highlight"
-              : hasContactEmail
-                ? "text-foreground-muted/40 hover:text-highlight"
-                : "text-foreground-muted/20 cursor-not-allowed",
+              : "text-foreground-muted/40 hover:text-highlight",
         className
       )}
     >

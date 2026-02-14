@@ -163,8 +163,7 @@
     "connect": "Conectar",
     "sending": "Enviando...",
     "emailSent": "Email enviado",
-    "connected": "Conectado",
-    "noEmail": "Sem email de contato"
+    "connected": "Conectado"
   },
   "Browse": {
     "title": "Descubra",
@@ -340,6 +339,16 @@
     "statusEmailSent": "Email Enviado",
     "statusClicked": "Clicou",
     "statusAccepted": "Aceito"
+  },
+  "SeekerConnections": {
+    "title": "Conexões",
+    "description": "Acompanhe os emails de contato enviados às startups.",
+    "empty": "Nenhuma conexão ainda",
+    "emptyHint": "Quando você se conectar com uma startup, seu histórico de contato aparecerá aqui.",
+    "startExploring": "Explorar startups",
+    "loginRequired": "Entre para ver suas conexões",
+    "loginButton": "Entrar",
+    "emailSent": "Email enviado"
   },
   "Metadata": {
     "title": "MatchPoint — Matching de Startups com IA",

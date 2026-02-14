@@ -16,6 +16,7 @@ import {
   Monitor,
   Inbox,
   Building2,
+  Send,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
@@ -55,6 +56,7 @@ export function AppSidebar() {
   const isDescubraActive = pathname.startsWith("/descubra");
   const isSalvosActive = pathname.startsWith("/salvos");
   const isSearchesActive = pathname.startsWith("/searches");
+  const isConexoesActive = pathname.startsWith("/conexoes");
   const isCompanyActive = pathname.startsWith("/company");
 
   const handleHomeClick = (e: React.MouseEvent) => {
@@ -188,6 +190,18 @@ export function AppSidebar() {
             >
               <LayoutGrid className="h-5 w-5 shrink-0" />
               {!collapsed && <span>{t("searches")}</span>}
+            </Link>
+            <Link
+              href="/conexoes"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                isConexoesActive
+                  ? "bg-highlight/10 text-highlight"
+                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+              )}
+            >
+              <Send className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>{t("connections")}</span>}
             </Link>
           </>
         )}

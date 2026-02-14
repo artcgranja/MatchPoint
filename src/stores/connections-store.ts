@@ -3,6 +3,21 @@ import { apiGet, apiPost, apiPut } from "@/lib/api/client";
 
 type ConnectionStatus = "pending" | "email_sent" | "clicked" | "accepted";
 
+export interface SeekerConnection {
+  id: string;
+  companyId: number;
+  status: ConnectionStatus;
+  emailSubject: string;
+  emailBody: string;
+  createdAt: string;
+  company: {
+    id: number;
+    name: string;
+    oneLiner: string;
+    smallLogoUrl: string;
+  };
+}
+
 export interface BuilderConnection {
   id: string;
   companyId: number;
@@ -21,6 +36,7 @@ interface ConnectionsStore {
   connectionsByCompany: Map<number, ConnectionStatus>;
   loadingCompanies: Set<number>;
   isLoaded: boolean;
+  seekerConnections: SeekerConnection[];
   builderConnections: BuilderConnection[];
   fetchConnections: () => Promise<void>;
   fetchBuilderConnections: () => Promise<void>;
@@ -30,26 +46,21 @@ interface ConnectionsStore {
   reset: () => void;
 }
 
-interface ConnectionResponse {
-  id: string;
-  companyId: number;
-  status: ConnectionStatus;
-}
-
 export const useConnectionsStore = create<ConnectionsStore>()((set, get) => ({
   connectionsByCompany: new Map(),
   loadingCompanies: new Set(),
   isLoaded: false,
+  seekerConnections: [],
   builderConnections: [],
 
   fetchConnections: async () => {
     try {
-      const connections = await apiGet<ConnectionResponse[]>("/connections");
+      const connections = await apiGet<SeekerConnection[]>("/connections");
       const map = new Map<number, ConnectionStatus>();
       for (const c of connections) {
         map.set(c.companyId, c.status);
       }
-      set({ connectionsByCompany: map, isLoaded: true });
+      set({ connectionsByCompany: map, seekerConnections: connections, isLoaded: true });
     } catch {
       set({ isLoaded: true });
     }
@@ -101,5 +112,11 @@ export const useConnectionsStore = create<ConnectionsStore>()((set, get) => ({
 
   getStatus: (companyId: number) => get().connectionsByCompany.get(companyId) ?? null,
 
-  reset: () => set({ connectionsByCompany: new Map(), loadingCompanies: new Set(), isLoaded: false, builderConnections: [] }),
+  reset: () => set({
+    connectionsByCompany: new Map(),
+    loadingCompanies: new Set(),
+    isLoaded: false,
+    seekerConnections: [],
+    builderConnections: [],
+  }),
 }));
