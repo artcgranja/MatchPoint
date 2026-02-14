@@ -11,6 +11,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useLoginModalStore } from "@/stores/login-modal-store";
@@ -24,16 +25,87 @@ function GitHubIcon({ className }: { className?: string }) {
   );
 }
 
-/**
- * Login modal shown when user needs to authenticate.
- * Uses GitHub OAuth. Controlled by useLoginModalStore.
- */
-export function LoginModal() {
-  const { open, error, closeLoginModal } = useLoginModalStore();
+function LoginTabContent({ role }: { role: "seeker" | "builder" }) {
   const t = useTranslations("Auth");
   const [magicEmail, setMagicEmail] = useState("");
   const [magicSending, setMagicSending] = useState(false);
   const [magicSent, setMagicSent] = useState(false);
+
+  const githubUrl = role === "builder"
+    ? "/api/v1/auth/github?role=builder"
+    : "/api/v1/auth/github";
+
+  return (
+    <div className="flex flex-col gap-6 pt-2">
+      {/* GitHub OAuth button */}
+      <Button asChild className="w-full gap-2" size="lg">
+        <a href={githubUrl}>
+          <GitHubIcon className="h-5 w-5" />
+          {t("continueWithGitHub")}
+        </a>
+      </Button>
+
+      {/* Divider */}
+      <div className="flex items-center gap-3">
+        <div className="h-px flex-1 bg-divider" />
+        <span className="text-xs text-foreground-muted">{t("or")}</span>
+        <div className="h-px flex-1 bg-divider" />
+      </div>
+
+      {/* Magic Link */}
+      {magicSent ? (
+        <div className="rounded-lg bg-highlight/10 border border-highlight/20 px-4 py-3 text-sm text-highlight text-center">
+          <Mail className="h-4 w-4 inline-block mr-2" />
+          {t("checkYourEmail")}
+        </div>
+      ) : (
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            if (!magicEmail.trim() || magicSending) return;
+            setMagicSending(true);
+            try {
+              await fetch("/api/v1/auth/magic-link", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: magicEmail.trim(), role }),
+              });
+              setMagicSent(true);
+            } finally {
+              setMagicSending(false);
+            }
+          }}
+          className="flex gap-2"
+        >
+          <Input
+            type="email"
+            placeholder={t("emailPlaceholder")}
+            value={magicEmail}
+            onChange={(e) => setMagicEmail(e.target.value)}
+            required
+            className="flex-1"
+          />
+          <Button type="submit" variant="outline" disabled={magicSending} className="gap-2 shrink-0">
+            {magicSending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Mail className="h-4 w-4" />
+            )}
+            {t("sendMagicLink")}
+          </Button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Login modal shown when user needs to authenticate.
+ * Has Seeker / Builder tabs. Controlled by useLoginModalStore.
+ */
+export function LoginModal() {
+  const { open, error, closeLoginModal } = useLoginModalStore();
+  const t = useTranslations("Auth");
 
   const ERROR_MESSAGES: Record<string, string> = {
     invalid_state: t("loginError"),
@@ -67,76 +139,28 @@ export function LoginModal() {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-6 pt-2">
-          {/* Error message */}
-          {error && (
-            <div
-              role="alert"
-              className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive"
-            >
-              {ERROR_MESSAGES[error] ?? t("loginUnexpectedError")}
-            </div>
-          )}
-
-          {/* GitHub OAuth button */}
-          <Button asChild className="w-full gap-2" size="lg">
-            <a href="/api/v1/auth/github">
-              <GitHubIcon className="h-5 w-5" />
-              {t("continueWithGitHub")}
-            </a>
-          </Button>
-
-          {/* Divider */}
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-divider" />
-            <span className="text-xs text-foreground-muted">{t("or")}</span>
-            <div className="h-px flex-1 bg-divider" />
+        {/* Error message */}
+        {error && (
+          <div
+            role="alert"
+            className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive"
+          >
+            {ERROR_MESSAGES[error] ?? t("loginUnexpectedError")}
           </div>
+        )}
 
-          {/* Magic Link */}
-          {magicSent ? (
-            <div className="rounded-lg bg-highlight/10 border border-highlight/20 px-4 py-3 text-sm text-highlight text-center">
-              <Mail className="h-4 w-4 inline-block mr-2" />
-              {t("checkYourEmail")}
-            </div>
-          ) : (
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                if (!magicEmail.trim() || magicSending) return;
-                setMagicSending(true);
-                try {
-                  await fetch("/api/v1/auth/magic-link", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email: magicEmail.trim() }),
-                  });
-                  setMagicSent(true);
-                } finally {
-                  setMagicSending(false);
-                }
-              }}
-              className="flex gap-2"
-            >
-              <Input
-                type="email"
-                placeholder={t("emailPlaceholder")}
-                value={magicEmail}
-                onChange={(e) => setMagicEmail(e.target.value)}
-                required
-                className="flex-1"
-              />
-              <Button type="submit" variant="outline" disabled={magicSending} className="gap-2 shrink-0">
-                {magicSending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Mail className="h-4 w-4" />
-                )}
-                {t("sendMagicLink")}
-              </Button>
-            </form>
-          )}
-        </div>
+        <Tabs defaultValue="seeker" className="w-full">
+          <TabsList className="w-full">
+            <TabsTrigger value="seeker">Seeker</TabsTrigger>
+            <TabsTrigger value="builder">Builder</TabsTrigger>
+          </TabsList>
+          <TabsContent value="seeker">
+            <LoginTabContent role="seeker" />
+          </TabsContent>
+          <TabsContent value="builder">
+            <LoginTabContent role="builder" />
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

@@ -11,6 +11,7 @@ export interface JWTPayload {
   userId: string;
   email: string;
   role: "seeker" | "builder";
+  roleChosenAt?: string | null;
 }
 
 export async function signToken(payload: JWTPayload): Promise<string> {

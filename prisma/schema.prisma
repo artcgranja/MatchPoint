@@ -41,6 +41,7 @@ model User {
   avatarUrl         String?
   githubId          Int?                @unique
   role              UserRole            @default(seeker)
+  roleChosenAt      DateTime?
   companyId         Int?                @unique
   company           Company?            @relation("BuilderCompany", fields: [companyId], references: [id])
   createdAt         DateTime            @default(now())
@@ -53,7 +54,7 @@ model User {
 }
 
 model Company {
-  id              Int            @id
+  id              Int            @id @default(autoincrement())
   name            String
   slug            String         @unique
   oneLiner        String

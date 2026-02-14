@@ -4,7 +4,7 @@ import { generateMagicLinkToken } from "@/lib/auth";
 import { sendMagicLink } from "@/lib/email/send";
 
 export async function POST(request: Request) {
-  const { email } = (await request.json()) as { email?: string };
+  const { email, role } = (await request.json()) as { email?: string; role?: string };
 
   if (!email || typeof email !== "string") {
     return NextResponse.json({ error: "Email is required" }, { status: 400 });
@@ -38,7 +38,8 @@ export async function POST(request: Request) {
   });
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
-  const loginUrl = `${appUrl}/api/v1/auth/magic-link/verify?token=${token}`;
+  const roleParam = role === "builder" ? "&role=builder" : "";
+  const loginUrl = `${appUrl}/api/v1/auth/magic-link/verify?token=${token}${roleParam}`;
 
   try {
     await sendMagicLink({ to: normalizedEmail, loginUrl });

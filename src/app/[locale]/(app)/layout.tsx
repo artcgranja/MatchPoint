@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const jwtPayload = await getAuthUser();
   const initialUser: AuthUser | null = jwtPayload
-    ? { id: jwtPayload.userId, email: jwtPayload.email, name: null, avatarUrl: null, role: jwtPayload.role ?? "seeker" }
+    ? { id: jwtPayload.userId, email: jwtPayload.email, name: null, avatarUrl: null, role: jwtPayload.role ?? "seeker", roleChosenAt: jwtPayload.roleChosenAt ?? null }
     : null;
 
   return (

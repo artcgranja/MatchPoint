@@ -23,9 +23,10 @@ export async function GET(request: Request) {
   const state = url.searchParams.get("state");
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
 
-  // Read state cookie for CSRF validation
+  // Read state + role cookies
   const cookieStore = await cookies();
   const storedState = cookieStore.get("github_oauth_state")?.value ?? null;
+  const loginRole = cookieStore.get("login_role")?.value as "seeker" | "builder" | undefined;
 
   if (!code || !state || !storedState || state !== storedState) {
     const response = NextResponse.redirect(`${appUrl}/?auth_error=invalid_state`);
@@ -104,13 +105,16 @@ export async function GET(request: Request) {
         },
       });
     } else {
-      // Create new user
+      // Create new user with role from login tab
+      const chosenRole = loginRole ?? "seeker";
       user = await prisma.user.create({
         data: {
           email,
           githubId: githubUser.id,
           name: githubUser.name ?? githubUser.login,
           avatarUrl: githubUser.avatar_url,
+          role: chosenRole,
+          roleChosenAt: new Date(),
         },
       });
     }
@@ -125,10 +129,19 @@ export async function GET(request: Request) {
     });
   }
 
-  // Issue JWT and redirect to home
-  const token = await signToken({ userId: user.id, email: user.email, role: user.role as "seeker" | "builder" });
+  // Issue JWT and redirect
+  const token = await signToken({
+    userId: user.id,
+    email: user.email,
+    role: user.role as "seeker" | "builder",
+    roleChosenAt: user.roleChosenAt?.toISOString() ?? null,
+  });
 
-  const response = NextResponse.redirect(`${appUrl}/`);
+  // New builders without a company go to company onboarding
+  const redirectUrl = user.role === "builder" && !user.companyId
+    ? `${appUrl}/onboarding/company`
+    : `${appUrl}/`;
+  const response = NextResponse.redirect(redirectUrl);
 
   response.cookies.set("token", token, {
     httpOnly: true,
@@ -139,6 +152,7 @@ export async function GET(request: Request) {
   });
 
   response.cookies.delete("github_oauth_state");
+  response.cookies.delete("login_role");
 
   return response;
 }

@@ -1,14 +1,31 @@
 import { create } from "zustand";
-import { apiGet, apiPost } from "@/lib/api/client";
+import { apiGet, apiPost, apiPut } from "@/lib/api/client";
 
 type ConnectionStatus = "pending" | "email_sent" | "clicked" | "accepted";
+
+export interface BuilderConnection {
+  id: string;
+  companyId: number;
+  status: ConnectionStatus;
+  emailSubject: string;
+  emailBody: string;
+  createdAt: string;
+  seeker: {
+    id: string;
+    name: string | null;
+    email: string;
+  };
+}
 
 interface ConnectionsStore {
   connectionsByCompany: Map<number, ConnectionStatus>;
   loadingCompanies: Set<number>;
   isLoaded: boolean;
+  builderConnections: BuilderConnection[];
   fetchConnections: () => Promise<void>;
+  fetchBuilderConnections: () => Promise<void>;
   createConnection: (companyId: number, searchResultId?: string) => Promise<void>;
+  acceptConnection: (id: string) => Promise<void>;
   getStatus: (companyId: number) => ConnectionStatus | null;
   reset: () => void;
 }
@@ -23,6 +40,7 @@ export const useConnectionsStore = create<ConnectionsStore>()((set, get) => ({
   connectionsByCompany: new Map(),
   loadingCompanies: new Set(),
   isLoaded: false,
+  builderConnections: [],
 
   fetchConnections: async () => {
     try {
@@ -32,6 +50,15 @@ export const useConnectionsStore = create<ConnectionsStore>()((set, get) => ({
         map.set(c.companyId, c.status);
       }
       set({ connectionsByCompany: map, isLoaded: true });
+    } catch {
+      set({ isLoaded: true });
+    }
+  },
+
+  fetchBuilderConnections: async () => {
+    try {
+      const connections = await apiGet<BuilderConnection[]>("/connections");
+      set({ builderConnections: connections, isLoaded: true });
     } catch {
       set({ isLoaded: true });
     }
@@ -59,7 +86,20 @@ export const useConnectionsStore = create<ConnectionsStore>()((set, get) => ({
     }
   },
 
+  acceptConnection: async (id: string) => {
+    try {
+      await apiPut(`/connections/${id}/accept`);
+      set({
+        builderConnections: get().builderConnections.map((c) =>
+          c.id === id ? { ...c, status: "accepted" as const } : c
+        ),
+      });
+    } catch {
+      // noop
+    }
+  },
+
   getStatus: (companyId: number) => get().connectionsByCompany.get(companyId) ?? null,
 
-  reset: () => set({ connectionsByCompany: new Map(), loadingCompanies: new Set(), isLoaded: false }),
+  reset: () => set({ connectionsByCompany: new Map(), loadingCompanies: new Set(), isLoaded: false, builderConnections: [] }),
 }));

@@ -5,6 +5,7 @@ import { signToken } from "@/lib/auth";
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const token = url.searchParams.get("token");
+  const loginRole = url.searchParams.get("role") as "seeker" | "builder" | null;
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
 
   if (!token) {
@@ -32,16 +33,19 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${appUrl}/?auth_error=invalid_token`);
   }
 
-  // Find or create user as builder
+  // Find or create user
   let user = await prisma.user.findUnique({
     where: { email: magicLink.email },
   });
 
   if (!user) {
+    // Connection invite → builder; login modal → use selected role; fallback → seeker
+    const role = magicLink.connectionId ? "builder" : (loginRole ?? "seeker");
     user = await prisma.user.create({
       data: {
         email: magicLink.email,
-        role: "builder",
+        role,
+        roleChosenAt: new Date(),
       },
     });
   }
@@ -59,7 +63,7 @@ export async function GET(request: Request) {
           ? [
               prisma.user.update({
                 where: { id: user.id },
-                data: { companyId: connection.companyId, role: "builder" },
+                data: { companyId: connection.companyId, role: "builder", roleChosenAt: user.roleChosenAt ?? new Date() },
               }),
             ]
           : []),
@@ -80,9 +84,14 @@ export async function GET(request: Request) {
     userId: user.id,
     email: user.email,
     role: user.role as "seeker" | "builder",
+    roleChosenAt: user.roleChosenAt?.toISOString() ?? null,
   });
 
-  const response = NextResponse.redirect(`${appUrl}/`);
+  // New builders without a company go to company onboarding
+  const redirectUrl = user.role === "builder" && !user.companyId
+    ? `${appUrl}/onboarding/company`
+    : `${appUrl}/`;
+  const response = NextResponse.redirect(redirectUrl);
 
   response.cookies.set("token", jwt, {
     httpOnly: true,

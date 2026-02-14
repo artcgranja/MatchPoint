@@ -12,6 +12,7 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { HeroChatSection } from "@/components/home/hero-chat-section";
+import { BuilderHomePage } from "@/components/builder/builder-home-page";
 import { ChatWelcome } from "@/components/search/chat-welcome";
 import { ChatMessageList } from "@/components/discovery/chat-message-list";
 import { ChatInput } from "@/components/discovery/chat-input";
@@ -128,6 +129,8 @@ export default function HomePage() {
   const isIdle = discoveryState === "idle";
   const isLoggedIn = !!user;
   const showPanel = panelOpen || analysisStatus !== "idle" || scoutStatus !== "idle";
+
+  if (user?.role === "builder") return <BuilderHomePage />;
 
   return (
   <>
