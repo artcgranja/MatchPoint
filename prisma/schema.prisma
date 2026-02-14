@@ -51,6 +51,7 @@ model User {
   discoverySessions DiscoverySession[]
   savedStartups     SavedStartup[]
   connectionsSent   Connection[]        @relation("ConnectionSeeker")
+  connectionMessages ConnectionMessage[] @relation("ConnectionMessageSender")
 }
 
 model Company {
@@ -218,7 +219,23 @@ model Connection {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
+  messages       ConnectionMessage[]
+
   @@unique([seekerId, companyId])
   @@index([seekerId])
   @@index([companyId])
+}
+
+model ConnectionMessage {
+  id           String     @id @default(uuid())
+  connectionId String
+  connection   Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  senderId     String?
+  sender       User?      @relation("ConnectionMessageSender", fields: [senderId], references: [id])
+  content      String
+  isSystem     Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+
+  @@index([connectionId])
+  @@index([senderId])
 }

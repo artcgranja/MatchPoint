@@ -16,7 +16,6 @@ import {
   Monitor,
   Inbox,
   Building2,
-  Send,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
@@ -115,7 +114,7 @@ export function AppSidebar() {
                   : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
               )}
             >
-              <Inbox className="h-5 w-5 shrink-0" />
+              <Send className="h-5 w-5 shrink-0" />
               {!collapsed && <span>{t("connections")}</span>}
             </Link>
             <Link
@@ -200,7 +199,7 @@ export function AppSidebar() {
                   : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
               )}
             >
-              <Send className="h-5 w-5 shrink-0" />
+              <Inbox className="h-5 w-5 shrink-0" />
               {!collapsed && <span>{t("connections")}</span>}
             </Link>
           </>

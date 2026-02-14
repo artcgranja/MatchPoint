@@ -294,7 +294,11 @@
     "generatingQuestionnaire": "Generating interactive questionnaire...",
     "finalizingDiscovery": "Finalizing discovery...",
     "searchingCompanies": "Searching companies...",
-    "loadingCompanyDetails": "Loading company details..."
+    "loadingCompanyDetails": "Loading company details...",
+    "analysisInterrupted": "Analysis was interrupted. Click below to restart.",
+    "scoutInterrupted": "Startup search was interrupted. Click below to restart.",
+    "retryAnalysis": "Restart Analysis",
+    "retryScout": "Restart Search"
   },
   "Onboarding": {
     "title": "How will you use MatchPoint?",
@@ -349,6 +353,18 @@
     "loginRequired": "Sign in to see your connections",
     "loginButton": "Sign in",
     "emailSent": "Email sent"
+  },
+  "ConnectionChat": {
+    "aiOutreach": "AI-generated outreach",
+    "placeholder": "Type a message...",
+    "placeholderPendingSeeker": "Waiting for the builder to accept...",
+    "placeholderPendingBuilder": "Accept the connection to start chatting",
+    "sendMessage": "Send message",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "acceptToChat": "Accept this connection to start a conversation",
+    "acceptConnection": "Accept Connection",
+    "accepting": "Accepting..."
   },
   "Metadata": {
     "title": "MatchPoint — Startup Matching with AI",

@@ -10,7 +10,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "db:sync-yc": "tsx scripts/sync-yc.ts"
+    "db:sync-yc": "tsx scripts/sync-yc.ts",
+    "db:seed:messages": "tsx prisma/seed-messages.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",

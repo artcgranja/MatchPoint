@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Send, Mail } from "lucide-react";
+import { Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useConnectionsStore, type SeekerConnection } from "@/stores/connections-store";
 import { ConnectionStatusBadge } from "@/components/builder/connection-status-badge";
@@ -20,6 +20,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { Link } from "@/i18n/navigation";
+import { ConnectionChat } from "@/components/connections/connection-chat";
 import { cardStagger, cardEntrance } from "@/lib/motion";
 
 export default function ConexoesPage() {
@@ -113,33 +114,20 @@ export default function ConexoesPage() {
       )}
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent>
+        <SheetContent className="flex flex-col p-0 sm:max-w-md">
           {selected && (
             <>
-              <SheetHeader>
+              <SheetHeader className="border-b border-border px-4 pt-4 pb-3">
                 <SheetTitle>{selected.company.name}</SheetTitle>
-                <SheetDescription>{selected.company.oneLiner}</SheetDescription>
-              </SheetHeader>
-              <div className="space-y-6 p-4">
-                <div className="flex items-center gap-3">
+                <SheetDescription className="flex items-center gap-2">
                   <ConnectionStatusBadge status={selected.status} labels={statusLabels} />
-                  <span className="text-xs text-foreground-muted">
-                    {formatTime(selected.createdAt)}
-                  </span>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    <Mail className="h-4 w-4 text-foreground-muted" />
-                    {t("emailSent")}
-                  </div>
-                  <div className="space-y-2 rounded-lg bg-background-secondary/50 p-3">
-                    <p className="text-sm font-medium">{selected.emailSubject}</p>
-                    <p className="whitespace-pre-wrap text-sm text-foreground-muted">
-                      {selected.emailBody}
-                    </p>
-                  </div>
-                </div>
-              </div>
+                  <span className="text-xs text-foreground-muted">{formatTime(selected.createdAt)}</span>
+                </SheetDescription>
+              </SheetHeader>
+              <ConnectionChat
+                connectionId={selected.id}
+                connectionStatus={selected.status}
+              />
             </>
           )}
         </SheetContent>

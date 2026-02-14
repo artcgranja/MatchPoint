@@ -61,12 +61,14 @@ export interface DiscoveryMessage {
   id?: string;
   role: "user" | "assistant";
   content: string;
-  type?: "text" | "cards" | "stage-update" | "questions";
+  type?: "text" | "cards" | "stage-update" | "questions" | "action";
   cards?: StartupCard[];
   questions?: QuestionData[];
   questionsContext?: string;
   questionsAnswered?: boolean;
   questionsAnswers?: QuestionAnswer[];
+  actionType?: "retry_analysis" | "retry_scout";
+  actionLabel?: string;
   createdAt?: string;
 }
 
@@ -85,6 +87,7 @@ export interface DiscoverySession {
   title?: string | null;
   currentStage: SessionStage;
   awaitingConfirmation?: boolean;
+  recoveryAction?: "retry_analysis" | "retry_scout" | null;
   isComplete: boolean;
   needSummary?: Record<string, unknown>;
   messages: DiscoveryMessage[];
@@ -103,6 +106,21 @@ export interface ToolCallEvent {
   status: "running" | "complete" | "error";
   resultSummary?: string;
   timestamp: number;
+}
+
+export interface ConnectionMessage {
+  id: string;
+  connectionId: string;
+  senderId: string | null;
+  content: string;
+  isSystem: boolean;
+  createdAt: string;
+  sender: {
+    id: string;
+    name: string | null;
+    email: string;
+    avatarUrl: string | null;
+  } | null;
 }
 
 export interface UserSettings {

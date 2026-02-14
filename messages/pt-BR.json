@@ -294,7 +294,11 @@
     "generatingQuestionnaire": "Gerando questionário interativo...",
     "finalizingDiscovery": "Finalizando descoberta...",
     "searchingCompanies": "Buscando empresas...",
-    "loadingCompanyDetails": "Carregando detalhes da empresa..."
+    "loadingCompanyDetails": "Carregando detalhes da empresa...",
+    "analysisInterrupted": "A análise foi interrompida. Clique abaixo para reiniciar.",
+    "scoutInterrupted": "A busca de startups foi interrompida. Clique abaixo para reiniciar.",
+    "retryAnalysis": "Reiniciar Análise",
+    "retryScout": "Reiniciar Busca"
   },
   "Onboarding": {
     "title": "Como você vai usar o MatchPoint?",
@@ -349,6 +353,18 @@
     "loginRequired": "Entre para ver suas conexões",
     "loginButton": "Entrar",
     "emailSent": "Email enviado"
+  },
+  "ConnectionChat": {
+    "aiOutreach": "Email gerado por IA",
+    "placeholder": "Digite uma mensagem...",
+    "placeholderPendingSeeker": "Aguardando o builder aceitar...",
+    "placeholderPendingBuilder": "Aceite a conexão para conversar",
+    "sendMessage": "Enviar mensagem",
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "acceptToChat": "Aceite esta conexão para iniciar a conversa",
+    "acceptConnection": "Aceitar Conexão",
+    "accepting": "Aceitando..."
   },
   "Metadata": {
     "title": "MatchPoint — Matching de Startups com IA",

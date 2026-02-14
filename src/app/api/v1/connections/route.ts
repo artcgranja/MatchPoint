@@ -134,7 +134,7 @@ export async function POST(request: Request) {
     seekerCompany: user.name ?? undefined,
   });
 
-  // Create connection record
+  // Create connection record + initial system message
   const connection = await prisma.connection.create({
     data: {
       seekerId: user.id,
@@ -144,6 +144,13 @@ export async function POST(request: Request) {
       emailSubject: email.subject,
       emailBody: email.body,
       builderEmail: contactEmail,
+      messages: {
+        create: {
+          senderId: user.id,
+          content: email.body,
+          isSystem: true,
+        },
+      },
     },
   });
 
