@@ -104,7 +104,16 @@ export async function* handleMessage(
       break;
 
     case "analysis":
-      // Analysis was interrupted (serverless process died) — re-run it
+      // Analysis was interrupted (serverless process died) — save user message and re-run
+      if (message.trim()) {
+        await prisma.orchestratorMessage.create({
+          data: {
+            searchExecutionId: state.searchId!,
+            role: "user",
+            content: message,
+          },
+        });
+      }
       yield {
         type: "status",
         agent: "system",
@@ -129,16 +138,18 @@ export async function* handleMessage(
 
     case "scouting":
       // Scout was interrupted — clean up incomplete data and re-run
-      await prisma.searchResult.deleteMany({
-        where: { searchExecutionId: state.searchId! },
-      });
-      await prisma.pipelineStageLog.deleteMany({
-        where: { searchExecutionId: state.searchId!, agentName: "Scout" },
-      });
-      await prisma.searchExecution.update({
-        where: { id: state.searchId! },
-        data: { status: "idle", resultCount: 0, scoutSummary: null },
-      });
+      await prisma.$transaction([
+        prisma.searchResult.deleteMany({
+          where: { searchExecutionId: state.searchId! },
+        }),
+        prisma.pipelineStageLog.deleteMany({
+          where: { searchExecutionId: state.searchId!, agentName: "Scout" },
+        }),
+        prisma.searchExecution.update({
+          where: { id: state.searchId! },
+          data: { status: "idle", resultCount: 0, scoutSummary: null },
+        }),
+      ]);
       yield* runScout(state.searchId!);
       break;
   }

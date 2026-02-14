@@ -11,7 +11,7 @@ const STAGES: { key: SessionStage; labelKey: "discovery" | "analysis" | "scout";
   { key: "scout", labelKey: "scout", panelTab: "scout" },
 ];
 
-const STAGE_ORDER: SessionStage[] = ["discovery", "analysis", "scout", "complete", "advising"];
+const STAGE_ORDER: SessionStage[] = ["discovery", "analysis", "awaiting_confirmation", "scout", "complete", "advising"];
 
 interface StageIndicatorProps {
   currentStage: SessionStage;

@@ -25,6 +25,7 @@ export function ChatInput({ onSend, disabled, currentStage, variant = "default" 
   const STAGE_PLACEHOLDERS: Record<SessionStage, string> = {
     discovery: t("placeholderDiscovery"),
     analysis: t("placeholderAnalysis"),
+    awaiting_confirmation: t("placeholderAnalysis"),
     scout: t("placeholderScout"),
     complete: t("placeholderAdvisor"),
     advising: t("placeholderAdvisor"),

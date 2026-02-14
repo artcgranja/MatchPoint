@@ -19,7 +19,7 @@ export interface SessionItem {
 
 export type AgentName = "Analysis" | "Scout";
 
-export type SessionStage = "discovery" | "analysis" | "scout" | "complete" | "advising";
+export type SessionStage = "discovery" | "analysis" | "awaiting_confirmation" | "scout" | "complete" | "advising";
 
 export interface PipelineStage {
   id: string;
@@ -86,7 +86,6 @@ export interface DiscoverySession {
   id: string;
   title?: string | null;
   currentStage: SessionStage;
-  awaitingConfirmation?: boolean;
   recoveryAction?: "retry_analysis" | "retry_scout" | null;
   isComplete: boolean;
   needSummary?: Record<string, unknown>;

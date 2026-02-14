@@ -103,7 +103,7 @@ export function useDiscoverySession() {
           if (search.productDocument) {
             // If awaiting confirmation, show the approval button ("complete")
             // Otherwise, the user already confirmed ("confirmed")
-            if (session.awaitingConfirmation) {
+            if (session.currentStage === "awaiting_confirmation") {
               useAgentPanelStore.getState().batchUpdate({
                 planText: search.productDocument,
                 analysisStatus: "complete",
@@ -203,7 +203,7 @@ export function useDiscoverySession() {
         // Set discovery state based on stage
         if (session.recoveryAction) {
           setDiscoveryState("chatting"); // Don't disable chat — action buttons handle recovery
-        } else if (session.awaitingConfirmation) {
+        } else if (session.currentStage === "awaiting_confirmation") {
           setDiscoveryState("processing");
         } else if (session.currentStage === "advising") {
           setDiscoveryState("advising");

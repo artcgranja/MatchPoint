@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
+import type { SessionStage } from "@/types";
 
 export async function GET(
   _req: Request,
@@ -44,8 +45,7 @@ export async function GET(
   const search = session.searches[0] ?? null;
 
   // Determine currentStage from session + search state (aligned with getSessionState())
-  let currentStage: string;
-  let awaitingConfirmation = false;
+  let currentStage: SessionStage;
   let recoveryAction: "retry_analysis" | "retry_scout" | null = null;
 
   if (!session.isComplete) {
@@ -57,8 +57,7 @@ export async function GET(
   } else if (search.status === "error") {
     // Error state — allow retry based on what failed
     if (search.bizPlan) {
-      currentStage = "analysis";
-      awaitingConfirmation = true; // Let user retry scout via confirm button
+      currentStage = "awaiting_confirmation";
     } else {
       currentStage = "analysis";
       recoveryAction = "retry_analysis";
@@ -79,8 +78,7 @@ export async function GET(
       recoveryAction = "retry_scout";
     } else {
       // Analysis complete, awaiting scout confirmation
-      currentStage = "analysis";
-      awaitingConfirmation = true;
+      currentStage = "awaiting_confirmation";
     }
   }
 
@@ -104,7 +102,6 @@ export async function GET(
     id: session.id,
     title: session.title,
     currentStage,
-    awaitingConfirmation,
     recoveryAction,
     isComplete: session.isComplete,
     needSummary: session.bizPlan,

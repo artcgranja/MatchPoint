@@ -125,14 +125,23 @@ export async function POST(request: Request) {
   }
 
   // Generate outreach email via Opus
-  const email = await outreachAgent.generateEmail({
-    needSummary,
-    bizPlan,
-    startupName: company.name,
-    startupOneLiner: company.oneLiner,
-    whyRelevant,
-    seekerCompany: user.name ?? undefined,
-  });
+  let email: { subject: string; body: string };
+  try {
+    email = await outreachAgent.generateEmail({
+      needSummary,
+      bizPlan,
+      startupName: company.name,
+      startupOneLiner: company.oneLiner,
+      whyRelevant,
+      seekerCompany: user.name ?? undefined,
+    });
+  } catch (err) {
+    console.error("[connections] Failed to generate outreach email:", err);
+    return NextResponse.json(
+      { error: "Failed to generate outreach email. Please try again." },
+      { status: 502 }
+    );
+  }
 
   // Create connection record + initial system message
   const connection = await prisma.connection.create({
