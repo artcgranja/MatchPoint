@@ -169,6 +169,7 @@ export async function POST(request: Request) {
   const inviteUrl = `${appUrl}/api/v1/auth/magic-link/verify?token=${token}`;
 
   // Send email
+  let finalStatus: "email_sent" | "pending" = "pending";
   try {
     const resendId = await sendConnectionInvite({
       to: contactEmail,
@@ -187,12 +188,13 @@ export async function POST(request: Request) {
         resendEmailId: resendId,
       },
     });
+    finalStatus = "email_sent";
   } catch (err) {
     console.error("[connections] Failed to send invite email:", err);
     // Connection stays in pending status
   }
 
-  return NextResponse.json({ id: connection.id, status: "email_sent" }, { status: 201 });
+  return NextResponse.json({ id: connection.id, status: finalStatus }, { status: 201 });
 }
 
 export async function GET() {
