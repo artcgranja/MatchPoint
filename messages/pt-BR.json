@@ -198,6 +198,7 @@
     "description": "Visualize e gerencie todas as suas execuções de busca",
     "recentSearches": "Buscas Recentes",
     "seeAll": "Ver todas",
+    "searchPlaceholder": "Buscar sessões...",
     "noSearchesYet": "Ainda não há buscas",
     "startSearching": "Inicie uma nova sessão de descoberta para ver suas buscas aqui",
     "loading": "Carregando...",

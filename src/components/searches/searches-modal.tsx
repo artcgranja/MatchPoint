@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
-import { FolderOpen, ArrowRight } from "lucide-react";
+import { LayoutGrid, ArrowRight } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -53,7 +53,7 @@ export function SearchesModal() {
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle className="flex items-center gap-2">
-            <FolderOpen className="h-5 w-5 text-highlight" />
+            <LayoutGrid className="h-5 w-5 text-highlight" />
             {t("recentSearches")}
           </DialogTitle>
           <Button
@@ -75,7 +75,7 @@ export function SearchesModal() {
             </p>
           ) : searches.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-8 text-center">
-              <FolderOpen className="h-10 w-10 text-foreground-muted/30" />
+              <LayoutGrid className="h-10 w-10 text-foreground-muted/30" />
               <p className="text-sm text-foreground-muted">{t("noSearchesYet")}</p>
               <p className="text-xs text-foreground-muted/50">
                 {t("startSearching")}

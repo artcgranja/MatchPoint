@@ -198,6 +198,7 @@
     "description": "View and manage all your search executions",
     "recentSearches": "Recent Searches",
     "seeAll": "See all",
+    "searchPlaceholder": "Search sessions...",
     "noSearchesYet": "No searches yet",
     "startSearching": "Start a new discovery session to see your searches here",
     "loading": "Loading...",
