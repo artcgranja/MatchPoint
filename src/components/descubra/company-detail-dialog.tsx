@@ -1,28 +1,28 @@
 "use client";
 
 import { CompanyModal } from "@/components/shared/company-modal";
-import type { StartupCard } from "@/types";
+import type { BrowseCompanyDetail } from "@/types";
 
-interface StartupDetailDialogProps {
-  card: StartupCard;
+interface CompanyDetailDialogProps {
+  company: BrowseCompanyDetail;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function StartupDetailDialog({
-  card,
+export function CompanyDetailDialog({
+  company,
   open,
   onOpenChange,
-}: StartupDetailDialogProps) {
+}: CompanyDetailDialogProps) {
   return (
     <CompanyModal
       company={{
-        ...card,
-        location: card.location,
+        ...company,
+        location: company.allLocations,
       }}
       open={open}
       onOpenChange={onOpenChange}
-      mode="search"
+      mode="browse"
     />
   );
 }

@@ -1,7 +1,8 @@
 "use client";
 
-import { MessageSquare, FileText, Rocket } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
 import {
   Drawer,
@@ -11,15 +12,16 @@ import {
 } from "@/components/ui/drawer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SessionCard } from "@/components/discovery/session-card";
+import { SessionActionDialogs } from "@/components/discovery/session-action-dialogs";
+import { useSessionActions } from "@/hooks/use-session-actions";
+import { useRelativeTime } from "@/hooks/use-relative-time";
+import { STAGE_CONFIG } from "@/lib/stage-config";
 import type { SessionItem, SessionPipelineStage } from "@/types";
 
-const STAGE_ICONS: Record<SessionPipelineStage, { icon: typeof MessageSquare; color: string }> = {
-  discovery: { icon: MessageSquare, color: "text-blue-400" },
-  analysis: { icon: FileText, color: "text-amber-400" },
-  results: { icon: Rocket, color: "text-green-400" },
-};
+const STAGES: SessionPipelineStage[] = ["discovery", "analysis", "results"];
 
 interface ChatHistoryDrawerProps {
   open: boolean;
@@ -27,7 +29,8 @@ interface ChatHistoryDrawerProps {
   sessions: SessionItem[];
   currentSessionId: string | null;
   onSelect: (sessionId: string) => void;
-  onDelete: (sessionId: string) => void;
+  onDelete: (sessionId: string) => Promise<void> | void;
+  onRename: (sessionId: string, newTitle: string) => Promise<string | null | void> | void;
 }
 
 export function ChatHistoryDrawer({
@@ -37,33 +40,24 @@ export function ChatHistoryDrawer({
   currentSessionId,
   onSelect,
   onDelete,
+  onRename,
 }: ChatHistoryDrawerProps) {
   const tHistory = useTranslations("ChatHistory");
-  const tTime = useTranslations("RelativeTime");
+  const tSearches = useTranslations("Searches");
+  const tCommon = useTranslations("Common");
+  const router = useRouter();
+  const getRelativeTime = useRelativeTime();
 
-  const stages: SessionPipelineStage[] = ["discovery", "analysis", "results"];
+  const sessionActions = useSessionActions({
+    onDelete,
+    onRename,
+  });
 
   const stageLabels: Record<SessionPipelineStage, string> = {
     discovery: tHistory("discovery"),
     analysis: tHistory("analysis"),
     results: tHistory("results"),
   };
-
-  function getRelativeTime(dateStr: string): string {
-    const now = new Date();
-    const date = new Date(dateStr);
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return tTime("now");
-    if (diffMins < 60) return tTime("minutesAgo", { minutes: diffMins });
-    if (diffHours < 24) return tTime("hoursAgo", { hours: diffHours });
-    if (diffDays === 1) return tTime("yesterday");
-    if (diffDays < 7) return tTime("daysAgo", { days: diffDays });
-    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  }
 
   const countByStage = (stage: SessionPipelineStage) =>
     sessions.filter((s) => s.pipelineStage === stage).length;
@@ -78,17 +72,33 @@ export function ChatHistoryDrawer({
     onOpenChange(false);
   };
 
+  const handleSeeAll = () => {
+    onOpenChange(false);
+    router.push("/searches");
+  };
+
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent className="max-h-[85vh]">
         <DrawerHeader>
-          <DrawerTitle>{tHistory("yourChats")}</DrawerTitle>
+          <div className="flex flex-row items-center justify-between">
+            <DrawerTitle>{tHistory("yourChats")}</DrawerTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSeeAll}
+              className="shrink-0"
+            >
+              {tSearches("seeAll")}
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
         </DrawerHeader>
 
         <Tabs defaultValue="discovery" className="flex min-h-0 flex-1 flex-col px-4 pb-4">
           <TabsList className="w-full">
-            {stages.map((stage) => {
-              const config = STAGE_ICONS[stage];
+            {STAGES.map((stage) => {
+              const config = STAGE_CONFIG[stage];
               const count = countByStage(stage);
               return (
                 <TabsTrigger key={stage} value={stage} className="flex-1 gap-2">
@@ -104,7 +114,7 @@ export function ChatHistoryDrawer({
             })}
           </TabsList>
 
-          {stages.map((stage) => (
+          {STAGES.map((stage) => (
             <TabsContent key={stage} value={stage} className="mt-3 min-h-0 flex-1">
               <ScrollArea className="h-full max-h-[60vh]">
                 {sessionsByStage(stage).length === 0 ? (
@@ -121,8 +131,10 @@ export function ChatHistoryDrawer({
                         session={session}
                         isActive={session.id === currentSessionId}
                         onClick={() => handleCardClick(session.id)}
-                        onDelete={() => onDelete(session.id)}
-                        deleteLabel={tHistory("deleteSession", { title: session.title })}
+                        onDelete={() => sessionActions.requestDelete(session)}
+                        onRename={() => sessionActions.requestRename(session)}
+                        deleteLabel={tCommon("delete")}
+                        renameLabel={tHistory("renameSession")}
                         resultCountLabel={tHistory("resultCount", { count: session.resultCount })}
                         relativeTime={getRelativeTime(session.updatedAt)}
                         moreLabel={(count) => tHistory("moreStartups", { count })}
@@ -135,6 +147,8 @@ export function ChatHistoryDrawer({
           ))}
         </Tabs>
       </DrawerContent>
+
+      <SessionActionDialogs actions={sessionActions} />
     </Drawer>
   );
 }

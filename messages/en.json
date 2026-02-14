@@ -15,6 +15,9 @@
   "Navigation": {
     "home": "Home",
     "discover": "Discover",
+    "saved": "Saved",
+    "searches": "Searches",
+    "processes": "Processes",
     "settings": "Settings",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar",
@@ -37,7 +40,7 @@
     "sessionNotFound": "Session not found"
   },
   "ChatHistory": {
-    "yourChats": "Your executions",
+    "yourChats": "Recent executions",
     "discovery": "Discovery",
     "analysis": "Analysis",
     "results": "Scout",
@@ -45,6 +48,9 @@
     "loginToSeeHistory": "Sign in to see your history",
     "noChatsYet": "No executions yet",
     "deleteSession": "Delete session: {title}",
+    "renameSession": "Rename session",
+    "deleteSessionConfirm": "Are you sure you want to delete \"{title}\"?",
+    "deleteSessionDescription": "This action cannot be undone. All messages and results will be permanently deleted.",
     "resultCount": "{count, plural, one {# result} other {# results}}",
     "moreStartups": "+{count} more"
   },
@@ -69,8 +75,8 @@
     "searchingStartups": "Searching for startups..."
   },
   "Welcome": {
-    "title": "What shall we <gradient>solve</gradient>?",
-    "yourChats": "Your executions",
+    "title": "What shall we solve, {name}?",
+    "yourChats": "Recent executions",
     "noChatsInStage": "No executions in this stage"
   },
   "Suggestions": {
@@ -178,6 +184,34 @@
     "ycProfile": "YC Profile",
     "startupNotFound": "Startup not found",
     "errorLoading": "Error loading"
+  },
+  "Saved": {
+    "title": "Saved",
+    "description": "Startups you saved to follow up on.",
+    "save": "Save",
+    "unsave": "Remove from saved",
+    "noSavedStartups": "No saved startups yet",
+    "noSavedHint": "Browse startups and click the heart to save them here.",
+    "startExploring": "Explore startups",
+    "loginToSave": "Sign in to save startups",
+    "loginButton": "Sign in"
+  },
+  "Searches": {
+    "title": "Searches",
+    "description": "View and manage all your search executions",
+    "recentSearches": "Recent Searches",
+    "seeAll": "See all",
+    "searchPlaceholder": "Search sessions...",
+    "noSearchesYet": "No searches yet",
+    "startSearching": "Start a new discovery session to see your searches here",
+    "loading": "Loading...",
+    "resultCount": "{count, plural, one {# result} other {# results}}",
+    "stages": {
+      "all": "All",
+      "discovery": "Discovery",
+      "analysis": "Analysis",
+      "results": "Results"
+    }
   },
   "Settings": {
     "title": "Settings",

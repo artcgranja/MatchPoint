@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useRouter } from "@/i18n/navigation";
 import {
   Compass,
   ChevronDown,
@@ -33,9 +32,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { StageIndicator } from "@/components/discovery/phase-indicator";
-import { useDiscoveryStore } from "@/stores/discovery-store";
-import { useAgentPanelStore } from "@/stores/agent-panel-store";
-import { useSearchStore } from "@/stores/search-store";
+import { useSessionNavigation } from "@/hooks/use-session-navigation";
 import type { SessionStage } from "@/types";
 
 interface ChatNavbarProps {
@@ -90,7 +87,7 @@ export function ChatNavbar({
   onTogglePanel,
   onRename,
 }: ChatNavbarProps) {
-  const router = useRouter();
+  const { goHome } = useSessionNavigation();
   const t = useTranslations("Chat");
   const tCommon = useTranslations("Common");
   const [isRenameOpen, setIsRenameOpen] = useState(false);
@@ -100,12 +97,7 @@ export function ChatNavbar({
 
   const displayTitle = sessionTitle ?? t("newChat");
 
-  const handleHomeClick = () => {
-    useDiscoveryStore.getState().reset();
-    useAgentPanelStore.getState().reset();
-    useSearchStore.getState().resetPipeline();
-    router.push("/");
-  };
+  const handleHomeClick = () => goHome();
 
   const handleOpenRename = () => {
     setRenameValue(displayTitle);

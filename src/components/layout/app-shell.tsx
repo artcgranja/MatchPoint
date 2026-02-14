@@ -3,6 +3,7 @@
 import { usePathname } from "@/i18n/navigation";
 import { motion, MotionConfig } from "motion/react";
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { SearchesModal } from "@/components/searches/searches-modal";
 import { useDiscoveryStore } from "@/stores/discovery-store";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useSidebarStore } from "@/stores/sidebar-store";
@@ -35,6 +36,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <SearchesModal />
     </MotionConfig>
   );
 }

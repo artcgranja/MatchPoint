@@ -15,6 +15,9 @@
   "Navigation": {
     "home": "Home",
     "discover": "Descubra",
+    "saved": "Salvos",
+    "searches": "Buscas",
+    "processes": "Processos",
     "settings": "Configurações",
     "expandSidebar": "Expandir barra lateral",
     "collapseSidebar": "Recolher barra lateral",
@@ -37,7 +40,7 @@
     "sessionNotFound": "Sessão não encontrada"
   },
   "ChatHistory": {
-    "yourChats": "Suas execuções",
+    "yourChats": "Execuções recentes",
     "discovery": "Descoberta",
     "analysis": "Análise",
     "results": "Scout",
@@ -45,6 +48,9 @@
     "loginToSeeHistory": "Entre para ver seu histórico",
     "noChatsYet": "Nenhuma execução ainda",
     "deleteSession": "Excluir sessão: {title}",
+    "renameSession": "Renomear sessão",
+    "deleteSessionConfirm": "Tem certeza que deseja excluir \"{title}\"?",
+    "deleteSessionDescription": "Esta ação não pode ser desfeita. Todas as mensagens e resultados serão permanentemente excluídos.",
     "resultCount": "{count, plural, one {# resultado} other {# resultados}}",
     "moreStartups": "+{count} mais"
   },
@@ -69,8 +75,8 @@
     "searchingStartups": "Buscando startups..."
   },
   "Welcome": {
-    "title": "O que vamos <gradient>resolver</gradient>?",
-    "yourChats": "Suas execuções",
+    "title": "O que vamos resolver, {name}?",
+    "yourChats": "Execuções recentes",
     "noChatsInStage": "Nenhuma execução nessa etapa"
   },
   "Suggestions": {
@@ -178,6 +184,34 @@
     "ycProfile": "YC Profile",
     "startupNotFound": "Startup não encontrada",
     "errorLoading": "Erro ao carregar"
+  },
+  "Saved": {
+    "title": "Salvos",
+    "description": "Startups que você salvou para acompanhar.",
+    "save": "Salvar",
+    "unsave": "Remover dos salvos",
+    "noSavedStartups": "Nenhuma startup salva ainda",
+    "noSavedHint": "Explore startups e clique no coração para salvá-las aqui.",
+    "startExploring": "Explorar startups",
+    "loginToSave": "Entre para salvar startups",
+    "loginButton": "Entrar"
+  },
+  "Searches": {
+    "title": "Buscas",
+    "description": "Visualize e gerencie todas as suas execuções de busca",
+    "recentSearches": "Buscas Recentes",
+    "seeAll": "Ver todas",
+    "searchPlaceholder": "Buscar sessões...",
+    "noSearchesYet": "Ainda não há buscas",
+    "startSearching": "Inicie uma nova sessão de descoberta para ver suas buscas aqui",
+    "loading": "Carregando...",
+    "resultCount": "{count, plural, one {# resultado} other {# resultados}}",
+    "stages": {
+      "all": "Todas",
+      "discovery": "Descoberta",
+      "analysis": "Análise",
+      "results": "Resultados"
+    }
   },
   "Settings": {
     "title": "Configurações",

@@ -1,11 +1,13 @@
 "use client";
 
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { usePathname } from "@/i18n/navigation";
 import {
   Home,
   PanelLeftClose,
   PanelLeft,
   Compass,
+  Bookmark,
+  LayoutGrid,
   Settings,
   LogOut,
   LogIn,
@@ -27,37 +29,32 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDiscoveryStore } from "@/stores/discovery-store";
-import { useAgentPanelStore } from "@/stores/agent-panel-store";
-import { useSearchStore } from "@/stores/search-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLoginModalStore } from "@/stores/login-modal-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import { SessionList } from "@/components/layout/session-list";
+import { useSessionNavigation } from "@/hooks/use-session-navigation";
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const t = useTranslations("Navigation");
   const tCommon = useTranslations("Common");
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggleCollapsed = useSidebarStore((s) => s.toggleCollapsed);
   const { theme, setTheme } = useTheme();
-  const resetDiscovery = useDiscoveryStore((s) => s.reset);
-  const resetPanel = useAgentPanelStore((s) => s.reset);
   const currentSessionId = useDiscoveryStore((s) => s.sessionId);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const { goHome } = useSessionNavigation();
 
   const isOnChat = pathname === "/" || pathname === "/search";
   const isHomeActive = isOnChat && !currentSessionId;
   const isDescubraActive = pathname.startsWith("/descubra");
+  const isSalvosActive = pathname.startsWith("/salvos");
+  const isSearchesActive = pathname.startsWith("/searches");
 
   const handleHomeClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    resetDiscovery();
-    resetPanel();
-    useSearchStore.getState().resetPipeline();
-    router.push("/");
+    goHome();
   };
 
   const initials = getInitials(user?.name);
@@ -123,13 +120,42 @@ export function AppSidebar() {
           <Compass className="h-5 w-5 shrink-0" />
           {!collapsed && <span>{t("discover")}</span>}
         </Link>
+
+        {/* Processes section */}
+        {!collapsed && (
+          <span className="mt-4 mb-1 px-3 text-xs font-medium uppercase tracking-wider text-foreground-muted/50">
+            {t("processes")}
+          </span>
+        )}
+        {collapsed && <div className="my-2 mx-3 border-t border-border" />}
+        <Link
+          href="/salvos"
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+            isSalvosActive
+              ? "bg-highlight/10 text-highlight"
+              : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+          )}
+        >
+          <Bookmark className="h-5 w-5 shrink-0" />
+          {!collapsed && <span>{t("saved")}</span>}
+        </Link>
+        <Link
+          href="/searches"
+          className={cn(
+            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+            isSearchesActive
+              ? "bg-highlight/10 text-highlight"
+              : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+          )}
+        >
+          <LayoutGrid className="h-5 w-5 shrink-0" />
+          {!collapsed && <span>{t("searches")}</span>}
+        </Link>
       </nav>
 
-      {/* Session history */}
-      {!collapsed && <SessionList />}
-
-      {/* Spacer (only when collapsed or no session list) */}
-      {collapsed && <div className="flex-1" />}
+      {/* Spacer */}
+      <div className="flex-1" />
 
       {/* Footer: avatar + collapse */}
       <div className="flex flex-col gap-2 border-t border-border p-2">

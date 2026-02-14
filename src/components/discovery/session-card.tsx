@@ -1,44 +1,24 @@
 "use client";
 
+import { useState } from "react";
 import {
-  MessageSquare,
-  FileText,
-  Rocket,
   Trash2,
   Building2,
+  MoreVertical,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import type { SessionItem, SessionPipelineStage } from "@/types";
-
-const STAGE_CONFIG: Record<
-  SessionPipelineStage,
-  {
-    icon: typeof MessageSquare;
-    color: string;
-    iconBg: string;
-    borderAccent: string;
-  }
-> = {
-  discovery: {
-    icon: MessageSquare,
-    color: "text-blue-400",
-    iconBg: "bg-blue-500/10",
-    borderAccent: "border-l-blue-500/50",
-  },
-  analysis: {
-    icon: FileText,
-    color: "text-amber-400",
-    iconBg: "bg-amber-500/10",
-    borderAccent: "border-l-amber-500/50",
-  },
-  results: {
-    icon: Rocket,
-    color: "text-green-400",
-    iconBg: "bg-green-500/10",
-    borderAccent: "border-l-green-500/50",
-  },
-};
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { StartupDetailDialog } from "./startup-detail-dialog";
+import { apiGet } from "@/lib/api/client";
+import { STAGE_CONFIG } from "@/lib/stage-config";
+import type { SessionItem, SessionPipelineStage, StartupCard } from "@/types";
 
 function DiscoveryPreview({ preview }: { preview: string | null }) {
   if (!preview) return null;
@@ -64,10 +44,14 @@ function ScoutPreview({
   topStartups,
   resultCount,
   moreLabel,
+  searchExecutionId,
+  onStartupClick,
 }: {
   topStartups: string[] | null;
   resultCount: number;
   moreLabel: (count: number) => string;
+  searchExecutionId: string | null;
+  onStartupClick: (name: string) => void;
 }) {
   if (!topStartups || topStartups.length === 0) return null;
   const remaining = resultCount - topStartups.length;
@@ -75,14 +59,21 @@ function ScoutPreview({
   return (
     <div className="flex flex-col gap-1.5">
       {topStartups.map((name) => (
-        <div key={name} className="flex items-center gap-2">
+        <button
+          key={name}
+          onClick={(e) => {
+            e.stopPropagation();
+            onStartupClick(name);
+          }}
+          className="flex items-center gap-2 text-left hover:bg-surface-hover/50 rounded px-1 py-0.5 -mx-1 transition-colors"
+        >
           <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-green-500/10">
             <Building2 className="h-3 w-3 text-green-400/70" />
           </div>
-          <span className="truncate text-xs text-foreground-muted/70">
+          <span className="truncate text-xs text-foreground-muted/70 group-hover:text-foreground-muted">
             {name}
           </span>
-        </div>
+        </button>
       ))}
       {remaining > 0 && (
         <span className="pl-7 text-[10px] text-foreground-muted/40">
@@ -98,7 +89,9 @@ interface SessionCardProps {
   isActive: boolean;
   onClick: () => void;
   onDelete: () => void;
+  onRename: () => void;
   deleteLabel: string;
+  renameLabel: string;
   resultCountLabel: string;
   relativeTime: string;
   moreLabel: (count: number) => string;
@@ -109,15 +102,39 @@ export function SessionCard({
   isActive,
   onClick,
   onDelete,
+  onRename,
   deleteLabel,
+  renameLabel,
   resultCountLabel,
   relativeTime,
   moreLabel,
 }: SessionCardProps) {
   const config = STAGE_CONFIG[session.pipelineStage];
   const Icon = config.icon;
+  const [selectedCard, setSelectedCard] = useState<StartupCard | null>(null);
+  const [isLoadingCard, setIsLoadingCard] = useState(false);
+
+  const handleStartupClick = async (startupName: string) => {
+    if (!session.searchExecutionId || isLoadingCard) return;
+
+    setIsLoadingCard(true);
+    try {
+      const searchData = await apiGet<{ cards: StartupCard[] }>(
+        `/searches/${session.searchExecutionId}`
+      );
+      const card = searchData.cards.find((c) => c.name === startupName);
+      if (card) {
+        setSelectedCard(card);
+      }
+    } catch (error) {
+      console.error("Failed to fetch startup details:", error);
+    } finally {
+      setIsLoadingCard(false);
+    }
+  };
 
   return (
+    <>
     <div
       role="button"
       tabIndex={0}
@@ -151,16 +168,38 @@ export function SessionCard({
             {relativeTime}
           </span>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          aria-label={deleteLabel}
-          className="shrink-0 rounded p-0.5 text-foreground-muted/30 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Session actions"
+              className="shrink-0 rounded p-0.5 text-foreground-muted/30 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+            >
+              <MoreVertical className="h-3.5 w-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onRename();
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+              {renameLabel}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleteLabel}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Stage-specific preview */}
@@ -169,6 +208,8 @@ export function SessionCard({
           topStartups={session.topStartups}
           resultCount={session.resultCount}
           moreLabel={moreLabel}
+          searchExecutionId={session.searchExecutionId}
+          onStartupClick={handleStartupClick}
         />
       ) : session.pipelineStage === "analysis" ? (
         <AnalysisPreview preview={session.analysisPreview} />
@@ -188,5 +229,16 @@ export function SessionCard({
         </div>
       )}
     </div>
+
+      {selectedCard && (
+        <StartupDetailDialog
+          card={selectedCard}
+          open={!!selectedCard}
+          onOpenChange={(open) => {
+            if (!open) setSelectedCard(null);
+          }}
+        />
+      )}
+    </>
   );
 }

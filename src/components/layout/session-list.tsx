@@ -3,9 +3,6 @@
 import { useMemo } from "react";
 import {
   Trash2,
-  MessageSquare,
-  Rocket,
-  FileText,
   LogIn,
   Building2,
 } from "lucide-react";
@@ -13,31 +10,9 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useSessions } from "@/hooks/use-sessions";
+import { useRelativeTime } from "@/hooks/use-relative-time";
+import { STAGE_CONFIG, STAGE_ORDER } from "@/lib/stage-config";
 import type { SessionItem, SessionPipelineStage } from "@/types";
-
-const STAGE_STYLE: Record<
-  SessionPipelineStage,
-  { icon: typeof MessageSquare; color: string; iconBg: string; borderAccent: string }
-> = {
-  results: {
-    icon: Rocket,
-    color: "text-green-500",
-    iconBg: "bg-green-500/10",
-    borderAccent: "border-l-green-500/50",
-  },
-  analysis: {
-    icon: FileText,
-    color: "text-amber-400",
-    iconBg: "bg-amber-500/10",
-    borderAccent: "border-l-amber-500/50",
-  },
-  discovery: {
-    icon: MessageSquare,
-    color: "text-blue-400",
-    iconBg: "bg-blue-500/10",
-    borderAccent: "border-l-blue-500/50",
-  },
-};
 
 function SidebarSessionCard({
   session,
@@ -50,7 +25,7 @@ function SidebarSessionCard({
   moreLabel,
 }: {
   session: SessionItem;
-  style: (typeof STAGE_STYLE)[SessionPipelineStage];
+  style: (typeof STAGE_CONFIG)[SessionPipelineStage];
   isActive: boolean;
   onSelect: () => void;
   onDelete: () => void;
@@ -136,9 +111,7 @@ export function SessionList() {
   } = useSessions();
 
   const tHistory = useTranslations("ChatHistory");
-  const tTime = useTranslations("RelativeTime");
-
-  const stageOrder: SessionPipelineStage[] = ["results", "analysis", "discovery"];
+  const getRelativeTime = useRelativeTime();
 
   const stageLabels: Record<SessionPipelineStage, string> = {
     results: tHistory("results"),
@@ -146,24 +119,8 @@ export function SessionList() {
     discovery: tHistory("discovery"),
   };
 
-  function getRelativeTime(dateStr: string): string {
-    const now = new Date();
-    const date = new Date(dateStr);
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return tTime("now");
-    if (diffMins < 60) return tTime("minutesAgo", { minutes: diffMins });
-    if (diffHours < 24) return tTime("hoursAgo", { hours: diffHours });
-    if (diffDays === 1) return tTime("yesterday");
-    if (diffDays < 7) return tTime("daysAgo", { days: diffDays });
-    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  }
-
   const grouped = useMemo(() => {
-    return stageOrder
+    return STAGE_ORDER
       .map((stage) => {
         const items = sessions
           .filter((s) => s.pipelineStage === stage)
@@ -196,7 +153,7 @@ export function SessionList() {
   return (
     <ScrollArea className="flex-1 px-2 pt-2">
       {grouped.map((group) => {
-        const style = STAGE_STYLE[group.stage];
+        const style = STAGE_CONFIG[group.stage];
         const StageIcon = style.icon;
         return (
           <div key={group.stage} className="mb-3">

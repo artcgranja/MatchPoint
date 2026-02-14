@@ -22,6 +22,7 @@ export async function GET() {
         orderBy: { createdAt: "desc" },
         take: 1,
         select: {
+          id: true,
           status: true,
           resultCount: true,
           scoutSummary: true,
@@ -95,6 +96,7 @@ export async function GET() {
       isComplete: s.isComplete,
       hasResults,
       resultCount: search?.resultCount ?? 0,
+      searchExecutionId: search?.id ?? null,
       preview,
       topStartups,
       analysisPreview,

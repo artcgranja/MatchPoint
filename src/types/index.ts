@@ -9,6 +9,7 @@ export interface SessionItem {
   isComplete: boolean;
   hasResults: boolean;
   resultCount: number;
+  searchExecutionId: string | null;
   preview: string | null;
   topStartups: string[] | null;
   analysisPreview: string | null;
