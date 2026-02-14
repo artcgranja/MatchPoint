@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   MessageSquare,
   FileText,
@@ -9,7 +10,9 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import type { SessionItem, SessionPipelineStage } from "@/types";
+import { StartupDetailDialog } from "./startup-detail-dialog";
+import { apiGet } from "@/lib/api/client";
+import type { SessionItem, SessionPipelineStage, StartupCard } from "@/types";
 
 const STAGE_CONFIG: Record<
   SessionPipelineStage,
@@ -64,10 +67,14 @@ function ScoutPreview({
   topStartups,
   resultCount,
   moreLabel,
+  searchExecutionId,
+  onStartupClick,
 }: {
   topStartups: string[] | null;
   resultCount: number;
   moreLabel: (count: number) => string;
+  searchExecutionId: string | null;
+  onStartupClick: (name: string) => void;
 }) {
   if (!topStartups || topStartups.length === 0) return null;
   const remaining = resultCount - topStartups.length;
@@ -75,14 +82,21 @@ function ScoutPreview({
   return (
     <div className="flex flex-col gap-1.5">
       {topStartups.map((name) => (
-        <div key={name} className="flex items-center gap-2">
+        <button
+          key={name}
+          onClick={(e) => {
+            e.stopPropagation();
+            onStartupClick(name);
+          }}
+          className="flex items-center gap-2 text-left hover:bg-surface-hover/50 rounded px-1 py-0.5 -mx-1 transition-colors"
+        >
           <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-green-500/10">
             <Building2 className="h-3 w-3 text-green-400/70" />
           </div>
-          <span className="truncate text-xs text-foreground-muted/70">
+          <span className="truncate text-xs text-foreground-muted/70 group-hover:text-foreground-muted">
             {name}
           </span>
-        </div>
+        </button>
       ))}
       {remaining > 0 && (
         <span className="pl-7 text-[10px] text-foreground-muted/40">
@@ -116,8 +130,30 @@ export function SessionCard({
 }: SessionCardProps) {
   const config = STAGE_CONFIG[session.pipelineStage];
   const Icon = config.icon;
+  const [selectedCard, setSelectedCard] = useState<StartupCard | null>(null);
+  const [isLoadingCard, setIsLoadingCard] = useState(false);
+
+  const handleStartupClick = async (startupName: string) => {
+    if (!session.searchExecutionId || isLoadingCard) return;
+
+    setIsLoadingCard(true);
+    try {
+      const searchData = await apiGet<{ cards: StartupCard[] }>(
+        `/searches/${session.searchExecutionId}`
+      );
+      const card = searchData.cards.find((c) => c.name === startupName);
+      if (card) {
+        setSelectedCard(card);
+      }
+    } catch (error) {
+      console.error("Failed to fetch startup details:", error);
+    } finally {
+      setIsLoadingCard(false);
+    }
+  };
 
   return (
+    <>
     <div
       role="button"
       tabIndex={0}
@@ -169,6 +205,8 @@ export function SessionCard({
           topStartups={session.topStartups}
           resultCount={session.resultCount}
           moreLabel={moreLabel}
+          searchExecutionId={session.searchExecutionId}
+          onStartupClick={handleStartupClick}
         />
       ) : session.pipelineStage === "analysis" ? (
         <AnalysisPreview preview={session.analysisPreview} />
@@ -188,5 +226,16 @@ export function SessionCard({
         </div>
       )}
     </div>
+
+      {selectedCard && (
+        <StartupDetailDialog
+          card={selectedCard}
+          open={!!selectedCard}
+          onOpenChange={(open) => {
+            if (!open) setSelectedCard(null);
+          }}
+        />
+      )}
+    </>
   );
 }

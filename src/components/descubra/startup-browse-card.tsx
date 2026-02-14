@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback } from "react";
-import { Link } from "@/i18n/navigation";
+import { useState, useCallback } from "react";
 import { motion } from "motion/react";
 import { MapPin, ExternalLink, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cardEntrance } from "@/lib/motion";
 import { Badge } from "@/components/ui/badge";
 import { SaveButton } from "@/components/saved/save-button";
-import type { BrowseCompany } from "@/types";
+import { CompanyDetailDialog } from "./company-detail-dialog";
+import { apiGet } from "@/lib/api/client";
+import type { BrowseCompany, BrowseCompanyDetail } from "@/types";
 
 interface StartupBrowseCardProps {
   company: BrowseCompany;
@@ -16,6 +17,9 @@ interface StartupBrowseCardProps {
 
 export function StartupBrowseCard({ company }: StartupBrowseCardProps) {
   const t = useTranslations("Browse");
+  const [selectedCompany, setSelectedCompany] = useState<BrowseCompanyDetail | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       const rect = e.currentTarget.getBoundingClientRect();
@@ -31,13 +35,28 @@ export function StartupBrowseCard({ company }: StartupBrowseCardProps) {
     []
   );
 
+  const handleClick = async () => {
+    if (isLoading) return;
+
+    setIsLoading(true);
+    try {
+      const data = await apiGet<BrowseCompanyDetail>(`/startups/${company.id}`);
+      setSelectedCompany(data);
+    } catch (error) {
+      console.error("Failed to fetch company details:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <Link href={`/descubra/${company.id}`}>
+    <>
       <motion.div
         variants={cardEntrance}
         whileHover={{ y: -2 }}
         transition={{ type: "spring", stiffness: 300, damping: 20 }}
         onMouseMove={handleMouseMove}
+        onClick={handleClick}
         className="spotlight-card glass relative rounded-xl border border-border p-4 space-y-3 cursor-pointer transition-colors duration-200 hover:border-border-hover hover:bg-surface-hover h-full"
       >
         <SaveButton companyId={company.id} size="sm" className="absolute top-2 right-2 z-10" />
@@ -128,6 +147,16 @@ export function StartupBrowseCard({ company }: StartupBrowseCardProps) {
           )}
         </div>
       </motion.div>
-    </Link>
+
+      {selectedCompany && (
+        <CompanyDetailDialog
+          company={selectedCompany}
+          open={!!selectedCompany}
+          onOpenChange={(open) => {
+            if (!open) setSelectedCompany(null);
+          }}
+        />
+      )}
+    </>
   );
 }
