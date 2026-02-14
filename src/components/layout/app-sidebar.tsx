@@ -34,7 +34,6 @@ import { useSearchStore } from "@/stores/search-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLoginModalStore } from "@/stores/login-modal-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
-import { useSearchesModalStore } from "@/stores/searches-modal-store";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -139,8 +138,8 @@ export function AppSidebar() {
           <Heart className="h-5 w-5 shrink-0" />
           {!collapsed && <span>{t("saved")}</span>}
         </Link>
-        <button
-          onClick={() => useSearchesModalStore.getState().openModal()}
+        <Link
+          href="/searches"
           className={cn(
             "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
             isSearchesActive
@@ -150,7 +149,7 @@ export function AppSidebar() {
         >
           <FolderOpen className="h-5 w-5 shrink-0" />
           {!collapsed && <span>{t("searches")}</span>}
-        </button>
+        </Link>
       </nav>
 
       {/* Spacer */}
