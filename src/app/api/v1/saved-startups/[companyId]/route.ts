@@ -16,6 +16,10 @@ export async function DELETE(
   const { companyId } = await props.params;
   const id = Number(companyId);
 
+  if (isNaN(id)) {
+    return NextResponse.json({ error: "Invalid company ID" }, { status: 400 });
+  }
+
   await prisma.savedStartup.deleteMany({
     where: { userId, companyId: id },
   });

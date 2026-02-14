@@ -4,8 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import type { SessionItem } from "@/types";
 import { useAuthStore } from "@/stores/auth-store";
 import { useDiscoveryStore } from "@/stores/discovery-store";
-import { useAgentPanelStore } from "@/stores/agent-panel-store";
-import { useSearchStore } from "@/stores/search-store";
 import { useSessionNavigation } from "@/hooks/use-session-navigation";
 
 export function useSessions() {
@@ -13,10 +11,7 @@ export function useSessions() {
   const [isLoading, setIsLoading] = useState(false);
   const user = useAuthStore((s) => s.user);
   const currentSessionId = useDiscoveryStore((s) => s.sessionId);
-  const resetDiscovery = useDiscoveryStore((s) => s.reset);
-  const resetPanel = useAgentPanelStore((s) => s.reset);
-  const resetPipeline = useSearchStore((s) => s.resetPipeline);
-  const { goToSession } = useSessionNavigation();
+  const { goToSession, goHome } = useSessionNavigation();
 
   const prevSessionIdRef = useRef(currentSessionId);
 
@@ -95,16 +90,14 @@ export function useSessions() {
         if (res.ok) {
           setSessions((prev) => prev.filter((s) => s.id !== sessionId));
           if (sessionId === currentSessionId) {
-            resetDiscovery();
-            resetPanel();
-            resetPipeline();
+            goHome();
           }
         }
       } catch (err) {
         console.error("Failed to delete session:", err);
       }
     },
-    [currentSessionId, resetDiscovery, resetPanel, resetPipeline]
+    [currentSessionId, goHome]
   );
 
   return {
