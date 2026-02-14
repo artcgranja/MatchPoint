@@ -5,12 +5,16 @@ import { useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { motion } from "motion/react";
-import { MessageSquare, FileText, Rocket, LayoutGrid, Search } from "lucide-react";
+import { LayoutGrid, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SessionCard } from "@/components/discovery/session-card";
+import { SessionActionDialogs } from "@/components/discovery/session-action-dialogs";
+import { useSessionActions } from "@/hooks/use-session-actions";
+import { useRelativeTime } from "@/hooks/use-relative-time";
 import { apiGet } from "@/lib/api/client";
+import { STAGE_CONFIG } from "@/lib/stage-config";
 import { cardStagger } from "@/lib/motion";
 import { useDiscoveryStore } from "@/stores/discovery-store";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
@@ -19,25 +23,56 @@ import type { SessionItem, SessionPipelineStage } from "@/types";
 
 type StageFilter = SessionPipelineStage | "all";
 
-const STAGE_FILTERS: { value: StageFilter; icon: typeof MessageSquare }[] = [
+const STAGE_FILTERS: { value: StageFilter; icon: typeof LayoutGrid }[] = [
   { value: "all", icon: LayoutGrid },
-  { value: "discovery", icon: MessageSquare },
-  { value: "analysis", icon: FileText },
-  { value: "results", icon: Rocket },
+  { value: "discovery", icon: STAGE_CONFIG.discovery.icon },
+  { value: "analysis", icon: STAGE_CONFIG.analysis.icon },
+  { value: "results", icon: STAGE_CONFIG.results.icon },
 ];
 
 export default function SearchesPage() {
   const t = useTranslations("Searches");
   const tHistory = useTranslations("ChatHistory");
-  const tTime = useTranslations("RelativeTime");
+  const tCommon = useTranslations("Common");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const getRelativeTime = useRelativeTime();
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [stage, setStage] = useState<StageFilter>(
     (searchParams.get("stage") as StageFilter) || "all"
   );
   const [query, setQuery] = useState("");
+
+  const handleDelete = async (sessionId: string) => {
+    try {
+      const res = await fetch(`/api/v1/sessions/${sessionId}`, { method: "DELETE" });
+      if (res.ok) {
+        setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      }
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+    }
+  };
+
+  const handleRename = async (sessionId: string, newTitle: string) => {
+    const res = await fetch(`/api/v1/sessions/${sessionId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: newTitle }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setSessions((prev) =>
+        prev.map((s) => (s.id === sessionId ? { ...s, title: data.title } : s))
+      );
+    }
+  };
+
+  const sessionActions = useSessionActions({
+    onDelete: handleDelete,
+    onRename: handleRename,
+  });
 
   useEffect(() => {
     setLoading(true);
@@ -72,38 +107,11 @@ export default function SearchesPage() {
     router.push(`/searches${queryString ? `?${queryString}` : ""}`);
   };
 
-  function getRelativeTime(dateStr: string): string {
-    const now = new Date();
-    const date = new Date(dateStr);
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return tTime("now");
-    if (diffMins < 60) return tTime("minutesAgo", { minutes: diffMins });
-    if (diffHours < 24) return tTime("hoursAgo", { hours: diffHours });
-    if (diffDays === 1) return tTime("yesterday");
-    if (diffDays < 7) return tTime("daysAgo", { days: diffDays });
-    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  }
-
   const handleSelectSession = (sessionId: string) => {
     useDiscoveryStore.getState().reset();
     useAgentPanelStore.getState().reset();
     useSearchStore.getState().resetPipeline();
     router.push(`/?session=${sessionId}`);
-  };
-
-  const handleDeleteSession = async (sessionId: string) => {
-    try {
-      const res = await fetch(`/api/v1/sessions/${sessionId}`, { method: "DELETE" });
-      if (res.ok) {
-        setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      }
-    } catch (error) {
-      console.error("Failed to delete session:", error);
-    }
   };
 
   const getStageLabel = (value: StageFilter) => {
@@ -185,8 +193,10 @@ export default function SearchesPage() {
               session={session}
               isActive={false}
               onClick={() => handleSelectSession(session.id)}
-              onDelete={() => handleDeleteSession(session.id)}
-              deleteLabel={tHistory("deleteSession", { title: session.title })}
+              onDelete={() => sessionActions.requestDelete(session)}
+              onRename={() => sessionActions.requestRename(session)}
+              deleteLabel={tCommon("delete")}
+              renameLabel={tHistory("renameSession")}
               resultCountLabel={tHistory("resultCount", { count: session.resultCount })}
               relativeTime={getRelativeTime(session.updatedAt)}
               moreLabel={(count) => tHistory("moreStartups", { count })}
@@ -194,6 +204,8 @@ export default function SearchesPage() {
           ))}
         </motion.div>
       )}
+
+      <SessionActionDialogs actions={sessionActions} />
     </div>
   );
 }

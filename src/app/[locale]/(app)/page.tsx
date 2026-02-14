@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useSearchParams } from "next/navigation";
 import { Loader2 } from "lucide-react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import {
@@ -58,6 +59,15 @@ export default function HomePage() {
     renameSession,
     deleteSession,
   } = useSessions();
+  const searchParams = useSearchParams();
+
+  // Handle URL query parameter for session loading
+  useEffect(() => {
+    const sessionIdFromUrl = searchParams.get("session");
+    if (sessionIdFromUrl && sessionIdFromUrl !== sessionId) {
+      handleSessionSelect(sessionIdFromUrl);
+    }
+  }, [searchParams, sessionId, handleSessionSelect]);
 
   useEffect(() => {
     if (sessionId && discoveryState === "idle" && messages.length === 0) {
@@ -141,6 +151,7 @@ export default function HomePage() {
               currentSessionId={hookSessionId}
               onSelectSession={handleSessionSelect}
               onDeleteSession={deleteSession}
+              onRenameSession={renameSession}
             />
           </motion.div>
         ) : (

@@ -48,6 +48,9 @@
     "loginToSeeHistory": "Entre para ver seu histórico",
     "noChatsYet": "Nenhuma execução ainda",
     "deleteSession": "Excluir sessão: {title}",
+    "renameSession": "Renomear sessão",
+    "deleteSessionConfirm": "Tem certeza que deseja excluir \"{title}\"?",
+    "deleteSessionDescription": "Esta ação não pode ser desfeita. Todas as mensagens e resultados serão permanentemente excluídos.",
     "resultCount": "{count, plural, one {# resultado} other {# resultados}}",
     "moreStartups": "+{count} mais"
   },

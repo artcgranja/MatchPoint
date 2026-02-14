@@ -3,9 +3,6 @@
 import { useState, useMemo } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import {
-  MessageSquare,
-  FileText,
-  Rocket,
   ArrowRight,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -17,18 +14,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SessionCard } from "@/components/discovery/session-card";
+import { SessionActionDialogs } from "@/components/discovery/session-action-dialogs";
 import { useAuth } from "@/components/providers/auth-provider";
+import { useSessionActions } from "@/hooks/use-session-actions";
+import { useRelativeTime } from "@/hooks/use-relative-time";
 import { cn } from "@/lib/utils";
 import { slideUp, staggerContainer } from "@/lib/motion";
+import { STAGE_CONFIG, STAGE_ORDER } from "@/lib/stage-config";
 import type { SessionItem, SessionPipelineStage, SessionStage } from "@/types";
-
-const STAGE_ICONS: Record<SessionPipelineStage, { icon: typeof MessageSquare; color: string }> = {
-  discovery: { icon: MessageSquare, color: "text-blue-400" },
-  analysis: { icon: FileText, color: "text-amber-400" },
-  results: { icon: Rocket, color: "text-green-400" },
-};
-
-const STAGES: SessionPipelineStage[] = ["results", "analysis", "discovery"];
 
 interface ChatWelcomeProps {
   onSendMessage: (text: string) => void;
@@ -37,7 +30,8 @@ interface ChatWelcomeProps {
   sessions: SessionItem[];
   currentSessionId: string | null;
   onSelectSession: (sessionId: string) => void;
-  onDeleteSession: (sessionId: string) => void;
+  onDeleteSession: (sessionId: string) => Promise<void> | void;
+  onRenameSession: (sessionId: string, newTitle: string) => Promise<string | null | void> | void;
 }
 
 export function ChatWelcome({
@@ -48,6 +42,7 @@ export function ChatWelcome({
   currentSessionId,
   onSelectSession,
   onDeleteSession,
+  onRenameSession,
 }: ChatWelcomeProps) {
   const [isHovered, setIsHovered] = useState(false);
   const prefersReducedMotion = useReducedMotion();
@@ -55,12 +50,17 @@ export function ChatWelcome({
   const router = useRouter();
   const t = useTranslations("Welcome");
   const tHistory = useTranslations("ChatHistory");
-  const tTime = useTranslations("RelativeTime");
   const tSearches = useTranslations("Searches");
+  const tCommon = useTranslations("Common");
+  const getRelativeTime = useRelativeTime();
+
+  const sessionActions = useSessionActions({
+    onDelete: onDeleteSession,
+    onRename: onRenameSession,
+  });
 
   const hasSessions = sessions.length > 0;
 
-  // Extract first name from user's name
   const firstName = user?.name?.split(" ")[0] || "there";
 
   const stageLabels: Record<SessionPipelineStage, string> = {
@@ -68,22 +68,6 @@ export function ChatWelcome({
     analysis: tHistory("analysis"),
     results: tHistory("results"),
   };
-
-  function getRelativeTime(dateStr: string): string {
-    const now = new Date();
-    const date = new Date(dateStr);
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return tTime("now");
-    if (diffMins < 60) return tTime("minutesAgo", { minutes: diffMins });
-    if (diffHours < 24) return tTime("hoursAgo", { hours: diffHours });
-    if (diffDays === 1) return tTime("yesterday");
-    if (diffDays < 7) return tTime("daysAgo", { days: diffDays });
-    return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  }
 
   const groupedSessions = useMemo(() => {
     const groups: Record<SessionPipelineStage, SessionItem[]> = {
@@ -187,8 +171,8 @@ export function ChatWelcome({
                   </Button>
                 </div>
                 <TabsList className="w-full">
-                  {STAGES.map((stage) => {
-                    const config = STAGE_ICONS[stage];
+                  {STAGE_ORDER.map((stage) => {
+                    const config = STAGE_CONFIG[stage];
                     const count = countByStage(stage);
                     return (
                       <TabsTrigger key={stage} value={stage} className="flex-1 gap-2">
@@ -209,7 +193,7 @@ export function ChatWelcome({
               </div>
 
               <div className="py-4">
-                {STAGES.map((stage) => (
+                {STAGE_ORDER.map((stage) => (
                   <TabsContent key={stage} value={stage} className="mt-0">
                     <ScrollArea className="max-h-[60vh]">
                       <div className="px-6">
@@ -227,8 +211,10 @@ export function ChatWelcome({
                                 session={session}
                                 isActive={session.id === currentSessionId}
                                 onClick={() => onSelectSession(session.id)}
-                                onDelete={() => onDeleteSession(session.id)}
-                                deleteLabel={tHistory("deleteSession", { title: session.title })}
+                                onDelete={() => sessionActions.requestDelete(session)}
+                                onRename={() => sessionActions.requestRename(session)}
+                                deleteLabel={tCommon("delete")}
+                                renameLabel={tHistory("renameSession")}
                                 resultCountLabel={tHistory("resultCount", { count: session.resultCount })}
                                 relativeTime={getRelativeTime(session.updatedAt)}
                                 moreLabel={(count) => tHistory("moreStartups", { count })}
@@ -245,6 +231,8 @@ export function ChatWelcome({
           </div>
         </div>
       )}
+
+      <SessionActionDialogs actions={sessionActions} />
     </div>
   );
 }

@@ -2,46 +2,23 @@
 
 import { useState } from "react";
 import {
-  MessageSquare,
-  FileText,
-  Rocket,
   Trash2,
   Building2,
+  MoreVertical,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { StartupDetailDialog } from "./startup-detail-dialog";
 import { apiGet } from "@/lib/api/client";
+import { STAGE_CONFIG } from "@/lib/stage-config";
 import type { SessionItem, SessionPipelineStage, StartupCard } from "@/types";
-
-const STAGE_CONFIG: Record<
-  SessionPipelineStage,
-  {
-    icon: typeof MessageSquare;
-    color: string;
-    iconBg: string;
-    borderAccent: string;
-  }
-> = {
-  discovery: {
-    icon: MessageSquare,
-    color: "text-blue-400",
-    iconBg: "bg-blue-500/10",
-    borderAccent: "border-l-blue-500/50",
-  },
-  analysis: {
-    icon: FileText,
-    color: "text-amber-400",
-    iconBg: "bg-amber-500/10",
-    borderAccent: "border-l-amber-500/50",
-  },
-  results: {
-    icon: Rocket,
-    color: "text-green-400",
-    iconBg: "bg-green-500/10",
-    borderAccent: "border-l-green-500/50",
-  },
-};
 
 function DiscoveryPreview({ preview }: { preview: string | null }) {
   if (!preview) return null;
@@ -112,7 +89,9 @@ interface SessionCardProps {
   isActive: boolean;
   onClick: () => void;
   onDelete: () => void;
+  onRename: () => void;
   deleteLabel: string;
+  renameLabel: string;
   resultCountLabel: string;
   relativeTime: string;
   moreLabel: (count: number) => string;
@@ -123,7 +102,9 @@ export function SessionCard({
   isActive,
   onClick,
   onDelete,
+  onRename,
   deleteLabel,
+  renameLabel,
   resultCountLabel,
   relativeTime,
   moreLabel,
@@ -187,16 +168,38 @@ export function SessionCard({
             {relativeTime}
           </span>
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDelete();
-          }}
-          aria-label={deleteLabel}
-          className="shrink-0 rounded p-0.5 text-foreground-muted/30 opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Session actions"
+              className="shrink-0 rounded p-0.5 text-foreground-muted/30 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+            >
+              <MoreVertical className="h-3.5 w-3.5" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                onRename();
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+              {renameLabel}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              variant="destructive"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              {deleteLabel}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Stage-specific preview */}

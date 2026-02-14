@@ -48,6 +48,9 @@
     "loginToSeeHistory": "Sign in to see your history",
     "noChatsYet": "No executions yet",
     "deleteSession": "Delete session: {title}",
+    "renameSession": "Rename session",
+    "deleteSessionConfirm": "Are you sure you want to delete \"{title}\"?",
+    "deleteSessionDescription": "This action cannot be undone. All messages and results will be permanently deleted.",
     "resultCount": "{count, plural, one {# result} other {# results}}",
     "moreStartups": "+{count} more"
   },
