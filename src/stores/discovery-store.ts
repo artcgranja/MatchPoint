@@ -58,7 +58,11 @@ export const useDiscoveryStore = create<DiscoveryStore>()(
         set((state) => {
           const msgs = [...state.messages];
           const lastIdx = msgs.length - 1;
-          if (lastIdx >= 0 && msgs[lastIdx].role === "assistant") {
+          if (
+            lastIdx >= 0 &&
+            msgs[lastIdx].role === "assistant" &&
+            !msgs[lastIdx].type // Don't overwrite special message types (questions, cards, stage-update)
+          ) {
             msgs[lastIdx] = { ...msgs[lastIdx], content };
           } else {
             msgs.push({ role: "assistant", content });
