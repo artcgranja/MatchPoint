@@ -3,6 +3,7 @@
 import { useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { useSearchParams } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { Loader2 } from "lucide-react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import {
@@ -60,14 +61,20 @@ export default function HomePage() {
     deleteSession,
   } = useSessions();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const processedSessionRef = useRef<string | null>(null);
 
   // Handle URL query parameter for session loading
   useEffect(() => {
     const sessionIdFromUrl = searchParams.get("session");
-    if (sessionIdFromUrl && sessionIdFromUrl !== sessionId) {
+    if (sessionIdFromUrl && sessionIdFromUrl !== processedSessionRef.current) {
+      processedSessionRef.current = sessionIdFromUrl;
       handleSessionSelect(sessionIdFromUrl);
+      router.replace("/", { scroll: false });
+    } else if (!sessionIdFromUrl) {
+      processedSessionRef.current = null;
     }
-  }, [searchParams, sessionId, handleSessionSelect]);
+  }, [searchParams, handleSessionSelect, router]);
 
   useEffect(() => {
     if (sessionId && discoveryState === "idle" && messages.length === 0) {

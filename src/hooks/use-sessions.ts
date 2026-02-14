@@ -1,25 +1,22 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { usePathname, useRouter } from "@/i18n/navigation";
 import type { SessionItem } from "@/types";
 import { useAuthStore } from "@/stores/auth-store";
 import { useDiscoveryStore } from "@/stores/discovery-store";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { useSearchStore } from "@/stores/search-store";
+import { useSessionNavigation } from "@/hooks/use-session-navigation";
 
 export function useSessions() {
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const pathname = usePathname();
-  const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const currentSessionId = useDiscoveryStore((s) => s.sessionId);
-  const setSessionId = useDiscoveryStore((s) => s.setSessionId);
-  const setIsLoadingSession = useDiscoveryStore((s) => s.setIsLoadingSession);
   const resetDiscovery = useDiscoveryStore((s) => s.reset);
   const resetPanel = useAgentPanelStore((s) => s.reset);
   const resetPipeline = useSearchStore((s) => s.resetPipeline);
+  const { goToSession } = useSessionNavigation();
 
   const prevSessionIdRef = useRef(currentSessionId);
 
@@ -58,14 +55,9 @@ export function useSessions() {
   const handleSelect = useCallback(
     (sessionId: string) => {
       if (sessionId === currentSessionId) return;
-      resetDiscovery();
-      resetPanel();
-      resetPipeline();
-      setIsLoadingSession(true);
-      setSessionId(sessionId);
-      if (pathname !== "/") router.push("/");
+      goToSession(sessionId);
     },
-    [currentSessionId, resetDiscovery, resetPanel, resetPipeline, setIsLoadingSession, setSessionId, pathname, router]
+    [currentSessionId, goToSession]
   );
 
   const renameSession = useCallback(

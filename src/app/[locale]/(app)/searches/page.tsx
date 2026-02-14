@@ -12,13 +12,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SessionCard } from "@/components/discovery/session-card";
 import { SessionActionDialogs } from "@/components/discovery/session-action-dialogs";
 import { useSessionActions } from "@/hooks/use-session-actions";
+import { useSessionNavigation } from "@/hooks/use-session-navigation";
 import { useRelativeTime } from "@/hooks/use-relative-time";
 import { apiGet } from "@/lib/api/client";
 import { STAGE_CONFIG } from "@/lib/stage-config";
 import { cardStagger } from "@/lib/motion";
-import { useDiscoveryStore } from "@/stores/discovery-store";
-import { useAgentPanelStore } from "@/stores/agent-panel-store";
-import { useSearchStore } from "@/stores/search-store";
 import type { SessionItem, SessionPipelineStage } from "@/types";
 
 type StageFilter = SessionPipelineStage | "all";
@@ -37,6 +35,7 @@ export default function SearchesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const getRelativeTime = useRelativeTime();
+  const { goToSession } = useSessionNavigation();
   const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [stage, setStage] = useState<StageFilter>(
@@ -107,12 +106,7 @@ export default function SearchesPage() {
     router.push(`/searches${queryString ? `?${queryString}` : ""}`);
   };
 
-  const handleSelectSession = (sessionId: string) => {
-    useDiscoveryStore.getState().reset();
-    useAgentPanelStore.getState().reset();
-    useSearchStore.getState().resetPipeline();
-    router.push(`/?session=${sessionId}`);
-  };
+  const handleSelectSession = (sessionId: string) => goToSession(sessionId);
 
   const getStageLabel = (value: StageFilter) => {
     if (value === "all") return t("stages.all");

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { LayoutGrid, ArrowRight } from "lucide-react";
+import { useSessionNavigation } from "@/hooks/use-session-navigation";
 import {
   Dialog,
   DialogContent,
@@ -32,8 +33,15 @@ export function SearchesModal() {
   const { open, closeModal } = useSearchesModalStore();
   const t = useTranslations("Searches");
   const router = useRouter();
+  const { goToSession } = useSessionNavigation();
   const [searches, setSearches] = useState<SearchItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const handleSelectSearch = (discoverySessionId: string | null) => {
+    if (!discoverySessionId) return;
+    closeModal();
+    goToSession(discoverySessionId);
+  };
 
   useEffect(() => {
     if (open) {
@@ -82,7 +90,13 @@ export function SearchesModal() {
               </p>
             </div>
           ) : (
-            searches.map((search) => <SearchCard key={search.id} search={search} />)
+            searches.map((search) => (
+              <SearchCard
+                key={search.id}
+                search={search}
+                onClick={() => handleSelectSearch(search.discoverySessionId)}
+              />
+            ))
           )}
         </div>
       </DialogContent>

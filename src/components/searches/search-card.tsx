@@ -2,7 +2,6 @@
 
 import { motion } from "motion/react";
 import { Building2 } from "lucide-react";
-import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { STAGE_CONFIG } from "@/lib/stage-config";
@@ -21,21 +20,17 @@ interface SearchCardProps {
     createdAt: string;
     updatedAt: string;
   };
+  onClick?: () => void;
 }
 
-export function SearchCard({ search }: SearchCardProps) {
-  const router = useRouter();
+export function SearchCard({ search, onClick }: SearchCardProps) {
   const tSearches = useTranslations("Searches");
   const getRelativeTime = useRelativeTime();
 
   const style = STAGE_CONFIG[search.stage];
   const Icon = style.icon;
 
-  const handleClick = () => {
-    if (search.discoverySessionId) {
-      router.push(`/?session=${search.discoverySessionId}`);
-    }
-  };
+  const handleClick = () => onClick?.();
 
   return (
     <motion.div

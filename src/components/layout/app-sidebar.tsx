@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { usePathname } from "@/i18n/navigation";
 import {
   Home,
   PanelLeftClose,
@@ -29,25 +29,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useDiscoveryStore } from "@/stores/discovery-store";
-import { useAgentPanelStore } from "@/stores/agent-panel-store";
-import { useSearchStore } from "@/stores/search-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLoginModalStore } from "@/stores/login-modal-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
+import { useSessionNavigation } from "@/hooks/use-session-navigation";
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const t = useTranslations("Navigation");
   const tCommon = useTranslations("Common");
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggleCollapsed = useSidebarStore((s) => s.toggleCollapsed);
   const { theme, setTheme } = useTheme();
-  const resetDiscovery = useDiscoveryStore((s) => s.reset);
-  const resetPanel = useAgentPanelStore((s) => s.reset);
   const currentSessionId = useDiscoveryStore((s) => s.sessionId);
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
+  const { goHome } = useSessionNavigation();
 
   const isOnChat = pathname === "/" || pathname === "/search";
   const isHomeActive = isOnChat && !currentSessionId;
@@ -57,10 +54,7 @@ export function AppSidebar() {
 
   const handleHomeClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    resetDiscovery();
-    resetPanel();
-    useSearchStore.getState().resetPipeline();
-    router.push("/");
+    goHome();
   };
 
   const initials = getInitials(user?.name);
