@@ -91,9 +91,13 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<SsePayload>
     }
 
     // Save product document text directly to SearchExecution (no structured extraction)
+    // Reset status to "idle" so getSessionState() → awaiting_confirmation on reload
     await prisma.searchExecution.update({
       where: { id: searchId },
-      data: { bizPlan: JSON.parse(JSON.stringify({ productDocument: fullPlanText })) },
+      data: {
+        bizPlan: JSON.parse(JSON.stringify({ productDocument: fullPlanText })),
+        status: "idle",
+      },
     });
 
     await logStage(searchId, "Analysis", "complete", 100, "BizDev plan complete", {

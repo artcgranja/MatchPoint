@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Info, Rocket, HelpCircle } from "lucide-react";
+import { Info, Rocket, HelpCircle, RefreshCw } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { code } from "@streamdown/code";
 import { useTranslations } from "next-intl";
@@ -15,9 +15,10 @@ import type { DiscoveryMessage } from "@/types";
 interface ChatMessageProps {
   message: DiscoveryMessage;
   isStreaming?: boolean;
+  onAction?: (actionType: string) => void;
 }
 
-export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
+export function ChatMessage({ message, isStreaming, onAction }: ChatMessageProps) {
   const t = useTranslations("Chat");
   const tQ = useTranslations("Questions");
   const isUser = message.role === "user";
@@ -93,6 +94,26 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
         >
           <HelpCircle className="h-3.5 w-3.5" />
           {tQ("answerQuestions", { count: message.questions.length })}
+        </button>
+      </motion.div>
+    );
+  }
+
+  // Action messages (recovery buttons)
+  if (message.type === "action" && message.actionType) {
+    return (
+      <motion.div
+        variants={slideUp}
+        initial="hidden"
+        animate="visible"
+        className="flex justify-center py-2"
+      >
+        <button
+          onClick={() => onAction?.(message.actionType!)}
+          className="flex items-center gap-2 rounded-full bg-highlight/10 border border-highlight/20 px-4 py-2 text-sm text-highlight hover:bg-highlight/20 transition-colors"
+        >
+          <RefreshCw className="h-4 w-4" />
+          {message.actionLabel}
         </button>
       </motion.div>
     );

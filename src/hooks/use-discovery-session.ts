@@ -156,6 +156,37 @@ export function useDiscoverySession() {
           }
         }
 
+        // Show recovery action if pipeline was interrupted
+        if (session.recoveryAction === "retry_analysis") {
+          msgs.push({
+            role: "assistant",
+            content: tPipeline("analysisInterrupted"),
+            type: "action",
+            actionType: "retry_analysis",
+            actionLabel: tPipeline("retryAnalysis"),
+          });
+          useAgentPanelStore.getState().batchUpdate({
+            panelOpen: true,
+            activeTab: "analysis",
+          });
+        } else if (session.recoveryAction === "retry_scout") {
+          msgs.push({
+            role: "assistant",
+            content: tPipeline("scoutInterrupted"),
+            type: "action",
+            actionType: "retry_scout",
+            actionLabel: tPipeline("retryScout"),
+          });
+          if (search?.productDocument) {
+            useAgentPanelStore.getState().batchUpdate({
+              planText: search.productDocument,
+              analysisStatus: "confirmed",
+              panelOpen: true,
+              activeTab: "scout",
+            });
+          }
+        }
+
         setMessages(msgs);
 
         // Reopen wizard for unanswered questions
@@ -170,7 +201,9 @@ export function useDiscoverySession() {
         }
 
         // Set discovery state based on stage
-        if (session.awaitingConfirmation) {
+        if (session.recoveryAction) {
+          setDiscoveryState("chatting"); // Don't disable chat — action buttons handle recovery
+        } else if (session.awaitingConfirmation) {
           setDiscoveryState("processing");
         } else if (session.currentStage === "advising") {
           setDiscoveryState("advising");
@@ -624,6 +657,123 @@ export function useDiscoverySession() {
   ]);
 
   // ═══════════════════════════════════════════
+  // Recovery: Retry interrupted analysis
+  // ═══════════════════════════════════════════
+  const retryAnalysis = useCallback(async () => {
+    const sid = sessionId ?? useDiscoveryStore.getState().sessionId;
+    if (!sid) return;
+
+    // Remove the action message from chat
+    const msgs = useDiscoveryStore.getState().messages.filter(m => m.type !== "action");
+    setMessages(msgs);
+
+    setIsStreaming(true);
+    setCurrentStage("analysis");
+    addMessage({
+      role: "assistant",
+      content: tPipeline("preparingAnalysis"),
+      type: "stage-update",
+    });
+
+    try {
+      const res = await fetch(`/api/v1/sessions/${sid}/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "[Retry Analysis]" }),
+      });
+
+      if (!res.body) {
+        errorPipeline();
+        setIsStreaming(false);
+        return;
+      }
+
+      await processStream(res);
+      setIsStreaming(false);
+    } catch (error) {
+      console.error("Retry analysis error:", error);
+      addMessage({
+        role: "assistant",
+        content: tPipeline("pipelineConnectionError"),
+        type: "stage-update",
+      });
+      setIsStreaming(false);
+      errorPipeline();
+    }
+  }, [
+    sessionId,
+    setMessages,
+    setIsStreaming,
+    setCurrentStage,
+    addMessage,
+    processStream,
+    errorPipeline,
+    tPipeline,
+  ]);
+
+  // ═══════════════════════════════════════════
+  // Recovery: Retry interrupted scout
+  // ═══════════════════════════════════════════
+  const retryScout = useCallback(async () => {
+    const sid = sessionId ?? useDiscoveryStore.getState().sessionId;
+    const searchIdVal = searchId ?? useSearchStore.getState().searchId;
+    if (!sid || !searchIdVal) return;
+
+    // Remove the action message from chat
+    const msgs = useDiscoveryStore.getState().messages.filter(m => m.type !== "action");
+    setMessages(msgs);
+
+    setCurrentStage("scout");
+    useAgentPanelStore.getState().batchUpdate({
+      activeTab: "scout",
+      scoutStatus: "searching",
+      scoutProgress: 0,
+      scoutMessage: tPipeline("startingSearch"),
+    });
+    addMessage({
+      role: "assistant",
+      content: tPipeline("planConfirmed"),
+      type: "stage-update",
+    });
+
+    try {
+      const res = await fetch(`/api/v1/sessions/${sid}/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "[Retry Scout]" }),
+      });
+
+      if (!res.body) {
+        errorPipeline();
+        return;
+      }
+
+      await processStream(res);
+    } catch (error) {
+      console.error("Retry scout error:", error);
+      addMessage({
+        role: "assistant",
+        content: tPipeline("pipelineConnectionError"),
+        type: "stage-update",
+      });
+      useAgentPanelStore.getState().batchUpdate({ scoutStatus: "error" });
+      setCurrentStage("complete");
+      setDiscoveryState("complete");
+      errorPipeline();
+    }
+  }, [
+    sessionId,
+    searchId,
+    setMessages,
+    setCurrentStage,
+    setDiscoveryState,
+    addMessage,
+    processStream,
+    errorPipeline,
+    tPipeline,
+  ]);
+
+  // ═══════════════════════════════════════════
   // Unified sendMessage — routes through conductor
   // ═══════════════════════════════════════════
   const sendMessage = useCallback(
@@ -753,6 +903,8 @@ export function useDiscoverySession() {
     loadSession,
     sendMessage,
     confirmPlan,
+    retryAnalysis,
+    retryScout,
     submitQuestionAnswers,
     reset,
   };

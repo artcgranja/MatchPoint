@@ -42,6 +42,8 @@ export default function HomePage() {
     loadSession,
     sendMessage,
     confirmPlan,
+    retryAnalysis,
+    retryScout,
     submitQuestionAnswers,
     reset,
   } = useDiscoverySession();
@@ -109,6 +111,17 @@ export default function HomePage() {
       // Panel not yet registered with group — ignore
     }
   }, [panelOpen]);
+
+  const handleAction = useCallback(
+    (actionType: string) => {
+      if (actionType === "retry_analysis") {
+        retryAnalysis();
+      } else if (actionType === "retry_scout") {
+        retryScout();
+      }
+    },
+    [retryAnalysis, retryScout]
+  );
 
   const handleSendMessage = useCallback(
     async (text: string) => {
@@ -205,7 +218,7 @@ export default function HomePage() {
 
                 {/* Messages + input */}
                 <div className="flex min-h-0 flex-1 flex-col">
-                  <ChatMessageList messages={messages} isStreaming={isStreaming} />
+                  <ChatMessageList messages={messages} isStreaming={isStreaming} onAction={handleAction} />
                   <div className="mx-auto w-full max-w-3xl px-4 pb-4 pt-2">
                     <ChatInput
                       onSend={handleSendMessage}

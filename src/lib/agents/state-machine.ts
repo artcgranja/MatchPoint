@@ -104,21 +104,42 @@ export async function* handleMessage(
       break;
 
     case "analysis":
+      // Analysis was interrupted (serverless process died) — re-run it
       yield {
         type: "status",
         agent: "system",
-        message: "Analysis in progress, please wait...",
-        key: "analysisInProgress",
+        message: "Restarting analysis...",
+        key: "preparingAnalysis",
+      };
+      for await (const event of runAnalysis(state.searchId!)) {
+        if (event.type === "error") {
+          yield event;
+          return;
+        }
+        yield event;
+      }
+      // Transition to awaiting_confirmation
+      yield {
+        type: "done",
+        agent: "discovery",
+        transition: "awaiting_confirmation",
+        searchId: state.searchId!,
       };
       break;
 
     case "scouting":
-      yield {
-        type: "status",
-        agent: "system",
-        message: "Startup search in progress, please wait...",
-        key: "scoutInProgress",
-      };
+      // Scout was interrupted — clean up incomplete data and re-run
+      await prisma.searchResult.deleteMany({
+        where: { searchExecutionId: state.searchId! },
+      });
+      await prisma.pipelineStageLog.deleteMany({
+        where: { searchExecutionId: state.searchId!, agentName: "Scout" },
+      });
+      await prisma.searchExecution.update({
+        where: { id: state.searchId! },
+        data: { status: "idle", resultCount: 0, scoutSummary: null },
+      });
+      yield* runScout(state.searchId!);
       break;
   }
 }

@@ -8,11 +8,13 @@ import type { DiscoveryMessage } from "@/types";
 interface ChatMessageListProps {
   messages: DiscoveryMessage[];
   isStreaming: boolean;
+  onAction?: (actionType: string) => void;
 }
 
 export function ChatMessageList({
   messages,
   isStreaming,
+  onAction,
 }: ChatMessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -73,6 +75,7 @@ export function ChatMessageList({
               key={message.id ?? index}
               message={message}
               isStreaming={isStreaming && isLast}
+              onAction={onAction}
             />
           );
         })}

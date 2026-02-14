@@ -43,21 +43,45 @@ export async function GET(
 
   const search = session.searches[0] ?? null;
 
-  // Determine currentStage from session + search state
+  // Determine currentStage from session + search state (aligned with getSessionState())
   let currentStage: string;
   let awaitingConfirmation = false;
+  let recoveryAction: "retry_analysis" | "retry_scout" | null = null;
+
   if (!session.isComplete) {
     currentStage = "discovery";
   } else if (!search) {
-    currentStage = "complete";
+    currentStage = "discovery"; // Edge case: session complete but no search
   } else if (search.status === "complete") {
     currentStage = "advising";
-  } else if (search.bizPlan && search.status === "idle") {
-    // BizPlan exists but scout hasn't started — user needs to approve
+  } else if (search.status === "error") {
+    // Error state — allow retry based on what failed
+    if (search.bizPlan) {
+      currentStage = "analysis";
+      awaitingConfirmation = true; // Let user retry scout via confirm button
+    } else {
+      currentStage = "analysis";
+      recoveryAction = "retry_analysis";
+    }
+  } else if (!search.bizPlan) {
+    // No bizPlan → analysis never completed (interrupted or not yet started)
     currentStage = "analysis";
-    awaitingConfirmation = true;
+    recoveryAction = "retry_analysis";
   } else {
-    currentStage = "analysis";
+    // bizPlan exists, status is "idle" or "running"
+    const hasScoutLog = await prisma.pipelineStageLog.findFirst({
+      where: { searchExecutionId: search.id, agentName: "Scout" },
+    });
+
+    if (hasScoutLog && search.status === "running") {
+      // Scout was running but interrupted
+      currentStage = "scout";
+      recoveryAction = "retry_scout";
+    } else {
+      // Analysis complete, awaiting scout confirmation
+      currentStage = "analysis";
+      awaitingConfirmation = true;
+    }
   }
 
   // Build cards from search results
@@ -81,6 +105,7 @@ export async function GET(
     title: session.title,
     currentStage,
     awaitingConfirmation,
+    recoveryAction,
     isComplete: session.isComplete,
     needSummary: session.bizPlan,
     messages: session.messages.map((m) => {
