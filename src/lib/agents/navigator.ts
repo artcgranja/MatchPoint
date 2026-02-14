@@ -1,4 +1,4 @@
-import { BaseAgent, type ToolStreamEvent } from "./base";
+import { BaseAgent } from "./base";
 import { NeedSummarySchema, type NeedSummary } from "./schemas";
 import { DISCOVERY_SYSTEM, DISCOVERY_EXTRACT_SYSTEM } from "./prompts/navigator";
 import { composeToolsForAgent } from "./skills/registry";
@@ -7,7 +7,9 @@ import type { QuestionData } from "@/types";
 
 export type DiscoveryEvent =
   | { type: "text"; text: string }
-  | { type: "tool_call"; name: string; input: Record<string, unknown> }
+  | { type: "tool_start"; name: string; id: string }
+  | { type: "tool_call"; name: string; id: string; input: Record<string, unknown> }
+  | { type: "tool_result"; name: string; id: string; result: unknown }
   | { type: "questions"; questions: QuestionData[]; context?: string }
   | { type: "done" };
 
@@ -39,7 +41,6 @@ export class DiscoveryAgent extends BaseAgent {
 
     const tools = composeToolsForAgent("discovery");
     let discoveryComplete = false;
-    let questionsData: { questions: QuestionData[]; context?: string } | null = null;
 
     for await (const event of this.streamWithToolEvents(
       DISCOVERY_SYSTEM,
@@ -49,16 +50,23 @@ export class DiscoveryAgent extends BaseAgent {
     )) {
       if (event.type === "text") {
         yield { type: "text", text: event.text };
-      } else if (event.type === "tool_call" && event.name === "complete_discovery") {
-        discoveryComplete = true;
-        yield { type: "tool_call", name: event.name, input: event.input };
-      } else if (event.type === "tool_call" && event.name === "ask_questions") {
-        questionsData = event.input as { questions: QuestionData[]; context?: string };
-      }
-    }
+      } else if (event.type === "tool_start") {
+        yield { type: "tool_start", name: event.name, id: event.id };
+      } else if (event.type === "tool_call") {
+        // Yield tool_call for ALL tools so the frontend can show loading states
+        yield { type: "tool_call", name: event.name, id: event.id, input: event.input };
 
-    if (questionsData) {
-      yield { type: "questions", questions: questionsData.questions, context: questionsData.context };
+        if (event.name === "complete_discovery") {
+          discoveryComplete = true;
+        } else if (event.name === "ask_questions") {
+          const data = event.input as { questions: QuestionData[]; context?: string };
+          yield { type: "questions", questions: data.questions, context: data.context };
+          // Stop the toolRunner — questions require user input before continuing
+          break;
+        }
+      } else if (event.type === "tool_result") {
+        yield { type: "tool_result", name: event.name, id: event.id, result: event.result };
+      }
     }
 
     if (discoveryComplete) {

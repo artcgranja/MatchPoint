@@ -2,18 +2,7 @@ import { prisma } from "@/lib/db";
 import { BizDevAgent } from "./bizdev";
 import { ScoutAgent } from "./scout";
 import type { StartupCard } from "./schemas";
-
-export interface PipelineEvent {
-  eventType: string;
-  stageId: string;
-  agentName: string;
-  status: string;
-  progress: number;
-  message: string;
-  key?: string;
-  params?: Record<string, string | number>;
-  data?: Record<string, unknown>;
-}
+import type { SsePayload } from "@/lib/sse/events";
 
 async function logStage(
   searchId: string,
@@ -41,7 +30,7 @@ async function logStage(
 // ═══════════════════════════════════════════
 // Phase 1: BizDev Analysis (streaming with thinking)
 // ═══════════════════════════════════════════
-export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEvent> {
+export async function* runAnalysis(searchId: string): AsyncGenerator<SsePayload> {
   const search = await prisma.searchExecution.findUniqueOrThrow({
     where: { id: searchId },
     include: { discoverySession: true },
@@ -79,10 +68,8 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
       : undefined;
 
     yield {
-      eventType: "stage_update",
-      stageId: "stage-1",
-      agentName: "Analysis",
-      status: "running",
+      type: "stage_update",
+      agent: "analysis",
       progress: 0,
       message: "Preparing BizDev plan...",
       key: "preparingAnalysis",
@@ -96,26 +83,10 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
     // Stream thinking + text chunks — BizDev receives transcript + NeedSummary
     for await (const chunk of bizDevAgent.streamPlan(conversationTranscript, needSummary)) {
       if (chunk.type === "thinking") {
-        yield {
-          eventType: "analysis_thinking",
-          stageId: "stage-1",
-          agentName: "Analysis",
-          status: "running",
-          progress: 25,
-          message: "",
-          data: { text: chunk.text },
-        };
+        yield { type: "thinking", agent: "analysis", text: chunk.text };
       } else {
         fullPlanText += chunk.text;
-        yield {
-          eventType: "analysis_text",
-          stageId: "stage-1",
-          agentName: "Analysis",
-          status: "running",
-          progress: 50,
-          message: "",
-          data: { text: chunk.text },
-        };
+        yield { type: "text", agent: "analysis", text: chunk.text };
       }
     }
 
@@ -131,14 +102,8 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
     });
 
     yield {
-      eventType: "analysis_complete",
-      stageId: "stage-1",
-      agentName: "Analysis",
-      status: "complete",
-      progress: 100,
-      message: "BizDev plan complete",
-      key: "analysisComplete",
-      data: { productDocument: fullPlanText },
+      type: "done",
+      agent: "analysis",
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Analysis failed";
@@ -148,21 +113,14 @@ export async function* runAnalysis(searchId: string): AsyncGenerator<PipelineEve
       data: { status: "error" },
     });
 
-    yield {
-      eventType: "error",
-      stageId: "stage-1",
-      agentName: "System",
-      status: "error",
-      progress: 0,
-      message,
-    };
+    yield { type: "error", agent: "system", message };
   }
 }
 
 // ═══════════════════════════════════════════
 // Phase 2: Scout (runs after user confirmation)
 // ═══════════════════════════════════════════
-export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent> {
+export async function* runScout(searchId: string): AsyncGenerator<SsePayload> {
   const search = await prisma.searchExecution.findUniqueOrThrow({
     where: { id: searchId },
   });
@@ -181,10 +139,8 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
     });
 
     yield {
-      eventType: "stage_update",
-      stageId: "stage-2",
-      agentName: "Scout",
-      status: "running",
+      type: "stage_update",
+      agent: "scout",
       progress: 0,
       message: "Searching startups...",
       key: "searchingStartups",
@@ -200,56 +156,34 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
     for await (const event of scoutAgent.searchWithEvents(productDocument)) {
       if (event.type === "tool_call") {
         toolCallCount++;
-        // Granular progress: roughly map tool calls to 10-80% range
         const progress = Math.min(10 + toolCallCount * 15, 80);
+        const toolKey = event.toolName === "search_startups" ? "searchingDatabase" : "analyzingDetails";
+        const toolMsg = event.toolName === "search_startups" ? "Searching database..." : "Analyzing details...";
 
         yield {
-          eventType: "scout_tool_call",
-          stageId: "stage-2",
-          agentName: "Scout",
-          status: "running",
-          progress,
-          message: event.toolName === "search_startups"
-            ? "Searching database..."
-            : "Analyzing details...",
-          key: event.toolName === "search_startups"
-            ? "searchingDatabase"
-            : "analyzingDetails",
-          data: {
-            toolCallId: event.toolCallId,
-            toolName: event.toolName,
-            input: event.input as unknown as Record<string, unknown>,
-          },
+          type: "tool_call",
+          agent: "scout",
+          toolName: event.toolName,
+          toolCallId: event.toolCallId,
+          input: event.input as unknown as Record<string, unknown>,
         };
 
         yield {
-          eventType: "stage_update",
-          stageId: "stage-2",
-          agentName: "Scout",
-          status: "running",
+          type: "stage_update",
+          agent: "scout",
           progress,
-          message: event.toolName === "search_startups"
-            ? "Searching database..."
-            : "Analyzing details...",
-          key: event.toolName === "search_startups"
-            ? "searchingDatabase"
-            : "analyzingDetails",
+          message: toolMsg,
+          key: toolKey,
         };
       }
 
       if (event.type === "tool_result") {
         yield {
-          eventType: "scout_tool_result",
-          stageId: "stage-2",
-          agentName: "Scout",
-          status: "running",
-          progress: Math.min(10 + toolCallCount * 15, 80),
-          message: event.resultSummary,
-          data: {
-            toolCallId: event.toolCallId,
-            toolName: event.toolName,
-            resultSummary: event.resultSummary,
-          },
+          type: "tool_result",
+          agent: "scout",
+          toolName: event.toolName,
+          toolCallId: event.toolCallId,
+          resultSummary: event.resultSummary,
         };
       }
 
@@ -268,10 +202,8 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
     });
 
     yield {
-      eventType: "stage_complete",
-      stageId: "stage-2",
-      agentName: "Scout",
-      status: "complete",
+      type: "stage_update",
+      agent: "scout",
       progress: 100,
       message: `${scoutResult.cards.length} startups found`,
       key: "startupsFound",
@@ -293,7 +225,6 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
         await logStage(searchId, "Scout", "running", 95, `Filtered ${invalidIds.length} hallucinated IDs`, {
           output: { hallucinatedIds: invalidIds, validCount: validIds.size },
         });
-        // Update scoutResult to contain only valid cards
         scoutResult = {
           ...scoutResult,
           cards: scoutResult.cards.filter((c) => validIds.has(c.id)),
@@ -323,19 +254,13 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
       },
     });
 
-    const cards: StartupCard[] = scoutResult.cards;
-
     yield {
-      eventType: "pipeline_complete",
-      stageId: "stage-2",
-      agentName: "Scout",
-      status: "complete",
-      progress: 100,
-      message: "Pipeline complete",
+      type: "pipeline_complete",
+      agent: "scout",
       data: {
         resultCount: scoutResult.cards.length,
         searchId,
-        cards: cards as unknown as Record<string, unknown>[],
+        cards: scoutResult.cards as unknown as Record<string, unknown>[],
         summary: scoutResult.summary,
       },
     };
@@ -347,13 +272,6 @@ export async function* runScout(searchId: string): AsyncGenerator<PipelineEvent>
       data: { status: "error" },
     });
 
-    yield {
-      eventType: "error",
-      stageId: "stage-2",
-      agentName: "System",
-      status: "error",
-      progress: 0,
-      message,
-    };
+    yield { type: "error", agent: "system", message };
   }
 }
