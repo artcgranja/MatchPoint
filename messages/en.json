@@ -69,7 +69,7 @@
     "searchingStartups": "Searching for startups..."
   },
   "Welcome": {
-    "title": "What shall we <gradient>solve</gradient>?",
+    "title": "What shall we solve, {name}?",
     "yourChats": "Your executions",
     "noChatsInStage": "No executions in this stage"
   },

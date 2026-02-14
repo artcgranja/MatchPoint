@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion, useReducedMotion } from "motion/react";
-import { WarpShaderBackground } from "@/components/ui/warp-shader-background";
+import AnimatedGradientBackground from "@/components/ui/animated-gradient-background";
 import { ChatInput } from "@/components/discovery/chat-input";
 import { MinimalNavbar } from "@/components/home/minimal-navbar";
 import { CondensedValueProps } from "@/components/home/condensed-value-props";
@@ -36,16 +36,8 @@ export function HeroChatSection({
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Shader — fade top-to-bottom (opacity on shader itself), bottom edge curved/oval */}
-        {prefersReducedMotion ? (
-          <div
-            className="absolute inset-0 z-0"
-            style={{
-              background:
-                "radial-gradient(ellipse at 50% 80%, hsl(217, 91%, 20%) 0%, hsl(215, 50%, 10%) 40%, transparent 70%)",
-            }}
-          />
-        ) : (
+        {/* Animated Gradient Background */}
+        {!prefersReducedMotion && (
           <div
             className="absolute inset-0 z-0"
             style={{
@@ -57,7 +49,13 @@ export function HeroChatSection({
               WebkitMaskComposite: "source-in",
             }}
           >
-            <WarpShaderBackground isHovered={isHovered} />
+            <AnimatedGradientBackground
+              Breathing={isHovered}
+              startingGap={120}
+              breathingRange={8}
+              animationSpeed={0.03}
+              topOffset={10}
+            />
           </div>
         )}
 

@@ -8,12 +8,13 @@ import {
   Rocket,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { WarpShaderBackground } from "@/components/ui/warp-shader-background";
+import AnimatedGradientBackground from "@/components/ui/animated-gradient-background";
 import { ChatInput } from "@/components/discovery/chat-input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { SessionCard } from "@/components/discovery/session-card";
+import { useAuth } from "@/components/providers/auth-provider";
 import { cn } from "@/lib/utils";
 import { slideUp, staggerContainer } from "@/lib/motion";
 import type { SessionItem, SessionPipelineStage, SessionStage } from "@/types";
@@ -47,11 +48,15 @@ export function ChatWelcome({
 }: ChatWelcomeProps) {
   const [isHovered, setIsHovered] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+  const { user } = useAuth();
   const t = useTranslations("Welcome");
   const tHistory = useTranslations("ChatHistory");
   const tTime = useTranslations("RelativeTime");
 
   const hasSessions = sessions.length > 0;
+
+  // Extract first name from user's name
+  const firstName = user?.name?.split(" ")[0] || "there";
 
   const stageLabels: Record<SessionPipelineStage, string> = {
     discovery: tHistory("discovery"),
@@ -105,15 +110,7 @@ export function ChatWelcome({
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="pointer-events-none sticky top-0 z-0 -mb-[100vh] h-screen w-full">
-        {prefersReducedMotion ? (
-          <div
-            className="h-screen w-full"
-            style={{
-              background:
-                "radial-gradient(ellipse at 50% 80%, hsl(217, 91%, 20%) 0%, hsl(215, 50%, 10%) 40%, transparent 70%)",
-            }}
-          />
-        ) : (
+        {!prefersReducedMotion && (
           <div
             className="h-screen w-full"
             style={{
@@ -125,7 +122,13 @@ export function ChatWelcome({
               WebkitMaskComposite: "source-in",
             }}
           >
-            <WarpShaderBackground isHovered={isHovered} />
+            <AnimatedGradientBackground
+              Breathing={isHovered}
+              startingGap={120}
+              breathingRange={8}
+              animationSpeed={0.03}
+              topOffset={10}
+            />
           </div>
         )}
       </div>
@@ -146,9 +149,7 @@ export function ChatWelcome({
             variants={slideUp}
             className="mb-8 text-center font-heading text-3xl font-bold tracking-tight sm:text-4xl"
           >
-            {t.rich("title", {
-              gradient: (chunks) => <span className="text-gradient">{chunks}</span>,
-            })}
+            {t("title", { name: firstName })}
           </motion.h1>
 
           <motion.div variants={slideUp} className="w-full">
@@ -164,7 +165,7 @@ export function ChatWelcome({
 
       {hasSessions && (
         <div className="relative z-10 flex justify-center px-4 pb-8">
-          <div className="w-full max-w-3xl overflow-hidden rounded-2xl border border-border/60 bg-background/80 shadow-2xl backdrop-blur-xl">
+          <div className="w-full max-w-6xl overflow-hidden rounded-2xl border border-border/60 bg-background/80 shadow-2xl backdrop-blur-xl">
             <Tabs defaultValue="results" className="flex flex-col">
               <div className="border-b border-border/40 px-6 pt-5 pb-3">
                 <h2 className="mb-4 text-base font-semibold text-foreground">
@@ -195,7 +196,7 @@ export function ChatWelcome({
               <div className="py-4">
                 {STAGES.map((stage) => (
                   <TabsContent key={stage} value={stage} className="mt-0">
-                    <ScrollArea className="max-h-[50vh]">
+                    <ScrollArea className="max-h-[60vh]">
                       <div className="px-6">
                         {sessionsByStage(stage).length === 0 ? (
                           <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -204,7 +205,7 @@ export function ChatWelcome({
                             </p>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                             {sessionsByStage(stage).map((session) => (
                               <SessionCard
                                 key={session.id}
