@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { motion } from "motion/react";
 import { MapPin, ExternalLink, Users, Building2 } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -28,15 +28,6 @@ export function CompanyCard(props: CompanyCardProps) {
   const location = mode === "browse" ? company.allLocations : company.location;
   const description = mode === "search" ? company.whyRelevant : company.longDescription;
 
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      const rect = e.currentTarget.getBoundingClientRect();
-      e.currentTarget.style.setProperty("--mouse-x", `${e.clientX - rect.left}px`);
-      e.currentTarget.style.setProperty("--mouse-y", `${e.clientY - rect.top}px`);
-    },
-    []
-  );
-
   const handleClick = async () => {
     if (mode === "search") {
       setDetailOpen(true);
@@ -59,11 +50,8 @@ export function CompanyCard(props: CompanyCardProps) {
     <>
       <motion.div
         variants={cardEntrance}
-        whileHover={{ y: -2 }}
-        transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        onMouseMove={handleMouseMove}
         onClick={handleClick}
-        className="spotlight-card glass relative rounded-xl border border-border p-4 space-y-2.5 cursor-pointer transition-colors duration-200 hover:border-border-hover hover:bg-surface-hover h-full"
+        className="relative rounded-xl border border-border-highlight bg-background-tertiary p-4 space-y-2.5 cursor-pointer transition-colors duration-200 hover:border-border-hover hover:bg-background-secondary h-full"
       >
         {/* Action buttons: top-right */}
         <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5">

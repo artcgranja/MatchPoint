@@ -63,13 +63,13 @@ function NavLink({
       href={href}
       onClick={onClick}
       className={cn(
-        "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+        "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
         isActive
-          ? "bg-highlight/10 text-highlight"
+          ? "bg-highlight/10 text-highlight font-medium"
           : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
       )}
     >
-      <Icon className="h-5 w-5 shrink-0" />
+      <Icon className="h-4 w-4 shrink-0" />
       {!collapsed && <span>{label}</span>}
     </Link>
   );
@@ -133,7 +133,7 @@ export function AppSidebar() {
             aria-label={t("expandSidebar")}
             className="rounded-lg p-1 text-foreground-muted transition-colors hover:bg-background-secondary hover:text-foreground"
           >
-            <PanelLeft className="h-5 w-5" />
+            <PanelLeft className="h-4 w-4" />
           </button>
         ) : (
           <>
