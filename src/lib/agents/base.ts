@@ -6,6 +6,7 @@ import { anthropic, MODELS } from "@/lib/anthropic";
 
 export type ToolStreamEvent =
   | { type: "text"; text: string }
+  | { type: "tool_start"; id: string; name: string }
   | { type: "tool_call"; id: string; name: string; input: Record<string, unknown> }
   | { type: "tool_result"; id: string; name: string; result: unknown; error?: string };
 
@@ -145,6 +146,7 @@ export abstract class BaseAgent {
             name: event.content_block.name,
             partialJson: "",
           });
+          yield { type: "tool_start", id: event.content_block.id, name: event.content_block.name };
         }
 
         if (event.type === "content_block_delta") {

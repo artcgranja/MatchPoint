@@ -1,8 +1,10 @@
 import { prisma } from "@/lib/db";
 import { DiscoveryAgent } from "./navigator";
 import { AdvisorAgent } from "./advisor";
-import { runAnalysis, runScout, type PipelineEvent } from "./orchestrator";
+import { runAnalysis, runScout } from "./orchestrator";
 import { assembleSessionContext } from "./context";
+import type { QuestionAnswer, QuestionData } from "@/types";
+import type { SsePayload } from "@/lib/sse/events";
 
 // ═══════════════════════════════════════════
 // Types
@@ -20,18 +22,6 @@ interface SessionState {
   sessionId: string;
   searchId: string | null;
 }
-
-export type ConductorEvent =
-  | { type: "text"; text: string }
-  | { type: "done"; transition?: "awaiting_confirmation"; searchId?: string }
-  | { type: "analysis_thinking"; text: string }
-  | { type: "analysis_text"; text: string }
-  | { type: "analysis_complete"; data: { productDocument: string } }
-  | { type: "scout_event"; event: PipelineEvent }
-  | { type: "advisor_text"; text: string }
-  | { type: "advisor_done" }
-  | { type: "error"; message: string }
-  | { type: "status"; message: string; key?: string; params?: Record<string, string | number> };
 
 // ═══════════════════════════════════════════
 // State Resolution (deterministic, no LLM)
@@ -95,13 +85,14 @@ export async function getSessionState(
 
 export async function* handleMessage(
   sessionId: string,
-  message: string
-): AsyncGenerator<ConductorEvent> {
+  message: string,
+  answers?: QuestionAnswer[]
+): AsyncGenerator<SsePayload> {
   const state = await getSessionState(sessionId);
 
   switch (state.stage) {
     case "discovery":
-      yield* handleDiscoveryMessage(sessionId, message);
+      yield* handleDiscoveryMessage(sessionId, message, answers);
       break;
 
     case "awaiting_confirmation":
@@ -113,19 +104,53 @@ export async function* handleMessage(
       break;
 
     case "analysis":
+      // Analysis was interrupted (serverless process died) — save user message and re-run
+      if (message.trim()) {
+        await prisma.orchestratorMessage.create({
+          data: {
+            searchExecutionId: state.searchId!,
+            role: "user",
+            content: message,
+          },
+        });
+      }
       yield {
         type: "status",
-        message: "Analysis in progress, please wait...",
-        key: "analysisInProgress",
+        agent: "system",
+        message: "Restarting analysis...",
+        key: "preparingAnalysis",
+      };
+      for await (const event of runAnalysis(state.searchId!)) {
+        if (event.type === "error") {
+          yield event;
+          return;
+        }
+        yield event;
+      }
+      // Transition to awaiting_confirmation
+      yield {
+        type: "done",
+        agent: "discovery",
+        transition: "awaiting_confirmation",
+        searchId: state.searchId!,
       };
       break;
 
     case "scouting":
-      yield {
-        type: "status",
-        message: "Startup search in progress, please wait...",
-        key: "scoutInProgress",
-      };
+      // Scout was interrupted — clean up incomplete data and re-run
+      await prisma.$transaction([
+        prisma.searchResult.deleteMany({
+          where: { searchExecutionId: state.searchId! },
+        }),
+        prisma.pipelineStageLog.deleteMany({
+          where: { searchExecutionId: state.searchId!, agentName: "Scout" },
+        }),
+        prisma.searchExecution.update({
+          where: { id: state.searchId! },
+          data: { status: "idle", resultCount: 0, scoutSummary: null },
+        }),
+      ]);
+      yield* runScout(state.searchId!);
       break;
   }
 }
@@ -136,19 +161,67 @@ export async function* handleMessage(
 
 async function* handleDiscoveryMessage(
   sessionId: string,
-  message: string
-): AsyncGenerator<ConductorEvent> {
+  message: string,
+  answers?: QuestionAnswer[]
+): AsyncGenerator<SsePayload> {
   const session = await prisma.discoverySession.findUniqueOrThrow({
     where: { id: sessionId },
   });
 
-  // Save user message
+  // If answers are provided, mark the last questions message as answered
+  if (answers && answers.length > 0) {
+    // Find the latest message with metadata.type=questions, then check in code
+    const latestQuestionsMsg = await prisma.discoveryMessage.findFirst({
+      where: {
+        sessionId,
+        role: "assistant",
+        metadata: { path: ["type"], equals: "questions" },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    if (latestQuestionsMsg) {
+      const meta = latestQuestionsMsg.metadata as Record<string, unknown>;
+
+      // Only update if not already answered (check in code, not DB query)
+      if (!meta.answered) {
+        // Filter out answers whose questionId doesn't match a real question
+        const originalQuestions = (meta.questions ?? []) as Array<{ id: string }>;
+        const validIds = new Set(originalQuestions.map((q) => q.id));
+        const validAnswers = answers.filter((a) => {
+          if (!validIds.has(a.questionId)) {
+            console.warn(
+              `[Discovery] Dropping answer with unknown questionId "${a.questionId}" in session ${sessionId}`
+            );
+            return false;
+          }
+          return true;
+        });
+
+        await prisma.discoveryMessage.update({
+          where: { id: latestQuestionsMsg.id },
+          data: {
+            metadata: JSON.parse(JSON.stringify({
+              ...meta,
+              answered: true,
+              answers: validAnswers,
+            })),
+          },
+        });
+      }
+    }
+  }
+
+  // Save user message (with question_answers metadata if applicable)
   await prisma.discoveryMessage.create({
     data: {
       sessionId,
       role: "user",
       content: message,
       phase: session.currentPhase,
+      ...(answers && answers.length > 0 && {
+        metadata: JSON.parse(JSON.stringify({ type: "question_answers" })),
+      }),
     },
   });
 
@@ -168,31 +241,96 @@ async function* handleDiscoveryMessage(
   const discovery = new DiscoveryAgent();
   let fullResponse = "";
   let discoveryDone = false;
+  let questionsPayload: { questions: QuestionData[]; context?: string } | null = null;
 
   for await (const event of discovery.chat(sessionId, message)) {
     if (event.type === "text") {
       fullResponse += event.text;
-      yield { type: "text", text: event.text };
+      yield { type: "text", agent: "discovery", text: event.text };
+    } else if (event.type === "tool_start") {
+      yield {
+        type: "tool_start",
+        agent: "discovery",
+        toolName: event.name,
+        toolCallId: event.id,
+      };
     } else if (event.type === "tool_call") {
-      // complete_discovery tool call detected — side effects handled below
-      discoveryDone = true;
+      yield {
+        type: "tool_call",
+        agent: "discovery",
+        toolName: event.name,
+        toolCallId: event.id,
+        input: event.input,
+      };
+      if (event.name === "complete_discovery") {
+        discoveryDone = true;
+      }
+    } else if (event.type === "tool_result") {
+      yield {
+        type: "tool_result",
+        agent: "discovery",
+        toolName: event.name,
+        toolCallId: event.id,
+      };
+    } else if (event.type === "questions") {
+      questionsPayload = { questions: event.questions, context: event.context };
     } else if (event.type === "done") {
       discoveryDone = true;
     }
   }
 
-  // Save assistant message
+  // Save assistant message(s)
+  // When questions exist with preceding text, split into two DB rows so reload
+  // matches the live streaming experience (text bubble + questions card).
   const updatedSession = await prisma.discoverySession.findUnique({
     where: { id: sessionId },
   });
-  await prisma.discoveryMessage.create({
-    data: {
-      sessionId,
-      role: "assistant",
-      content: fullResponse,
-      phase: updatedSession?.currentPhase ?? session.currentPhase,
-    },
-  });
+  const phase = updatedSession?.currentPhase ?? session.currentPhase;
+
+  if (questionsPayload && fullResponse.trim()) {
+    // Save text message first
+    await prisma.discoveryMessage.create({
+      data: { sessionId, role: "assistant", content: fullResponse, phase },
+    });
+    // Save questions message separately (empty content, metadata carries questions)
+    await prisma.discoveryMessage.create({
+      data: {
+        sessionId,
+        role: "assistant",
+        content: "",
+        phase,
+        metadata: JSON.parse(JSON.stringify({
+          type: "questions",
+          questions: questionsPayload.questions,
+          context: questionsPayload.context,
+        })),
+      },
+    });
+  } else if (questionsPayload) {
+    // Questions with no preceding text — single message
+    await prisma.discoveryMessage.create({
+      data: {
+        sessionId,
+        role: "assistant",
+        content: "",
+        phase,
+        metadata: JSON.parse(JSON.stringify({
+          type: "questions",
+          questions: questionsPayload.questions,
+          context: questionsPayload.context,
+        })),
+      },
+    });
+  } else {
+    // Regular assistant message (no questions)
+    await prisma.discoveryMessage.create({
+      data: { sessionId, role: "assistant", content: fullResponse, phase },
+    });
+  }
+
+  if (questionsPayload) {
+    yield { type: "questions", agent: "discovery", questions: questionsPayload.questions, context: questionsPayload.context };
+  }
 
   if (discoveryDone) {
     // Extract NeedSummary and mark session complete
@@ -217,46 +355,26 @@ async function* handleDiscoveryMessage(
       },
     });
 
-    yield { type: "status", message: "Discovery complete! Starting analysis...", key: "discoveryComplete" };
+    yield { type: "status", agent: "system", message: "Discovery complete! Starting analysis...", key: "discoveryComplete" };
 
-    // Run analysis inline — same SSE stream
+    // Run analysis inline — same SSE stream (orchestrator yields SsePayload directly)
     for await (const event of runAnalysis(search.id)) {
-      switch (event.eventType) {
-        case "analysis_thinking":
-          yield {
-            type: "analysis_thinking",
-            text: (event.data as { text: string } | undefined)?.text ?? "",
-          };
-          break;
-        case "analysis_text":
-          yield {
-            type: "analysis_text",
-            text: (event.data as { text: string } | undefined)?.text ?? "",
-          };
-          break;
-        case "analysis_complete":
-          yield {
-            type: "analysis_complete",
-            data: {
-              productDocument:
-                (event.data as { productDocument: string } | undefined)?.productDocument ?? "",
-            },
-          };
-          break;
-        case "error":
-          yield { type: "error", message: event.message };
-          return;
+      if (event.type === "error") {
+        yield event;
+        return;
       }
+      yield event;
     }
 
     // Analysis done → awaiting user confirmation
     yield {
       type: "done",
+      agent: "discovery",
       transition: "awaiting_confirmation",
       searchId: search.id,
     };
   } else {
-    yield { type: "done" };
+    yield { type: "done", agent: "discovery" };
   }
 }
 
@@ -267,7 +385,7 @@ async function* handleDiscoveryMessage(
 async function* handleConfirmation(
   searchId: string,
   message: string
-): AsyncGenerator<ConductorEvent> {
+): AsyncGenerator<SsePayload> {
   // Save the confirmation message
   await prisma.orchestratorMessage.create({
     data: {
@@ -278,9 +396,8 @@ async function* handleConfirmation(
   });
 
   // Any message in awaiting_confirmation state triggers Scout
-  for await (const event of runScout(searchId)) {
-    yield { type: "scout_event", event };
-  }
+  // Orchestrator yields SsePayload directly
+  yield* runScout(searchId);
 }
 
 // ═══════════════════════════════════════════
@@ -290,7 +407,7 @@ async function* handleConfirmation(
 async function* handleAdvisorMessage(
   searchId: string,
   message: string
-): AsyncGenerator<ConductorEvent> {
+): AsyncGenerator<SsePayload> {
   // Save user message
   await prisma.orchestratorMessage.create({
     data: {
@@ -304,10 +421,32 @@ async function* handleAdvisorMessage(
   const advisor = new AdvisorAgent();
   let fullText = "";
 
-  for await (const chunk of advisor.chat(context, message)) {
-    if (chunk.text) {
-      fullText += chunk.text;
-      yield { type: "advisor_text", text: chunk.text };
+  for await (const event of advisor.chat(context, message)) {
+    if (event.type === "text") {
+      fullText += event.text;
+      yield { type: "text", agent: "advisor", text: event.text };
+    } else if (event.type === "tool_start") {
+      yield {
+        type: "tool_start",
+        agent: "advisor",
+        toolName: event.name,
+        toolCallId: event.id,
+      };
+    } else if (event.type === "tool_call") {
+      yield {
+        type: "tool_call",
+        agent: "advisor",
+        toolName: event.name,
+        toolCallId: event.id,
+        input: event.input,
+      };
+    } else if (event.type === "tool_result") {
+      yield {
+        type: "tool_result",
+        agent: "advisor",
+        toolName: event.name,
+        toolCallId: event.id,
+      };
     }
   }
 
@@ -320,5 +459,5 @@ async function* handleAdvisorMessage(
     },
   });
 
-  yield { type: "advisor_done" };
+  yield { type: "done", agent: "advisor" };
 }

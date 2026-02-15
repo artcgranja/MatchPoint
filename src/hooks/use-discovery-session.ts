@@ -7,7 +7,8 @@ import { useSearchStore } from "@/stores/search-store";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
 import { apiGet, apiPost } from "@/lib/api/client";
 import { createSseParser } from "@/lib/sse/parser";
-import type { BizDevPlanStatus, DiscoveryMessage, DiscoverySession, SessionStage, StartupCard } from "@/types";
+import { useQuestionWizardStore } from "@/stores/question-wizard-store";
+import type { BizDevPlanStatus, DiscoveryMessage, DiscoverySession, QuestionAnswer, QuestionData, StartupCard } from "@/types";
 
 export function useDiscoverySession() {
   const tPipeline = useTranslations("Pipeline");
@@ -66,12 +67,32 @@ export function useDiscoverySession() {
         setCurrentStage(session.currentStage);
 
         // Build messages array from discovery messages
-        const msgs: DiscoveryMessage[] = session.messages.map((m) => ({
-          id: m.id,
-          role: m.role as "user" | "assistant",
-          content: m.content,
-          createdAt: m.createdAt,
-        }));
+        // API may return extended fields (type, questions, etc.) not in the base DiscoveryMessage type
+        const msgs: DiscoveryMessage[] = [];
+        for (const m of session.messages) {
+          const raw = m as unknown as Record<string, unknown>;
+
+          // Skip silent question_answers user messages (no chat bubble)
+          if (raw.type === "question_answers") continue;
+
+          const msg: DiscoveryMessage = {
+            id: m.id,
+            role: m.role as "user" | "assistant",
+            content: m.content,
+            createdAt: m.createdAt,
+          };
+
+          // Restore questions metadata from DB
+          if (raw.type === "questions") {
+            msg.type = "questions";
+            msg.questions = raw.questions as DiscoveryMessage["questions"];
+            msg.questionsContext = raw.questionsContext as string | undefined;
+            msg.questionsAnswered = raw.questionsAnswered as boolean | undefined;
+            msg.questionsAnswers = raw.questionsAnswers as DiscoveryMessage["questionsAnswers"];
+          }
+
+          msgs.push(msg);
+        }
 
         // Restore search execution state if it exists
         const search = session.searchExecution;
@@ -82,7 +103,7 @@ export function useDiscoverySession() {
           if (search.productDocument) {
             // If awaiting confirmation, show the approval button ("complete")
             // Otherwise, the user already confirmed ("confirmed")
-            if (session.awaitingConfirmation) {
+            if (session.currentStage === "awaiting_confirmation") {
               useAgentPanelStore.getState().batchUpdate({
                 planText: search.productDocument,
                 analysisStatus: "complete",
@@ -135,10 +156,54 @@ export function useDiscoverySession() {
           }
         }
 
+        // Show recovery action if pipeline was interrupted
+        if (session.recoveryAction === "retry_analysis") {
+          msgs.push({
+            role: "assistant",
+            content: tPipeline("analysisInterrupted"),
+            type: "action",
+            actionType: "retry_analysis",
+            actionLabel: tPipeline("retryAnalysis"),
+          });
+          useAgentPanelStore.getState().batchUpdate({
+            panelOpen: true,
+            activeTab: "analysis",
+          });
+        } else if (session.recoveryAction === "retry_scout") {
+          msgs.push({
+            role: "assistant",
+            content: tPipeline("scoutInterrupted"),
+            type: "action",
+            actionType: "retry_scout",
+            actionLabel: tPipeline("retryScout"),
+          });
+          if (search?.productDocument) {
+            useAgentPanelStore.getState().batchUpdate({
+              planText: search.productDocument,
+              analysisStatus: "confirmed",
+              panelOpen: true,
+              activeTab: "scout",
+            });
+          }
+        }
+
         setMessages(msgs);
 
+        // Reopen wizard for unanswered questions
+        const unanswered = msgs.findLast(
+          (m) => m.type === "questions" && !m.questionsAnswered
+        );
+        if (unanswered?.questions) {
+          useQuestionWizardStore.getState().openWizard(
+            unanswered.questions,
+            unanswered.questionsContext
+          );
+        }
+
         // Set discovery state based on stage
-        if (session.awaitingConfirmation) {
+        if (session.recoveryAction) {
+          setDiscoveryState("chatting"); // Don't disable chat — action buttons handle recovery
+        } else if (session.currentStage === "awaiting_confirmation") {
           setDiscoveryState("processing");
         } else if (session.currentStage === "advising") {
           setDiscoveryState("advising");
@@ -172,175 +237,362 @@ export function useDiscoverySession() {
   );
 
   // ═══════════════════════════════════════════
-  // Process Analysis events from SSE stream (batched)
+  // Unified SSE stream processor — handles ALL event types from all agents
   // ═══════════════════════════════════════════
-  const processAnalysisEvents = useCallback(
-    (sseEvents: Array<{ event: string; data: string }>) => {
-      const store = useAgentPanelStore.getState();
+  const processStream = useCallback(
+    async (res: Response) => {
+      if (!res.body) return;
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      const sseParser = createSseParser();
+
+      // Text accumulation for discovery/advisor streaming
+      let assistantMsg = "";
+      let textFinalized = false;
+      let textRafId: number | null = null;
+      const flushText = () => {
+        if (textFinalized) return;
+        updateLastAssistantMessage(assistantMsg);
+        textRafId = null;
+      };
+
+      // Analysis accumulation (batched)
       let thinkingAccum = "";
       let planAccum = "";
-      let newStatus: BizDevPlanStatus | null = null;
-      let shouldOpenPanel = false;
-      let shouldSetTab = false;
+      let analysisStatus: BizDevPlanStatus | null = null;
+      let analysisPanelOpened = false;
 
-      for (const sse of sseEvents) {
-        try {
-          const data = JSON.parse(sse.data);
-
-          if (sse.event === "analysis_thinking") {
-            shouldOpenPanel = true;
-            shouldSetTab = true;
-            newStatus = "thinking";
-            const text = data.data?.text ?? "";
-            if (text) thinkingAccum += text;
-          }
-
-          if (sse.event === "analysis_text") {
-            newStatus = "writing";
-            const text = data.data?.text ?? "";
-            if (text) planAccum += text;
-          }
-
-          if (sse.event === "analysis_complete") {
-            newStatus = "complete";
-          }
-        } catch (err) {
-          console.warn("[SSE] Malformed analysis event:", err);
+      const flushAnalysisBatch = () => {
+        const batch: Record<string, unknown> = {};
+        if (!analysisPanelOpened) {
+          batch.panelOpen = true;
+          batch.activeTab = "analysis";
+          analysisPanelOpened = true;
         }
-      }
+        if (analysisStatus) {
+          batch.analysisStatus = analysisStatus;
+          analysisStatus = null;
+        }
+        if (thinkingAccum) {
+          const store = useAgentPanelStore.getState();
+          batch.thinkingText = store.thinkingText + thinkingAccum;
+          thinkingAccum = "";
+        }
+        if (planAccum) {
+          const store = useAgentPanelStore.getState();
+          batch.planText = store.planText + planAccum;
+          planAccum = "";
+        }
+        if (Object.keys(batch).length > 0) {
+          useAgentPanelStore.getState().batchUpdate(batch);
+        }
+      };
 
-      // Single batch update for all accumulated changes
-      const batch: Record<string, unknown> = {};
-      if (shouldOpenPanel) batch.panelOpen = true;
-      if (shouldSetTab) batch.activeTab = "analysis";
-      if (newStatus) batch.analysisStatus = newStatus;
-      if (thinkingAccum) batch.thinkingText = store.thinkingText + thinkingAccum;
-      if (planAccum) batch.planText = store.planText + planAccum;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
 
-      if (Object.keys(batch).length > 0) {
-        useAgentPanelStore.getState().batchUpdate(batch);
-      }
-    },
-    []
-  );
+        const chunk = decoder.decode(value, { stream: true });
+        const events = sseParser.feed(chunk);
 
-  // ═══════════════════════════════════════════
-  // Process Scout events — cards go to panel (batched)
-  // ═══════════════════════════════════════════
-  const processScoutNamedEvents = useCallback(
-    (events: Array<{ event: string; data: string }>) => {
-      for (const sse of events) {
-        try {
-          const data = JSON.parse(sse.data);
+        // Track whether we need to flush analysis batch
+        let hasAnalysisEvents = false;
 
-          if (sse.event === "stage_update" || sse.event === "stage_complete") {
-            const stageMap: Record<string, SessionStage> = {
-              Scout: "scout",
-            };
-            const stage = stageMap[data.agentName];
-            const resolvedMessage = data.key
-              ? tPipeline(data.key as Parameters<typeof tPipeline>[0], data.params ?? {})
-              : (data.message ?? "");
-            if (stage && sse.event === "stage_update") {
-              if (data.progress === 0) {
-                setCurrentStage(stage);
-                // Batch panel open + tab + status + progress
+        for (const sse of events) {
+          try {
+            const payload = JSON.parse(sse.data);
+            const eventType = sse.event;
+
+            switch (eventType) {
+              case "text": {
+                if (payload.agent === "analysis") {
+                  // Analysis text → agent panel
+                  planAccum += payload.text ?? "";
+                  analysisStatus = "writing";
+                  hasAnalysisEvents = true;
+                } else {
+                  // Discovery/advisor text → chat bubble
+                  assistantMsg += payload.text ?? "";
+                  if (textRafId === null) {
+                    textRafId = requestAnimationFrame(flushText);
+                  }
+                }
+                break;
+              }
+
+              case "thinking": {
+                // Analysis thinking → agent panel
+                thinkingAccum += payload.text ?? "";
+                analysisStatus = "thinking";
+                hasAnalysisEvents = true;
+                break;
+              }
+
+              case "tool_start": {
+                // Finalize pending text before showing tool status
+                if (!textFinalized && assistantMsg) {
+                  if (textRafId !== null) {
+                    cancelAnimationFrame(textRafId);
+                    textRafId = null;
+                  }
+                  updateLastAssistantMessage(assistantMsg);
+                  textFinalized = true;
+                }
+
+                // Show tool-specific loading message in chat for discovery tools
+                if (payload.agent === "discovery") {
+                  const toolMsgKeys: Record<string, string> = {
+                    ask_questions: "generatingQuestionnaire",
+                    complete_discovery: "finalizingDiscovery",
+                  };
+                  const msgKey = toolMsgKeys[payload.toolName];
+                  if (msgKey) {
+                    addMessage({
+                      role: "assistant",
+                      content: tPipeline(msgKey as Parameters<typeof tPipeline>[0]),
+                      type: "stage-update",
+                    });
+                  }
+                }
+
+                // Add to agent panel tool calls early (status: running)
+                const store = useAgentPanelStore.getState();
                 useAgentPanelStore.getState().batchUpdate({
-                  activeTab: "scout",
-                  panelOpen: true,
-                  scoutStatus: "searching",
-                  scoutProgress: data.progress,
-                  scoutMessage: resolvedMessage,
+                  toolCalls: [...store.toolCalls, {
+                    id: payload.toolCallId ?? crypto.randomUUID(),
+                    toolName: payload.toolName ?? "unknown",
+                    input: {},
+                    status: "running" as const,
+                    timestamp: Date.now(),
+                  }],
                 });
-              } else {
+                break;
+              }
+
+              case "tool_call": {
+                // Update existing tool call with input (added on tool_start)
+                const tcId = payload.toolCallId;
+                if (tcId) {
+                  const tcStore = useAgentPanelStore.getState();
+                  const exists = tcStore.toolCalls.some((tc) => tc.id === tcId);
+                  if (exists) {
+                    useAgentPanelStore.getState().batchUpdate({
+                      toolCalls: tcStore.toolCalls.map((tc) =>
+                        tc.id === tcId ? { ...tc, input: payload.input ?? {} } : tc
+                      ),
+                    });
+                  } else {
+                    // Fallback: add if tool_start was missed
+                    useAgentPanelStore.getState().batchUpdate({
+                      toolCalls: [...tcStore.toolCalls, {
+                        id: tcId,
+                        toolName: payload.toolName ?? "unknown",
+                        input: payload.input ?? {},
+                        status: "running" as const,
+                        timestamp: Date.now(),
+                      }],
+                    });
+                  }
+                }
+                break;
+              }
+
+              case "tool_result": {
+                // Update tool call status
+                const toolCallId = payload.toolCallId;
+                if (toolCallId) {
+                  const store = useAgentPanelStore.getState();
+                  useAgentPanelStore.getState().batchUpdate({
+                    toolCalls: store.toolCalls.map((tc) =>
+                      tc.id === toolCallId
+                        ? { ...tc, status: "complete" as const, resultSummary: payload.resultSummary }
+                        : tc
+                    ),
+                  });
+                }
+                break;
+              }
+
+              case "questions": {
+                // Finalize any pending text first
+                if (!textFinalized && assistantMsg) {
+                  if (textRafId !== null) {
+                    cancelAnimationFrame(textRafId);
+                    textRafId = null;
+                  }
+                  updateLastAssistantMessage(assistantMsg);
+                  textFinalized = true;
+                }
+
+                // Open wizard
+                useQuestionWizardStore.getState().openWizard(
+                  payload.questions as QuestionData[],
+                  payload.context
+                );
+
+                // Track questions message in chat
+                addMessage({
+                  role: "assistant",
+                  content: "",
+                  type: "questions",
+                  questions: payload.questions as DiscoveryMessage["questions"],
+                  questionsContext: payload.context,
+                });
+                break;
+              }
+
+              case "stage_update": {
+                const agent = payload.agent as string;
+                const resolvedMessage = payload.key
+                  ? tPipeline(payload.key as Parameters<typeof tPipeline>[0], payload.params ?? {})
+                  : (payload.message ?? "");
+
+                if (agent === "scout") {
+                  if (payload.progress === 0) {
+                    setCurrentStage("scout");
+                    useAgentPanelStore.getState().batchUpdate({
+                      activeTab: "scout",
+                      panelOpen: true,
+                      scoutStatus: "searching",
+                      scoutProgress: payload.progress,
+                      scoutMessage: resolvedMessage,
+                    });
+                  } else {
+                    useAgentPanelStore.getState().batchUpdate({
+                      scoutProgress: payload.progress,
+                      scoutMessage: resolvedMessage,
+                    });
+                  }
+                } else if (agent === "analysis") {
+                  // Analysis stage update (preparing)
+                  hasAnalysisEvents = true;
+                }
+                break;
+              }
+
+              case "pipeline_complete": {
+                const data = payload.data as { cards?: StartupCard[]; summary?: string } | undefined;
+                const cards = (data?.cards ?? []) as StartupCard[];
+                const summary = data?.summary ?? "";
+
                 useAgentPanelStore.getState().batchUpdate({
-                  scoutProgress: data.progress,
-                  scoutMessage: resolvedMessage,
+                  cards,
+                  scoutSummary: summary,
+                  scoutStatus: "complete",
+                  scoutProgress: 100,
+                  scoutMessage: tPipeline("searchComplete"),
                 });
+
+                if (cards.length > 0) {
+                  addMessage({
+                    role: "assistant",
+                    content: tPipeline("startupsFoundChat", { count: cards.length }),
+                    type: "cards",
+                    cards,
+                  });
+                } else {
+                  addMessage({
+                    role: "assistant",
+                    content: summary || tPipeline("noStartupsFound"),
+                  });
+                }
+
+                setCurrentStage("advising");
+                setDiscoveryState("advising");
+                completePipeline();
+                break;
+              }
+
+              case "done": {
+                if (payload.agent === "analysis") {
+                  // Analysis complete — flush any remaining batch
+                  analysisStatus = "complete";
+                  flushAnalysisBatch();
+                }
+                if (payload.transition === "awaiting_confirmation" && payload.searchId) {
+                  setDiscoveryState("processing");
+                  setCurrentStage("analysis");
+                  setSearchId(payload.searchId);
+                  startPipeline();
+                }
+                break;
+              }
+
+              case "status": {
+                // Finalize any pending text first
+                if (!textFinalized && assistantMsg) {
+                  if (textRafId !== null) {
+                    cancelAnimationFrame(textRafId);
+                    textRafId = null;
+                  }
+                  updateLastAssistantMessage(assistantMsg);
+                  textFinalized = true;
+                }
+                const statusContent = payload.key
+                  ? tPipeline(payload.key as Parameters<typeof tPipeline>[0], payload.params ?? {})
+                  : payload.message;
+                addMessage({
+                  role: "assistant",
+                  content: statusContent,
+                  type: "stage-update",
+                });
+                break;
+              }
+
+              case "error": {
+                // Finalize any pending text first
+                if (!textFinalized && assistantMsg) {
+                  if (textRafId !== null) {
+                    cancelAnimationFrame(textRafId);
+                    textRafId = null;
+                  }
+                  updateLastAssistantMessage(assistantMsg);
+                  textFinalized = true;
+                }
+
+                addMessage({
+                  role: "assistant",
+                  content: tPipeline("error", { message: payload.message }),
+                  type: "stage-update",
+                });
+
+                // Set scout error if during scout phase
+                if (payload.agent === "system" || payload.agent === "scout") {
+                  useAgentPanelStore.getState().batchUpdate({ scoutStatus: "error" });
+                  setCurrentStage("complete");
+                  setDiscoveryState("complete");
+                }
+                errorPipeline();
+                break;
               }
             }
+          } catch (err) {
+            console.warn("[SSE] Malformed event:", err);
           }
+        }
 
-          // Tool call events
-          if (sse.event === "scout_tool_call") {
-            const store = useAgentPanelStore.getState();
-            useAgentPanelStore.getState().batchUpdate({
-              toolCalls: [...store.toolCalls, {
-                id: data.data?.toolCallId ?? data.data?.id ?? crypto.randomUUID(),
-                toolName: data.data?.toolName ?? "unknown",
-                input: data.data?.input ?? {},
-                status: "running" as const,
-                timestamp: Date.now(),
-              }],
-            });
-          }
-
-          if (sse.event === "scout_tool_result") {
-            const toolCallId = data.data?.toolCallId ?? data.data?.id;
-            if (toolCallId) {
-              const store = useAgentPanelStore.getState();
-              useAgentPanelStore.getState().batchUpdate({
-                toolCalls: store.toolCalls.map((tc) =>
-                  tc.id === toolCallId ? { ...tc, status: "complete" as const, resultSummary: data.data?.resultSummary } : tc
-                ),
-              });
-            }
-          }
-
-          if (sse.event === "pipeline_complete") {
-            const payload = data.data as
-              | { cards?: StartupCard[]; summary?: string }
-              | undefined;
-            const cards = payload?.cards ?? [];
-            const summary = payload?.summary ?? "";
-
-            // Batch all agent-panel mutations into one set()
-            useAgentPanelStore.getState().batchUpdate({
-              cards,
-              scoutSummary: summary,
-              scoutStatus: "complete",
-              scoutProgress: 100,
-              scoutMessage: data.key ? tPipeline(data.key as Parameters<typeof tPipeline>[0], data.params ?? {}) : tPipeline("searchComplete"),
-            });
-
-            if (cards.length > 0) {
-              addMessage({
-                role: "assistant",
-                content: tPipeline("startupsFoundChat", { count: cards.length }),
-                type: "cards",
-                cards,
-              });
-            } else {
-              addMessage({
-                role: "assistant",
-                content:
-                  summary ||
-                  tPipeline("noStartupsFound"),
-              });
-            }
-
-            setCurrentStage("advising");
-            setDiscoveryState("advising");
-            completePipeline();
-          }
-
-          if (sse.event === "error") {
-            addMessage({
-              role: "assistant",
-              content: tPipeline("pipelineError", { message: data.message }),
-              type: "stage-update",
-            });
-            useAgentPanelStore.getState().batchUpdate({ scoutStatus: "error" });
-            setCurrentStage("complete");
-            setDiscoveryState("complete");
-            errorPipeline();
-          }
-        } catch (err) {
-          console.warn("[SSE] Malformed scout event:", err);
+        // Flush analysis batch if we had any analysis events in this chunk
+        if (hasAnalysisEvents) {
+          flushAnalysisBatch();
         }
       }
+
+      // Final flush
+      if (textRafId !== null) cancelAnimationFrame(textRafId);
+      if (assistantMsg && !textFinalized) updateLastAssistantMessage(assistantMsg);
     },
-    [addMessage, completePipeline, errorPipeline, setCurrentStage, setDiscoveryState, tPipeline]
+    [
+      addMessage,
+      updateLastAssistantMessage,
+      setDiscoveryState,
+      setCurrentStage,
+      setSearchId,
+      startPipeline,
+      completePipeline,
+      errorPipeline,
+      tPipeline,
+    ]
   );
 
   // ═══════════════════════════════════════════
@@ -380,42 +632,7 @@ export function useDiscoverySession() {
         return;
       }
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      const parser = createSseParser();
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-
-        const events = parser.feed(chunk);
-
-        // Named events → scout handler
-        const namedEvents = events.filter((e) => e.event !== "message");
-        if (namedEvents.length > 0) {
-          processScoutNamedEvents(namedEvents);
-        }
-
-        // Unnamed events (error messages)
-        for (const sse of events) {
-          if (sse.event !== "message") continue;
-          try {
-            const data = JSON.parse(sse.data);
-            if (data.error) {
-              addMessage({
-                role: "assistant",
-                content: tPipeline("error", { message: data.error }),
-                type: "stage-update",
-              });
-              errorPipeline();
-            }
-          } catch (err) {
-            console.warn("[SSE] Malformed data line:", err);
-          }
-        }
-      }
+      await processStream(res);
     } catch (error) {
       console.error("Scout stream error:", error);
       addMessage({
@@ -435,7 +652,124 @@ export function useDiscoverySession() {
     setCurrentStage,
     setDiscoveryState,
     addMessage,
-    processScoutNamedEvents,
+    processStream,
+    tPipeline,
+  ]);
+
+  // ═══════════════════════════════════════════
+  // Recovery: Retry interrupted analysis
+  // ═══════════════════════════════════════════
+  const retryAnalysis = useCallback(async () => {
+    const sid = sessionId ?? useDiscoveryStore.getState().sessionId;
+    if (!sid) return;
+
+    // Remove the action message from chat
+    const msgs = useDiscoveryStore.getState().messages.filter(m => m.type !== "action");
+    setMessages(msgs);
+
+    setIsStreaming(true);
+    setCurrentStage("analysis");
+    addMessage({
+      role: "assistant",
+      content: tPipeline("preparingAnalysis"),
+      type: "stage-update",
+    });
+
+    try {
+      const res = await fetch(`/api/v1/sessions/${sid}/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "[Retry Analysis]" }),
+      });
+
+      if (!res.body) {
+        errorPipeline();
+        setIsStreaming(false);
+        return;
+      }
+
+      await processStream(res);
+      setIsStreaming(false);
+    } catch (error) {
+      console.error("Retry analysis error:", error);
+      addMessage({
+        role: "assistant",
+        content: tPipeline("pipelineConnectionError"),
+        type: "stage-update",
+      });
+      setIsStreaming(false);
+      errorPipeline();
+    }
+  }, [
+    sessionId,
+    setMessages,
+    setIsStreaming,
+    setCurrentStage,
+    addMessage,
+    processStream,
+    errorPipeline,
+    tPipeline,
+  ]);
+
+  // ═══════════════════════════════════════════
+  // Recovery: Retry interrupted scout
+  // ═══════════════════════════════════════════
+  const retryScout = useCallback(async () => {
+    const sid = sessionId ?? useDiscoveryStore.getState().sessionId;
+    const searchIdVal = searchId ?? useSearchStore.getState().searchId;
+    if (!sid || !searchIdVal) return;
+
+    // Remove the action message from chat
+    const msgs = useDiscoveryStore.getState().messages.filter(m => m.type !== "action");
+    setMessages(msgs);
+
+    setCurrentStage("scout");
+    useAgentPanelStore.getState().batchUpdate({
+      activeTab: "scout",
+      scoutStatus: "searching",
+      scoutProgress: 0,
+      scoutMessage: tPipeline("startingSearch"),
+    });
+    addMessage({
+      role: "assistant",
+      content: tPipeline("planConfirmed"),
+      type: "stage-update",
+    });
+
+    try {
+      const res = await fetch(`/api/v1/sessions/${sid}/message`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: "[Retry Scout]" }),
+      });
+
+      if (!res.body) {
+        errorPipeline();
+        return;
+      }
+
+      await processStream(res);
+    } catch (error) {
+      console.error("Retry scout error:", error);
+      addMessage({
+        role: "assistant",
+        content: tPipeline("pipelineConnectionError"),
+        type: "stage-update",
+      });
+      useAgentPanelStore.getState().batchUpdate({ scoutStatus: "error" });
+      setCurrentStage("complete");
+      setDiscoveryState("complete");
+      errorPipeline();
+    }
+  }, [
+    sessionId,
+    searchId,
+    setMessages,
+    setCurrentStage,
+    setDiscoveryState,
+    addMessage,
+    processStream,
+    errorPipeline,
     tPipeline,
   ]);
 
@@ -463,104 +797,7 @@ export function useDiscoverySession() {
           }
         );
 
-        if (!res.body) {
-          setIsStreaming(false);
-          return;
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        const sseParser = createSseParser();
-        let assistantMsg = "";
-        let textFinalized = false;
-        let textRafId: number | null = null;
-        const flushText = () => {
-          if (textFinalized) return;
-          updateLastAssistantMessage(assistantMsg);
-          textRafId = null;
-        };
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const sseEvents = sseParser.feed(chunk);
-
-          // Named events → analysis handler
-          const namedEvents = sseEvents.filter((e) => e.event !== "message");
-          if (namedEvents.length > 0) {
-            processAnalysisEvents(namedEvents);
-          }
-
-          // Unnamed events (text chunks, done, status, error)
-          for (const sse of sseEvents) {
-            if (sse.event !== "message") continue;
-            try {
-              const data = JSON.parse(sse.data);
-
-              if (data.text) {
-                assistantMsg += data.text;
-                // Debounce text updates to once per animation frame
-                if (textRafId === null) {
-                  textRafId = requestAnimationFrame(flushText);
-                }
-              }
-
-              if (data.status) {
-                if (!textFinalized && assistantMsg) {
-                  if (textRafId !== null) {
-                    cancelAnimationFrame(textRafId);
-                    textRafId = null;
-                  }
-                  updateLastAssistantMessage(assistantMsg);
-                  textFinalized = true;
-                }
-                const statusContent = data.statusKey
-                  ? tPipeline(data.statusKey as Parameters<typeof tPipeline>[0], data.statusParams ?? {})
-                  : data.status;
-                addMessage({
-                  role: "assistant",
-                  content: statusContent,
-                  type: "stage-update",
-                });
-              }
-
-              if (data.done) {
-                if (data.transition === "awaiting_confirmation" && data.searchId) {
-                  setDiscoveryState("processing");
-                  setCurrentStage("analysis");
-                  setSearchId(data.searchId);
-                  startPipeline();
-                }
-              }
-
-              if (data.error) {
-                if (!textFinalized && assistantMsg) {
-                  if (textRafId !== null) {
-                    cancelAnimationFrame(textRafId);
-                    textRafId = null;
-                  }
-                  updateLastAssistantMessage(assistantMsg);
-                  textFinalized = true;
-                }
-                addMessage({
-                  role: "assistant",
-                  content: tPipeline("error", { message: data.error }),
-                  type: "stage-update",
-                });
-                errorPipeline();
-              }
-            } catch (err) {
-              console.warn("[SSE] Malformed data line:", err);
-            }
-          }
-        }
-
-        // Final flush to ensure last chunk is rendered
-        if (textRafId !== null) cancelAnimationFrame(textRafId);
-        if (assistantMsg && !textFinalized) updateLastAssistantMessage(assistantMsg);
-
+        await processStream(res);
         setIsStreaming(false);
       } catch (error) {
         console.error("Session error:", error);
@@ -575,17 +812,78 @@ export function useDiscoverySession() {
     [
       sessionId,
       addMessage,
-      updateLastAssistantMessage,
       setIsStreaming,
       setSessionTitle,
-      setDiscoveryState,
-      setCurrentStage,
-      setSearchId,
-      startPipeline,
-      errorPipeline,
-      processAnalysisEvents,
+      processStream,
       tPipeline,
     ]
+  );
+
+  // ═══════════════════════════════════════════
+  // Silent answer submission (no user message bubble)
+  // ═══════════════════════════════════════════
+  const submitQuestionAnswers = useCallback(
+    async (answers: QuestionAnswer[]) => {
+      const activeSessionId = sessionId ?? useDiscoveryStore.getState().sessionId;
+      if (!activeSessionId) return;
+
+      // Build a rich format with original question text for each answer
+      const currentMessages = useDiscoveryStore.getState().messages;
+      const lastQ = currentMessages.findLast((m) => m.type === "questions" && !m.questionsAnswered);
+      const questionsMap = new Map(
+        (lastQ?.questions ?? []).map((q) => [q.id, q.question])
+      );
+
+      const formatted = answers
+        .map((a) => {
+          const label = questionsMap.get(a.questionId) ?? a.questionId;
+          const selected = a.selected.join(", ");
+          const custom = a.otherText ? ` (Custom: ${a.otherText})` : "";
+          return `**${label}**: ${selected}${custom}`;
+        })
+        .join("\n");
+
+      const text = `[Interactive Form Response]\n${formatted}`;
+
+      // Mark the last unanswered questions message as answered + store answers
+      const lastQIdx = currentMessages.findLastIndex(
+        (m) => m.type === "questions" && !m.questionsAnswered
+      );
+      if (lastQIdx >= 0) {
+        const updated = [...currentMessages];
+        updated[lastQIdx] = {
+          ...currentMessages[lastQIdx],
+          questionsAnswered: true,
+          questionsAnswers: answers,
+        };
+        useDiscoveryStore.getState().setMessages(updated);
+      }
+
+      // Send silently (no user bubble) and process the agent's response
+      setIsStreaming(true);
+      try {
+        const res = await fetch(
+          `/api/v1/sessions/${activeSessionId}/message`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text, answers }),
+          }
+        );
+
+        await processStream(res);
+        setIsStreaming(false);
+      } catch (error) {
+        console.error("Question answer submission error:", error);
+        addMessage({
+          role: "assistant",
+          content: tPipeline("connectionError"),
+          type: "stage-update",
+        });
+        setIsStreaming(false);
+      }
+    },
+    [sessionId, addMessage, setIsStreaming, processStream, tPipeline]
   );
 
   const reset = useCallback(() => {
@@ -605,6 +903,9 @@ export function useDiscoverySession() {
     loadSession,
     sendMessage,
     confirmPlan,
+    retryAnalysis,
+    retryScout,
+    submitQuestionAnswers,
     reset,
   };
 }

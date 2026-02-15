@@ -19,6 +19,8 @@
     "searches": "Buscas",
     "processes": "Processos",
     "settings": "Configurações",
+    "connections": "Conexões",
+    "companyProfile": "Empresa",
     "expandSidebar": "Expandir barra lateral",
     "collapseSidebar": "Recolher barra lateral",
     "mainNavigation": "Navegação principal"
@@ -143,14 +145,25 @@
   },
   "Auth": {
     "loginTitle": "Entre para continuar",
-    "loginDescription": "Conecte sua conta GitHub para começar a descobrir startups",
+    "loginDescription": "Entre para acessar o MatchPoint",
     "loginError": "Falha na autenticação. Tente novamente.",
     "loginConnectionError": "Não foi possível conectar ao GitHub. Tente novamente.",
     "loginNoEmail": "Nenhum email encontrado na sua conta GitHub. Verifique se você tem um email verificado.",
     "loginUnexpectedError": "Ocorreu um erro inesperado. Tente novamente.",
     "continueWithGitHub": "Continuar com GitHub",
     "loginPageTitle": "Entrar",
-    "loginPageDescription": "Entre com sua conta GitHub para acessar o MatchPoint."
+    "loginPageDescription": "Entre com sua conta GitHub para acessar o MatchPoint.",
+    "or": "ou",
+    "emailPlaceholder": "seu@email.com",
+    "sendMagicLink": "Enviar link",
+    "checkYourEmail": "Verifique seu email para o link de acesso",
+    "invalidToken": "Link inválido ou expirado. Solicite um novo."
+  },
+  "Connections": {
+    "connect": "Conectar",
+    "sending": "Enviando...",
+    "emailSent": "Email enviado",
+    "connected": "Conectado"
   },
   "Browse": {
     "title": "Descubra",
@@ -245,6 +258,20 @@
     "notFoundDescription": "A página que você procura pode ter sido movida ou não existe. Vamos te colocar de volta no caminho certo.",
     "backToHome": "Voltar ao início"
   },
+  "Questions": {
+    "submit": "Enviar",
+    "other": "Outro",
+    "otherPlaceholder": "Digite sua resposta...",
+    "answersSubmitted": "Respostas enviadas",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "reviewTitle": "Revise Suas Respostas",
+    "reviewDescription": "Confira se está tudo certo antes de enviar.",
+    "stepOf": "Pergunta {current} de {total}",
+    "answerQuestions": "{count, plural, one {Responder # pergunta} other {Responder # perguntas}}",
+    "editAnswer": "Editar",
+    "preparingQuestions": "Preparando perguntas..."
+  },
   "Pipeline": {
     "discoveryComplete": "Descoberta concluída! Iniciando análise...",
     "analysisInProgress": "Análise em andamento, por favor aguarde...",
@@ -263,7 +290,81 @@
     "connectionError": "Erro de conexão. Verifique sua rede e tente novamente.",
     "pipelineConnectionError": "Erro de conexão com o pipeline. Tente novamente.",
     "pipelineError": "Erro no pipeline: {message}",
-    "error": "Erro: {message}"
+    "error": "Erro: {message}",
+    "generatingQuestionnaire": "Gerando questionário interativo...",
+    "finalizingDiscovery": "Finalizando descoberta...",
+    "searchingCompanies": "Buscando empresas...",
+    "loadingCompanyDetails": "Carregando detalhes da empresa...",
+    "analysisInterrupted": "A análise foi interrompida. Clique abaixo para reiniciar.",
+    "scoutInterrupted": "A busca de startups foi interrompida. Clique abaixo para reiniciar.",
+    "retryAnalysis": "Reiniciar Análise",
+    "retryScout": "Reiniciar Busca"
+  },
+  "Onboarding": {
+    "title": "Como você vai usar o MatchPoint?",
+    "subtitle": "Escolha seu perfil para começar.",
+    "seekerTitle": "Estou buscando soluções",
+    "seekerDescription": "Encontre startups que resolvam seus desafios de negócio com matching inteligente.",
+    "builderTitle": "Estou construindo soluções",
+    "builderDescription": "Seja descoberto por empresas que precisam do que você está construindo."
+  },
+  "CompanyProfile": {
+    "title": "Perfil da Empresa",
+    "subtitle": "Conte-nos sobre sua empresa para que buscadores possam encontrá-lo.",
+    "editTitle": "Perfil da Empresa",
+    "editSubtitle": "Mantenha as informações da sua empresa atualizadas.",
+    "name": "Nome da empresa",
+    "namePlaceholder": "Acme Inc.",
+    "oneLiner": "Resumo",
+    "oneLinerPlaceholder": "O que sua empresa faz em uma frase?",
+    "description": "Descrição",
+    "descriptionPlaceholder": "Conte-nos mais sobre sua empresa...",
+    "industry": "Indústria",
+    "industryPlaceholder": "Selecione uma indústria",
+    "website": "Website",
+    "contactEmail": "Email de contato",
+    "location": "Localização",
+    "locationPlaceholder": "São Paulo, SP",
+    "save": "Salvar",
+    "saving": "Salvando...",
+    "saved": "Perfil da empresa salvo",
+    "saveError": "Erro ao salvar perfil da empresa"
+  },
+  "BuilderInbox": {
+    "title": "Conexões",
+    "description": "Empresas interessadas em trabalhar com você.",
+    "empty": "Nenhuma conexão ainda",
+    "emptyHint": "Quando buscadores encontrarem sua empresa pelo MatchPoint, as solicitações de conexão aparecerão aqui.",
+    "seekerInfo": "Buscador",
+    "emailContent": "Email de contato",
+    "accept": "Aceitar Conexão",
+    "accepting": "Aceitando...",
+    "statusPending": "Pendente",
+    "statusEmailSent": "Email Enviado",
+    "statusClicked": "Clicou",
+    "statusAccepted": "Aceito"
+  },
+  "SeekerConnections": {
+    "title": "Conexões",
+    "description": "Acompanhe os emails de contato enviados às startups.",
+    "empty": "Nenhuma conexão ainda",
+    "emptyHint": "Quando você se conectar com uma startup, seu histórico de contato aparecerá aqui.",
+    "startExploring": "Explorar startups",
+    "loginRequired": "Entre para ver suas conexões",
+    "loginButton": "Entrar",
+    "emailSent": "Email enviado"
+  },
+  "ConnectionChat": {
+    "aiOutreach": "Email gerado por IA",
+    "placeholder": "Digite uma mensagem...",
+    "placeholderPendingSeeker": "Aguardando o builder aceitar...",
+    "placeholderPendingBuilder": "Aceite a conexão para conversar",
+    "sendMessage": "Enviar mensagem",
+    "today": "Hoje",
+    "yesterday": "Ontem",
+    "acceptToChat": "Aceite esta conexão para iniciar a conversa",
+    "acceptConnection": "Aceitar Conexão",
+    "accepting": "Aceitando..."
   },
   "Metadata": {
     "title": "MatchPoint — Matching de Startups com IA",

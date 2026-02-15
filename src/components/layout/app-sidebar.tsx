@@ -14,6 +14,8 @@ import {
   Moon,
   Sun,
   Monitor,
+  Inbox,
+  Building2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
@@ -46,11 +48,15 @@ export function AppSidebar() {
   const logout = useAuthStore((s) => s.logout);
   const { goHome } = useSessionNavigation();
 
+  const isBuilder = user?.role === "builder";
+
   const isOnChat = pathname === "/" || pathname === "/search";
   const isHomeActive = isOnChat && !currentSessionId;
   const isDescubraActive = pathname.startsWith("/descubra");
   const isSalvosActive = pathname.startsWith("/salvos");
   const isSearchesActive = pathname.startsWith("/searches");
+  const isConexoesActive = pathname.startsWith("/conexoes");
+  const isCompanyActive = pathname.startsWith("/company");
 
   const handleHomeClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -95,63 +101,109 @@ export function AppSidebar() {
 
       {/* Nav */}
       <nav className="mt-2 flex flex-col gap-1 px-2">
-        <Link
-          href="/"
-          onClick={handleHomeClick}
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-            isHomeActive
-              ? "bg-highlight/10 text-highlight"
-              : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
-          )}
-        >
-          <Home className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>{t("home")}</span>}
-        </Link>
-        <Link
-          href="/descubra"
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-            isDescubraActive
-              ? "bg-highlight/10 text-highlight"
-              : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
-          )}
-        >
-          <Compass className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>{t("discover")}</span>}
-        </Link>
+        {isBuilder ? (
+          /* Builder nav */
+          <>
+            <Link
+              href="/"
+              onClick={handleHomeClick}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                isHomeActive
+                  ? "bg-highlight/10 text-highlight"
+                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+              )}
+            >
+              <Send className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>{t("connections")}</span>}
+            </Link>
+            <Link
+              href="/company"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                isCompanyActive
+                  ? "bg-highlight/10 text-highlight"
+                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+              )}
+            >
+              <Building2 className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>{t("companyProfile")}</span>}
+            </Link>
+          </>
+        ) : (
+          /* Seeker nav */
+          <>
+            <Link
+              href="/"
+              onClick={handleHomeClick}
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                isHomeActive
+                  ? "bg-highlight/10 text-highlight"
+                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+              )}
+            >
+              <Home className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>{t("home")}</span>}
+            </Link>
+            <Link
+              href="/descubra"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                isDescubraActive
+                  ? "bg-highlight/10 text-highlight"
+                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+              )}
+            >
+              <Compass className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>{t("discover")}</span>}
+            </Link>
 
-        {/* Processes section */}
-        {!collapsed && (
-          <span className="mt-4 mb-1 px-3 text-xs font-medium uppercase tracking-wider text-foreground-muted/50">
-            {t("processes")}
-          </span>
+            {/* Processes section */}
+            {!collapsed && (
+              <span className="mt-4 mb-1 px-3 text-xs font-medium uppercase tracking-wider text-foreground-muted/50">
+                {t("processes")}
+              </span>
+            )}
+            {collapsed && <div className="my-2 mx-3 border-t border-border" />}
+            <Link
+              href="/salvos"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                isSalvosActive
+                  ? "bg-highlight/10 text-highlight"
+                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+              )}
+            >
+              <Bookmark className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>{t("saved")}</span>}
+            </Link>
+            <Link
+              href="/searches"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                isSearchesActive
+                  ? "bg-highlight/10 text-highlight"
+                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+              )}
+            >
+              <LayoutGrid className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>{t("searches")}</span>}
+            </Link>
+            <Link
+              href="/conexoes"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                isConexoesActive
+                  ? "bg-highlight/10 text-highlight"
+                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+              )}
+            >
+              <Inbox className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>{t("connections")}</span>}
+            </Link>
+          </>
         )}
-        {collapsed && <div className="my-2 mx-3 border-t border-border" />}
-        <Link
-          href="/salvos"
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-            isSalvosActive
-              ? "bg-highlight/10 text-highlight"
-              : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
-          )}
-        >
-          <Bookmark className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>{t("saved")}</span>}
-        </Link>
-        <Link
-          href="/searches"
-          className={cn(
-            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-            isSearchesActive
-              ? "bg-highlight/10 text-highlight"
-              : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
-          )}
-        >
-          <LayoutGrid className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>{t("searches")}</span>}
-        </Link>
       </nav>
 
       {/* Spacer */}

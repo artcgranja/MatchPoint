@@ -1,22 +1,26 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Info, Rocket } from "lucide-react";
+import { Info, Rocket, HelpCircle, RefreshCw } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { code } from "@streamdown/code";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { slideUp } from "@/lib/motion";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
+import { useQuestionWizardStore } from "@/stores/question-wizard-store";
+import { QuestionAnsweredCard } from "./question-form";
 import type { DiscoveryMessage } from "@/types";
 
 interface ChatMessageProps {
   message: DiscoveryMessage;
   isStreaming?: boolean;
+  onAction?: (actionType: string) => void;
 }
 
-export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
+export function ChatMessage({ message, isStreaming, onAction }: ChatMessageProps) {
   const t = useTranslations("Chat");
+  const tQ = useTranslations("Questions");
   const isUser = message.role === "user";
 
   // Stage update messages
@@ -54,6 +58,62 @@ export function ChatMessage({ message, isStreaming }: ChatMessageProps) {
         >
           <Rocket className="h-3.5 w-3.5" />
           {t("startupsFound", { count: message.cards.length })}
+        </button>
+      </motion.div>
+    );
+  }
+
+  // Questions messages
+  if (message.type === "questions" && message.questions?.length) {
+    // Answered — compact summary card
+    if (message.questionsAnswered) {
+      return (
+        <QuestionAnsweredCard
+          questions={message.questions}
+          answers={message.questionsAnswers}
+          context={message.questionsContext}
+        />
+      );
+    }
+
+    // Unanswered — subtle pill (wizard opens automatically, this is a fallback reopener)
+    return (
+      <motion.div
+        variants={slideUp}
+        initial="hidden"
+        animate="visible"
+        className="flex justify-center py-2"
+      >
+        <button
+          onClick={() =>
+            useQuestionWizardStore
+              .getState()
+              .openWizard(message.questions!, message.questionsContext)
+          }
+          className="flex items-center gap-2 rounded-full bg-background-secondary/60 px-4 py-1.5 text-xs text-foreground-muted hover:text-foreground transition-colors"
+        >
+          <HelpCircle className="h-3.5 w-3.5" />
+          {tQ("answerQuestions", { count: message.questions.length })}
+        </button>
+      </motion.div>
+    );
+  }
+
+  // Action messages (recovery buttons)
+  if (message.type === "action" && message.actionType) {
+    return (
+      <motion.div
+        variants={slideUp}
+        initial="hidden"
+        animate="visible"
+        className="flex justify-center py-2"
+      >
+        <button
+          onClick={() => onAction?.(message.actionType!)}
+          className="flex items-center gap-2 rounded-full bg-highlight/10 border border-highlight/20 px-4 py-2 text-sm text-highlight hover:bg-highlight/20 transition-colors"
+        >
+          <RefreshCw className="h-4 w-4" />
+          {message.actionLabel}
         </button>
       </motion.div>
     );

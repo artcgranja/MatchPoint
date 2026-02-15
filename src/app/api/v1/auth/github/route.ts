@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const role = url.searchParams.get("role");
+
   const state = crypto.randomBytes(32).toString("hex");
 
   const params = new URLSearchParams({
@@ -22,6 +25,16 @@ export async function GET() {
     maxAge: 60 * 10,
     sameSite: "lax",
   });
+
+  if (role === "seeker" || role === "builder") {
+    response.cookies.set("login_role", role, {
+      path: "/",
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      maxAge: 60 * 10,
+      sameSite: "lax",
+    });
+  }
 
   return response;
 }

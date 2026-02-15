@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Search, FileText, Check, X, ChevronDown, Loader2 } from "lucide-react";
+import { Search, FileText, Check, X, ChevronDown, Loader2, HelpCircle, CheckCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ToolCallEvent } from "@/types";
 
 const TOOL_CONFIG: Record<string, { icon: typeof Search; label: string }> = {
   search_companies: { icon: Search, label: "Pesquisa de Empresas" },
   get_company_details: { icon: FileText, label: "Detalhes da Empresa" },
+  ask_questions: { icon: HelpCircle, label: "Formulário Interativo" },
+  complete_discovery: { icon: CheckCircle, label: "Conclusão do Discovery" },
 };
 
 interface ToolCallItemProps {

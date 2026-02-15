@@ -5,12 +5,15 @@ export interface AuthUser {
   email: string;
   name: string | null;
   avatarUrl: string | null;
+  role: "seeker" | "builder";
+  roleChosenAt: string | null;
 }
 
 interface AuthStore {
   user: AuthUser | null;
   isLoading: boolean;
   setUser: (user: AuthUser | null) => void;
+  setRole: (role: "seeker" | "builder", roleChosenAt: string) => void;
   fetchUser: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -20,6 +23,11 @@ export const useAuthStore = create<AuthStore>()((set) => ({
   isLoading: true,
 
   setUser: (user) => set({ user }),
+
+  setRole: (role, roleChosenAt) =>
+    set((state) =>
+      state.user ? { user: { ...state.user, role, roleChosenAt } } : state
+    ),
 
   fetchUser: async () => {
     try {

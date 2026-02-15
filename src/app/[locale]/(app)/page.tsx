@@ -12,11 +12,13 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 import { HeroChatSection } from "@/components/home/hero-chat-section";
+import { BuilderHomePage } from "@/components/builder/builder-home-page";
 import { ChatWelcome } from "@/components/search/chat-welcome";
 import { ChatMessageList } from "@/components/discovery/chat-message-list";
 import { ChatInput } from "@/components/discovery/chat-input";
 import { ChatNavbar } from "@/components/layout/chat-navbar";
 import { AgentWorkPanel } from "@/components/agent-panel/agent-work-panel";
+import { QuestionWizard } from "@/components/discovery/question-wizard";
 import { useDiscoverySession } from "@/hooks/use-discovery-session";
 import { useDiscoveryStore } from "@/stores/discovery-store";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
@@ -40,6 +42,9 @@ export default function HomePage() {
     loadSession,
     sendMessage,
     confirmPlan,
+    retryAnalysis,
+    retryScout,
+    submitQuestionAnswers,
     reset,
   } = useDiscoverySession();
 
@@ -107,6 +112,17 @@ export default function HomePage() {
     }
   }, [panelOpen]);
 
+  const handleAction = useCallback(
+    (actionType: string) => {
+      if (actionType === "retry_analysis") {
+        retryAnalysis();
+      } else if (actionType === "retry_scout") {
+        retryScout();
+      }
+    },
+    [retryAnalysis, retryScout]
+  );
+
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (!user) {
@@ -126,6 +142,8 @@ export default function HomePage() {
   const isIdle = discoveryState === "idle";
   const isLoggedIn = !!user;
   const showPanel = panelOpen || analysisStatus !== "idle" || scoutStatus !== "idle";
+
+  if (user?.role === "builder") return <BuilderHomePage />;
 
   return (
   <>
@@ -200,7 +218,7 @@ export default function HomePage() {
 
                 {/* Messages + input */}
                 <div className="flex min-h-0 flex-1 flex-col">
-                  <ChatMessageList messages={messages} isStreaming={isStreaming} />
+                  <ChatMessageList messages={messages} isStreaming={isStreaming} onAction={handleAction} />
                   <div className="mx-auto w-full max-w-3xl px-4 pb-4 pt-2">
                     <ChatInput
                       onSend={handleSendMessage}
@@ -237,7 +255,7 @@ export default function HomePage() {
         </motion.div>
       )}
     </AnimatePresence>
-
+    <QuestionWizard onSubmit={submitQuestionAnswers} />
   </>
   );
 }

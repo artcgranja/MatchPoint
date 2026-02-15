@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
+import type { SessionStage } from "@/types";
 
 export async function GET(
   _req: Request,
@@ -43,21 +44,42 @@ export async function GET(
 
   const search = session.searches[0] ?? null;
 
-  // Determine currentStage from session + search state
-  let currentStage: string;
-  let awaitingConfirmation = false;
+  // Determine currentStage from session + search state (aligned with getSessionState())
+  let currentStage: SessionStage;
+  let recoveryAction: "retry_analysis" | "retry_scout" | null = null;
+
   if (!session.isComplete) {
     currentStage = "discovery";
   } else if (!search) {
-    currentStage = "complete";
+    currentStage = "discovery"; // Edge case: session complete but no search
   } else if (search.status === "complete") {
     currentStage = "advising";
-  } else if (search.bizPlan && search.status === "idle") {
-    // BizPlan exists but scout hasn't started — user needs to approve
+  } else if (search.status === "error") {
+    // Error state — allow retry based on what failed
+    if (search.bizPlan) {
+      currentStage = "awaiting_confirmation";
+    } else {
+      currentStage = "analysis";
+      recoveryAction = "retry_analysis";
+    }
+  } else if (!search.bizPlan) {
+    // No bizPlan → analysis never completed (interrupted or not yet started)
     currentStage = "analysis";
-    awaitingConfirmation = true;
+    recoveryAction = "retry_analysis";
   } else {
-    currentStage = "analysis";
+    // bizPlan exists, status is "idle" or "running"
+    const hasScoutLog = await prisma.pipelineStageLog.findFirst({
+      where: { searchExecutionId: search.id, agentName: "Scout" },
+    });
+
+    if (hasScoutLog && search.status === "running") {
+      // Scout was running but interrupted
+      currentStage = "scout";
+      recoveryAction = "retry_scout";
+    } else {
+      // Analysis complete, awaiting scout confirmation
+      currentStage = "awaiting_confirmation";
+    }
   }
 
   // Build cards from search results
@@ -80,15 +102,30 @@ export async function GET(
     id: session.id,
     title: session.title,
     currentStage,
-    awaitingConfirmation,
+    recoveryAction,
     isComplete: session.isComplete,
     needSummary: session.bizPlan,
-    messages: session.messages.map((m) => ({
-      id: m.id,
-      role: m.role,
-      content: m.content,
-      createdAt: m.createdAt.toISOString(),
-    })),
+    messages: session.messages.map((m) => {
+      const meta = m.metadata as Record<string, unknown> | null;
+      return {
+        id: m.id,
+        role: m.role,
+        content: m.content,
+        createdAt: m.createdAt.toISOString(),
+        // Propagate questions metadata for session restore
+        ...(meta?.type === "questions" && {
+          type: "questions" as const,
+          questions: meta.questions,
+          questionsContext: meta.context,
+          questionsAnswered: !!meta.answered,
+          questionsAnswers: meta.answers,
+        }),
+        // Mark question_answers user messages so frontend can filter them
+        ...(meta?.type === "question_answers" && {
+          type: "question_answers" as const,
+        }),
+      };
+    }),
     searchExecution: search
       ? {
           id: search.id,

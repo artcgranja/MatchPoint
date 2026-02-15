@@ -3,6 +3,12 @@ import { ADVISOR_SYSTEM } from "./prompts/advisor";
 import { type SessionContext, buildContextBlock } from "./context";
 import { composeToolsForAgent } from "./skills/registry";
 
+export type AdvisorEvent =
+  | { type: "text"; text: string }
+  | { type: "tool_start"; name: string; id: string }
+  | { type: "tool_call"; name: string; id: string; input: Record<string, unknown> }
+  | { type: "tool_result"; name: string; id: string; result: unknown };
+
 export class AdvisorAgent extends BaseAgent {
   constructor() {
     super("advisor");
@@ -15,7 +21,7 @@ export class AdvisorAgent extends BaseAgent {
   async *chat(
     context: SessionContext,
     userMessage: string
-  ): AsyncGenerator<{ text: string }> {
+  ): AsyncGenerator<AdvisorEvent> {
     const contextBlock = buildContextBlock(context);
 
     const messages: Array<{
@@ -35,7 +41,13 @@ export class AdvisorAgent extends BaseAgent {
       { maxIterations: 5 }
     )) {
       if (event.type === "text") {
-        yield { text: event.text };
+        yield { type: "text", text: event.text };
+      } else if (event.type === "tool_start") {
+        yield { type: "tool_start", name: event.name, id: event.id };
+      } else if (event.type === "tool_call") {
+        yield { type: "tool_call", name: event.name, id: event.id, input: event.input };
+      } else if (event.type === "tool_result") {
+        yield { type: "tool_result", name: event.name, id: event.id, result: event.result };
       }
     }
   }

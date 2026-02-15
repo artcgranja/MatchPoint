@@ -19,6 +19,8 @@
     "searches": "Searches",
     "processes": "Processes",
     "settings": "Settings",
+    "connections": "Connections",
+    "companyProfile": "Company",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar",
     "mainNavigation": "Main navigation"
@@ -143,14 +145,25 @@
   },
   "Auth": {
     "loginTitle": "Sign in to continue",
-    "loginDescription": "Connect your GitHub account to start discovering startups",
+    "loginDescription": "Sign in to access MatchPoint",
     "loginError": "Authentication failed. Please try again.",
     "loginConnectionError": "Could not connect to GitHub. Please try again.",
     "loginNoEmail": "No email found in your GitHub account. Please verify you have a verified email.",
     "loginUnexpectedError": "An unexpected error occurred. Please try again.",
     "continueWithGitHub": "Continue with GitHub",
     "loginPageTitle": "Sign in",
-    "loginPageDescription": "Sign in with your GitHub account to access MatchPoint."
+    "loginPageDescription": "Sign in with your GitHub account to access MatchPoint.",
+    "or": "or",
+    "emailPlaceholder": "your@email.com",
+    "sendMagicLink": "Send link",
+    "checkYourEmail": "Check your email for the sign-in link",
+    "invalidToken": "Invalid or expired link. Please request a new one."
+  },
+  "Connections": {
+    "connect": "Connect",
+    "sending": "Sending...",
+    "emailSent": "Email sent",
+    "connected": "Connected"
   },
   "Browse": {
     "title": "Discover",
@@ -245,6 +258,20 @@
     "notFoundDescription": "The page you're looking for may have been moved or doesn't exist. Let's get you back on track.",
     "backToHome": "Back to home"
   },
+  "Questions": {
+    "submit": "Submit",
+    "other": "Other",
+    "otherPlaceholder": "Type your answer...",
+    "answersSubmitted": "Answers submitted",
+    "next": "Next",
+    "previous": "Previous",
+    "reviewTitle": "Review Your Answers",
+    "reviewDescription": "Make sure everything looks right before submitting.",
+    "stepOf": "Question {current} of {total}",
+    "answerQuestions": "{count, plural, one {Answer # question} other {Answer # questions}}",
+    "editAnswer": "Edit",
+    "preparingQuestions": "Preparing questions..."
+  },
   "Pipeline": {
     "discoveryComplete": "Discovery complete! Starting analysis...",
     "analysisInProgress": "Analysis in progress, please wait...",
@@ -263,7 +290,81 @@
     "connectionError": "Connection error. Check your network and try again.",
     "pipelineConnectionError": "Pipeline connection error. Try again.",
     "pipelineError": "Pipeline error: {message}",
-    "error": "Error: {message}"
+    "error": "Error: {message}",
+    "generatingQuestionnaire": "Generating interactive questionnaire...",
+    "finalizingDiscovery": "Finalizing discovery...",
+    "searchingCompanies": "Searching companies...",
+    "loadingCompanyDetails": "Loading company details...",
+    "analysisInterrupted": "Analysis was interrupted. Click below to restart.",
+    "scoutInterrupted": "Startup search was interrupted. Click below to restart.",
+    "retryAnalysis": "Restart Analysis",
+    "retryScout": "Restart Search"
+  },
+  "Onboarding": {
+    "title": "How will you use MatchPoint?",
+    "subtitle": "Choose your role to get started.",
+    "seekerTitle": "I'm looking for solutions",
+    "seekerDescription": "Find startups that solve your business challenges through AI-powered matching.",
+    "builderTitle": "I'm building solutions",
+    "builderDescription": "Get discovered by companies looking for what you're building."
+  },
+  "CompanyProfile": {
+    "title": "Company Profile",
+    "subtitle": "Tell us about your company so seekers can find you.",
+    "editTitle": "Company Profile",
+    "editSubtitle": "Keep your company information up to date.",
+    "name": "Company name",
+    "namePlaceholder": "Acme Inc.",
+    "oneLiner": "One-liner",
+    "oneLinerPlaceholder": "What does your company do in one sentence?",
+    "description": "Description",
+    "descriptionPlaceholder": "Tell us more about your company...",
+    "industry": "Industry",
+    "industryPlaceholder": "Select an industry",
+    "website": "Website",
+    "contactEmail": "Contact email",
+    "location": "Location",
+    "locationPlaceholder": "San Francisco, CA",
+    "save": "Save",
+    "saving": "Saving...",
+    "saved": "Company profile saved",
+    "saveError": "Failed to save company profile"
+  },
+  "BuilderInbox": {
+    "title": "Connections",
+    "description": "Companies interested in working with you.",
+    "empty": "No connections yet",
+    "emptyHint": "When seekers find your company through MatchPoint, their connection requests will appear here.",
+    "seekerInfo": "Seeker",
+    "emailContent": "Outreach email",
+    "accept": "Accept Connection",
+    "accepting": "Accepting...",
+    "statusPending": "Pending",
+    "statusEmailSent": "Email Sent",
+    "statusClicked": "Clicked",
+    "statusAccepted": "Accepted"
+  },
+  "SeekerConnections": {
+    "title": "Connections",
+    "description": "Track outreach emails sent to startups.",
+    "empty": "No connections yet",
+    "emptyHint": "When you connect with a startup, your outreach history will appear here.",
+    "startExploring": "Explore startups",
+    "loginRequired": "Sign in to see your connections",
+    "loginButton": "Sign in",
+    "emailSent": "Email sent"
+  },
+  "ConnectionChat": {
+    "aiOutreach": "AI-generated outreach",
+    "placeholder": "Type a message...",
+    "placeholderPendingSeeker": "Waiting for the builder to accept...",
+    "placeholderPendingBuilder": "Accept the connection to start chatting",
+    "sendMessage": "Send message",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "acceptToChat": "Accept this connection to start a conversation",
+    "acceptConnection": "Accept Connection",
+    "accepting": "Accepting..."
   },
   "Metadata": {
     "title": "MatchPoint — Startup Matching with AI",

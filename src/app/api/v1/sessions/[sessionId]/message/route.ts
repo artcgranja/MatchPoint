@@ -14,7 +14,7 @@ export async function POST(
 
   const { sessionId } = await params;
   const body = await req.json();
-  const { message } = body;
+  const { message, answers } = body;
 
   if (!message || typeof message !== "string") {
     return NextResponse.json(
@@ -54,17 +54,6 @@ export async function POST(
 
   const stream = new ReadableStream({
     async start(controller) {
-      const send = (data: object) => {
-        if (signal.aborted || controller.desiredSize === null) return;
-        try {
-          controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
-          );
-        } catch {
-          abortController.abort();
-        }
-      };
-
       const sendEvent = (event: string, data: object) => {
         if (signal.aborted || controller.desiredSize === null) return;
         try {
@@ -79,68 +68,15 @@ export async function POST(
       };
 
       try {
-        for await (const event of handleMessage(sessionId, message)) {
+        for await (const event of handleMessage(sessionId, message, answers)) {
           if (signal.aborted) break;
-
-          switch (event.type) {
-            case "text":
-              send({ text: event.text });
-              break;
-
-            case "done":
-              if (event.transition) {
-                send({
-                  done: true,
-                  transition: event.transition,
-                  searchId: event.searchId,
-                });
-              } else {
-                send({ done: true });
-              }
-              break;
-
-            case "analysis_thinking":
-              sendEvent("analysis_thinking", { data: { text: event.text } });
-              break;
-
-            case "analysis_text":
-              sendEvent("analysis_text", { data: { text: event.text } });
-              break;
-
-            case "analysis_complete":
-              sendEvent("analysis_complete", { data: event.data });
-              break;
-
-            case "scout_event":
-              sendEvent(event.event.eventType, event.event);
-              break;
-
-            case "advisor_text":
-              send({ text: event.text });
-              break;
-
-            case "advisor_done":
-              send({ done: true });
-              break;
-
-            case "status":
-              send({
-                status: event.message,
-                ...(event.key && { statusKey: event.key }),
-                ...(event.params && { statusParams: event.params }),
-              });
-              break;
-
-            case "error":
-              send({ error: event.message });
-              break;
-          }
+          sendEvent(event.type, event);
         }
       } catch (error) {
         if (!signal.aborted) {
           const msg =
             error instanceof Error ? error.message : "Internal error";
-          send({ error: msg });
+          sendEvent("error", { type: "error", agent: "system", message: msg });
         }
       } finally {
         if (!signal.aborted) {
