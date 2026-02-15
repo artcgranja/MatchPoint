@@ -12,12 +12,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { SessionCard } from "@/components/discovery/session-card";
 import { useSearchesModalStore } from "@/stores/searches-modal-store";
+import { useRelativeTime } from "@/hooks/use-relative-time";
 import { apiGet } from "@/lib/api/client";
-import { SearchCard } from "./search-card";
-import type { SessionPipelineStage } from "@/types";
+import type { SessionItem, SessionPipelineStage } from "@/types";
 
-interface SearchItem {
+interface SearchApiItem {
   id: string;
   discoverySessionId: string | null;
   sessionTitle: string;
@@ -29,12 +30,32 @@ interface SearchItem {
   updatedAt: string;
 }
 
+function toSessionItem(search: SearchApiItem): SessionItem {
+  const isResults = search.stage === "results";
+  const isAnalysis = search.stage === "analysis";
+  return {
+    id: search.discoverySessionId ?? search.id,
+    title: search.sessionTitle,
+    pipelineStage: search.stage,
+    isComplete: isResults || isAnalysis,
+    hasResults: isResults,
+    resultCount: search.resultCount,
+    searchExecutionId: search.id,
+    preview: !isAnalysis ? search.preview : null,
+    topStartups: search.topStartups,
+    analysisPreview: isAnalysis ? search.preview : null,
+    createdAt: search.createdAt,
+    updatedAt: search.updatedAt,
+  };
+}
+
 export function SearchesModal() {
   const { open, closeModal } = useSearchesModalStore();
   const t = useTranslations("Searches");
   const router = useRouter();
   const { goToSession } = useSessionNavigation();
-  const [searches, setSearches] = useState<SearchItem[]>([]);
+  const getRelativeTime = useRelativeTime();
+  const [searches, setSearches] = useState<SearchApiItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   const handleSelectSearch = (discoverySessionId: string | null) => {
@@ -46,7 +67,7 @@ export function SearchesModal() {
   useEffect(() => {
     if (open) {
       setLoading(true);
-      apiGet<{ data: SearchItem[] }>("/searches?limit=5")
+      apiGet<{ data: SearchApiItem[] }>("/searches?limit=5")
         .then((response) => setSearches(response.data))
         .catch((error) => {
           console.error("Failed to fetch searches:", error);
@@ -90,13 +111,17 @@ export function SearchesModal() {
               </p>
             </div>
           ) : (
-            searches.map((search) => (
-              <SearchCard
-                key={search.id}
-                search={search}
-                onClick={() => handleSelectSearch(search.discoverySessionId)}
-              />
-            ))
+            searches.map((search) => {
+              const session = toSessionItem(search);
+              return (
+                <SessionCard
+                  key={search.id}
+                  session={session}
+                  onClick={() => handleSelectSearch(search.discoverySessionId)}
+                  relativeTime={getRelativeTime(search.updatedAt)}
+                />
+              );
+            })
           )}
         </div>
       </DialogContent>

@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import { cardStagger } from "@/lib/motion";
 import { useAgentPanelStore } from "@/stores/agent-panel-store";
-import { StartupCard } from "@/components/discovery/startup-card";
+import { CompanyCard } from "@/components/shared/company-card";
 
 export function ScoutCardGrid() {
   const { cards } = useAgentPanelStore();
@@ -19,7 +19,7 @@ export function ScoutCardGrid() {
         className="grid grid-cols-1 gap-3"
       >
         {cards.map((card) => (
-          <StartupCard key={card.id} card={card} />
+          <CompanyCard key={card.id} mode="search" company={card} />
         ))}
       </motion.div>
     </div>

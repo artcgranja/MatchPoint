@@ -65,7 +65,8 @@ export function ChatHistoryDrawer({
   const sessionsByStage = (stage: SessionPipelineStage) =>
     sessions
       .filter((s) => s.pipelineStage === stage)
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 3);
 
   const handleCardClick = (sessionId: string) => {
     onSelect(sessionId);
