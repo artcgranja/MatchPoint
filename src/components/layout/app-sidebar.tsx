@@ -16,6 +16,7 @@ import {
   Monitor,
   Inbox,
   Building2,
+  Send,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
@@ -35,6 +36,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useLoginModalStore } from "@/stores/login-modal-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSessionNavigation } from "@/hooks/use-session-navigation";
+import { useNotificationsStore } from "@/stores/notifications-store";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -49,6 +51,7 @@ export function AppSidebar() {
   const { goHome } = useSessionNavigation();
 
   const isBuilder = user?.role === "builder";
+  const unreadCount = useNotificationsStore((s) => s.unreadCount);
 
   const isOnChat = pathname === "/" || pathname === "/search";
   const isHomeActive = isOnChat && !currentSessionId;
@@ -114,7 +117,14 @@ export function AppSidebar() {
                   : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
               )}
             >
-              <Send className="h-5 w-5 shrink-0" />
+              <div className="relative shrink-0">
+                <Send className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-highlight px-1 text-[10px] font-bold leading-none text-white">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </div>
               {!collapsed && <span>{t("connections")}</span>}
             </Link>
             <Link
