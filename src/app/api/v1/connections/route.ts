@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getAuthUser, generateMagicLinkToken } from "@/lib/auth";
 import { outreachAgent } from "@/lib/agents/outreach";
 import { sendConnectionInvite } from "@/lib/email/send";
+import { createConnectionNotification } from "@/lib/notifications/helpers";
 
 export async function POST(request: Request) {
   const auth = await getAuthUser();
@@ -163,7 +164,28 @@ export async function POST(request: Request) {
     },
   });
 
-  // Generate magic link token for builder
+  // Smart channel routing: check if builder is already registered
+  const builderUser = await prisma.user.findUnique({
+    where: { companyId },
+    select: { id: true },
+  });
+
+  if (builderUser) {
+    // Builder exists — create in-app notification
+    await createConnectionNotification({
+      builderId: builderUser.id,
+      connectionId: connection.id,
+      seekerName: user.name ?? user.email,
+      companyName: company.name,
+    });
+
+    await prisma.connection.update({
+      where: { id: connection.id },
+      data: { notificationSent: true },
+    });
+  }
+
+  // Always send email (both channels) + generate magic link
   const token = generateMagicLinkToken();
   await prisma.magicLinkToken.create({
     data: {
@@ -177,7 +199,6 @@ export async function POST(request: Request) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!;
   const inviteUrl = `${appUrl}/api/v1/auth/magic-link/verify?token=${token}`;
 
-  // Send email
   let finalStatus: "email_sent" | "pending" = "pending";
   try {
     const resendId = await sendConnectionInvite({

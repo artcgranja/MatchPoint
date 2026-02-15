@@ -3,6 +3,7 @@ import { getAuthUser } from "@/lib/auth";
 import { AuthProvider } from "@/components/providers/auth-provider";
 import { SavedStartupsProvider } from "@/components/providers/saved-startups-provider";
 import { ConnectionsProvider } from "@/components/providers/connections-provider";
+import { NotificationsProvider } from "@/components/providers/notifications-provider";
 import { AppShell } from "@/components/layout/app-shell";
 import type { AuthUser } from "@/stores/auth-store";
 
@@ -24,7 +25,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <AuthProvider initialUser={initialUser}>
       <SavedStartupsProvider>
         <ConnectionsProvider>
-          <AppShell>{children}</AppShell>
+          <NotificationsProvider>
+            <AppShell>{children}</AppShell>
+          </NotificationsProvider>
         </ConnectionsProvider>
       </SavedStartupsProvider>
     </AuthProvider>

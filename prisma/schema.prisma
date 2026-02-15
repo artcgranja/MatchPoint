@@ -34,6 +34,12 @@ enum ConnectionStatus {
   accepted
 }
 
+enum NotificationType {
+  connection_request
+  connection_accepted
+  connection_message
+}
+
 model User {
   id                String              @id @default(uuid())
   email             String              @unique
@@ -50,8 +56,10 @@ model User {
   searchExecutions  SearchExecution[]
   discoverySessions DiscoverySession[]
   savedStartups     SavedStartup[]
+  lastSeenAt        DateTime?
   connectionsSent   Connection[]        @relation("ConnectionSeeker")
   connectionMessages ConnectionMessage[] @relation("ConnectionMessageSender")
+  notifications     Notification[]
 }
 
 model Company {
@@ -240,9 +248,10 @@ model Connection {
   emailBody      String
   emailSentAt    DateTime?
   resendEmailId  String?
-  builderEmail   String?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
+  builderEmail      String?
+  notificationSent  Boolean          @default(false)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
   messages       ConnectionMessage[]
 
@@ -263,4 +272,21 @@ model ConnectionMessage {
 
   @@index([connectionId])
   @@index([senderId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String
+  actionUrl String?
+  metadata  Json?
+  read      Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }

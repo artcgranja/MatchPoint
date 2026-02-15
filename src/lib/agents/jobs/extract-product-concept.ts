@@ -50,7 +50,7 @@ export async function extractProductConcept(
     const classification = await agent.classifyConcept(concept, existingNames);
 
     // 6. Upsert concept + create audit trail atomically
-    const conceptId = await prisma.$transaction(async (tx: typeof prisma) => {
+    const conceptId = await prisma.$transaction(async (tx) => {
       let id: string;
 
       if (

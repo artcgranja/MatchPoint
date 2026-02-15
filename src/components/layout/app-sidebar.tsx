@@ -43,6 +43,7 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useLoginModalStore } from "@/stores/login-modal-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSessionNavigation } from "@/hooks/use-session-navigation";
+import { useNotificationsStore } from "@/stores/notifications-store";
 
 function NavLink({
   href,
@@ -51,6 +52,7 @@ function NavLink({
   icon: Icon,
   label,
   collapsed,
+  badge,
 }: {
   href: string;
   onClick?: (e: React.MouseEvent) => void;
@@ -58,6 +60,7 @@ function NavLink({
   icon: LucideIcon;
   label: string;
   collapsed: boolean;
+  badge?: string;
 }) {
   const link = (
     <Link
@@ -70,7 +73,14 @@ function NavLink({
           : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
       )}
     >
-      <Icon className="h-4 w-4 shrink-0" />
+      <div className="relative shrink-0">
+        <Icon className="h-4 w-4" />
+        {badge && (
+          <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-highlight px-1 text-[10px] font-bold leading-none text-white">
+            {badge}
+          </span>
+        )}
+      </div>
       {!collapsed && <span>{label}</span>}
     </Link>
   );
@@ -100,6 +110,7 @@ export function AppSidebar() {
   const { goHome } = useSessionNavigation();
 
   const isBuilder = user?.role === "builder";
+  const unreadCount = useNotificationsStore((s) => s.unreadCount);
 
   const isOnChat = pathname === "/" || pathname === "/search";
   const isHomeActive = isOnChat && !currentSessionId;
@@ -163,6 +174,7 @@ export function AppSidebar() {
               icon={Send}
               label={t("connections")}
               collapsed={collapsed}
+              badge={unreadCount > 0 ? (unreadCount > 9 ? "9+" : String(unreadCount)) : undefined}
             />
             <NavLink
               href="/company"
