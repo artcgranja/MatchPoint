@@ -17,7 +17,6 @@ import {
   Monitor,
   Inbox,
   Building2,
-  Send,
   Lightbulb,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -171,7 +170,7 @@ export function AppSidebar() {
               href="/"
               onClick={handleHomeClick}
               isActive={isHomeActive}
-              icon={Send}
+              icon={Inbox}
               label={t("connections")}
               collapsed={collapsed}
               badge={unreadCount > 0 ? (unreadCount > 9 ? "9+" : String(unreadCount)) : undefined}

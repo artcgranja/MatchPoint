@@ -376,7 +376,10 @@
     "category": "Categoria",
     "firstSeen": "Primeiro registro",
     "lastSeen": "Última atividade",
-    "searchPlaceholder": "Buscar conceitos..."
+    "searchPlaceholder": "Buscar conceitos...",
+    "definition": "Definição",
+    "demand": "Demanda",
+    "timeline": "Linha do tempo"
   },
   "Metadata": {
     "title": "MatchPoint — Matching de Startups com IA",

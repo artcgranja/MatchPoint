@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
-import { handleMessage } from "@/lib/agents/state-machine";
+import { handleMessage, type BackgroundJob } from "@/lib/agents/state-machine";
+import { extractProductConcept } from "@/lib/agents/jobs/extract-product-concept";
 
 export async function POST(
   req: Request,
@@ -51,6 +52,7 @@ export async function POST(
   const encoder = new TextEncoder();
   const abortController = new AbortController();
   const { signal } = abortController;
+  const backgroundJobs: BackgroundJob[] = [];
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -70,6 +72,11 @@ export async function POST(
       try {
         for await (const event of handleMessage(sessionId, message, answers)) {
           if (signal.aborted) break;
+          // Intercept internal background events — don't send to client
+          if (event.type === "_background") {
+            backgroundJobs.push(event);
+            continue;
+          }
           sendEvent(event.type, event);
         }
       } catch (error) {
@@ -87,6 +94,21 @@ export async function POST(
     cancel() {
       abortController.abort();
     },
+  });
+
+  // Schedule background jobs to run after the response is fully sent.
+  // after() guarantees execution even after the SSE stream closes,
+  // unlike fire-and-forget Promises which can be killed in serverless.
+  after(async () => {
+    for (const job of backgroundJobs) {
+      if (job.job === "extract_product_concept") {
+        try {
+          await extractProductConcept(job.searchId);
+        } catch (err) {
+          console.error("[after] Background concept extraction failed:", err);
+        }
+      }
+    }
   });
 
   return new Response(stream, {

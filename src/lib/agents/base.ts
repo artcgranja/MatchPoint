@@ -13,6 +13,8 @@ export type ToolStreamEvent =
 interface BaseMethodOptions {
   maxTokens?: number;
   cacheTtl?: "1h";
+  /** Timeout in milliseconds — converted to AbortSignal for the SDK call */
+  timeout?: number;
 }
 
 interface StreamOptions extends BaseMethodOptions {
@@ -42,12 +44,15 @@ export abstract class BaseAgent {
   }
 
   async invoke(systemPrompt: string, userMessage: string, options?: BaseMethodOptions): Promise<string> {
-    const response = await this.client.messages.create({
-      model: this.model,
-      max_tokens: options?.maxTokens ?? 4096,
-      system: this.buildSystemBlocks(systemPrompt, options?.cacheTtl),
-      messages: [{ role: "user", content: userMessage }],
-    });
+    const response = await this.client.messages.create(
+      {
+        model: this.model,
+        max_tokens: options?.maxTokens ?? 4096,
+        system: this.buildSystemBlocks(systemPrompt, options?.cacheTtl),
+        messages: [{ role: "user", content: userMessage }],
+      },
+      options?.timeout ? { signal: AbortSignal.timeout(options.timeout) } : undefined,
+    );
 
     const textBlock = response.content.find((b) => b.type === "text");
     return textBlock?.type === "text" ? textBlock.text : "";
@@ -59,13 +64,16 @@ export abstract class BaseAgent {
     schema: ZodType<T>,
     options?: BaseMethodOptions
   ): Promise<T> {
-    const response = await this.client.messages.create({
-      model: this.model,
-      max_tokens: options?.maxTokens ?? 4096,
-      system: this.buildSystemBlocks(systemPrompt, options?.cacheTtl),
-      messages: [{ role: "user", content: userMessage }],
-      output_config: { format: zodOutputFormat(schema) },
-    });
+    const response = await this.client.messages.create(
+      {
+        model: this.model,
+        max_tokens: options?.maxTokens ?? 4096,
+        system: this.buildSystemBlocks(systemPrompt, options?.cacheTtl),
+        messages: [{ role: "user", content: userMessage }],
+        output_config: { format: zodOutputFormat(schema) },
+      },
+      options?.timeout ? { signal: AbortSignal.timeout(options.timeout) } : undefined,
+    );
 
     const textBlock = response.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {

@@ -2,10 +2,18 @@ import { prisma } from "@/lib/db";
 import { DiscoveryAgent } from "./navigator";
 import { AdvisorAgent } from "./advisor";
 import { runAnalysis, runScout } from "./orchestrator";
-import { extractProductConcept } from "./jobs/extract-product-concept";
 import { assembleSessionContext } from "./context";
 import type { QuestionAnswer, QuestionData } from "@/types";
 import type { SsePayload } from "@/lib/sse/events";
+
+// Internal event — intercepted by route handler, never sent to client
+export type BackgroundJob = {
+  type: "_background";
+  job: "extract_product_concept";
+  searchId: string;
+};
+
+export type StateMachineEvent = SsePayload | BackgroundJob;
 
 // ═══════════════════════════════════════════
 // Types
@@ -88,7 +96,7 @@ export async function* handleMessage(
   sessionId: string,
   message: string,
   answers?: QuestionAnswer[]
-): AsyncGenerator<SsePayload> {
+): AsyncGenerator<StateMachineEvent> {
   const state = await getSessionState(sessionId);
 
   switch (state.stage) {
@@ -129,10 +137,8 @@ export async function* handleMessage(
         yield event;
       }
 
-      // Background: extract product concept for demand tracking (fire-and-forget)
-      extractProductConcept(state.searchId!).catch((err) =>
-        console.error("[StateMachine] Background concept extraction failed:", err)
-      );
+      // Schedule background extraction — route handler runs via after()
+      yield { type: "_background", job: "extract_product_concept", searchId: state.searchId! };
 
       // Transition to awaiting_confirmation
       yield {
@@ -170,7 +176,7 @@ async function* handleDiscoveryMessage(
   sessionId: string,
   message: string,
   answers?: QuestionAnswer[]
-): AsyncGenerator<SsePayload> {
+): AsyncGenerator<StateMachineEvent> {
   const session = await prisma.discoverySession.findUniqueOrThrow({
     where: { id: sessionId },
   });
@@ -373,10 +379,8 @@ async function* handleDiscoveryMessage(
       yield event;
     }
 
-    // Background: extract product concept for demand tracking (fire-and-forget)
-    extractProductConcept(search.id).catch((err) =>
-      console.error("[StateMachine] Background concept extraction failed:", err)
-    );
+    // Schedule background extraction — route handler runs via after()
+    yield { type: "_background", job: "extract_product_concept", searchId: search.id };
 
     // Analysis done → awaiting user confirmation
     yield {

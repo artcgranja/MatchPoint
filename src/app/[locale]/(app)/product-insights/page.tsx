@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { motion } from "motion/react";
-import { Lightbulb, Search, TrendingUp } from "lucide-react";
+import { Calendar, Lightbulb, Search, TrendingUp } from "lucide-react";
 import { apiGet } from "@/lib/api/client";
 import { cardStagger, cardEntrance } from "@/lib/motion";
 import { useRelativeTime } from "@/hooks/use-relative-time";
@@ -12,6 +12,13 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 
 interface ProductInsight {
   id: string;
@@ -31,6 +38,7 @@ export default function ProductInsightsPage() {
   const [concepts, setConcepts] = useState<ProductInsight[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<ProductInsight | null>(null);
 
   const fetchConcepts = useCallback(async () => {
     try {
@@ -98,7 +106,8 @@ export default function ProductInsightsPage() {
               <motion.div
                 key={concept.id}
                 variants={cardEntrance}
-                className="glass flex flex-col gap-3 rounded-xl p-4 transition-colors hover:border-highlight/30"
+                className="glass flex cursor-pointer flex-col gap-3 rounded-xl p-4 transition-colors hover:border-highlight/30"
+                onClick={() => setSelected(concept)}
               >
                 <div className="flex items-start justify-between gap-2">
                   <h3 className="text-sm font-semibold leading-tight">
@@ -135,6 +144,69 @@ export default function ProductInsightsPage() {
           )}
         </>
       )}
+
+      <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
+        <DialogContent className="sm:max-w-md">
+          {selected && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center gap-2">
+                  <DialogTitle>{selected.name}</DialogTitle>
+                  <Badge variant="secondary" className="text-[10px]">
+                    {selected.category}
+                  </Badge>
+                </div>
+                <DialogDescription>{t("definition")}</DialogDescription>
+              </DialogHeader>
+
+              <p className="text-sm text-foreground-muted">
+                {selected.definition}
+              </p>
+
+              <div className="grid grid-cols-2 gap-4 rounded-lg border border-border p-4">
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
+                    {t("demand")}
+                  </span>
+                  <div className="flex items-center gap-1.5 text-highlight">
+                    <TrendingUp className="h-4 w-4" />
+                    <span className="text-lg font-bold">
+                      {t("demandCount", { count: selected.demandCount })}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
+                    {t("category")}
+                  </span>
+                  <span className="text-sm font-medium">{selected.category}</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 rounded-lg border border-border p-4">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-foreground-muted">
+                  {t("timeline")}
+                </span>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-1.5 text-foreground-muted">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>{t("firstSeen")}</span>
+                  </div>
+                  <span className="font-medium">{relativeTime(selected.firstSeenAt)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-1.5 text-foreground-muted">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span>{t("lastSeen")}</span>
+                  </div>
+                  <span className="font-medium">{relativeTime(selected.lastSeenAt)}</span>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

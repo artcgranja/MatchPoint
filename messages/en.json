@@ -376,7 +376,10 @@
     "category": "Category",
     "firstSeen": "First seen",
     "lastSeen": "Last active",
-    "searchPlaceholder": "Search concepts..."
+    "searchPlaceholder": "Search concepts...",
+    "definition": "Definition",
+    "demand": "Demand",
+    "timeline": "Timeline"
   },
   "Metadata": {
     "title": "MatchPoint — Startup Matching with AI",

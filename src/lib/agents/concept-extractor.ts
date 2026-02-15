@@ -12,7 +12,7 @@ import {
 
 export class ConceptExtractorAgent extends BaseAgent {
   constructor() {
-    super("analysis"); // Opus — user specified
+    super("advisor"); // Haiku — classification tasks don't need Opus
   }
 
   async extractConcept(productDocument: string): Promise<ProductConcept> {
@@ -20,7 +20,7 @@ export class ConceptExtractorAgent extends BaseAgent {
       CONCEPT_EXTRACT_SYSTEM,
       `<product_document>\n${productDocument}\n</product_document>\n\nExtract the canonical product concept from this document.`,
       ProductConceptSchema,
-      { maxTokens: 1024 }
+      { maxTokens: 1024, timeout: 30_000 }
     );
   }
 
@@ -44,7 +44,7 @@ export class ConceptExtractorAgent extends BaseAgent {
       CONCEPT_CLASSIFY_SYSTEM,
       `<new_concept>\nName: ${newConcept.name}\nDefinition: ${newConcept.definition}\nCategory: ${newConcept.category}\n</new_concept>\n\n<existing_concepts>\n${existingList}\n</existing_concepts>\n\nDoes the new concept match any existing concept? If so, which one?`,
       ConceptClassificationSchema,
-      { maxTokens: 512 }
+      { maxTokens: 512, timeout: 30_000 }
     );
   }
 }
