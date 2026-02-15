@@ -221,10 +221,14 @@ export async function GET() {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
+  if (user.role === "builder" && !user.companyId) {
+    return NextResponse.json([]);
+  }
+
   const connections = await prisma.connection.findMany({
     where: user.role === "seeker"
       ? { seekerId: user.id }
-      : { companyId: user.companyId ?? -1 },
+      : { companyId: user.companyId! },
     include: {
       company: { select: { id: true, name: true, oneLiner: true, smallLogoUrl: true } },
       seeker: { select: { id: true, name: true, email: true } },
