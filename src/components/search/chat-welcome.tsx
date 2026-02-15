@@ -90,7 +90,7 @@ export function ChatWelcome({
     groupedSessions[stage].length;
 
   const sessionsByStage = (stage: SessionPipelineStage) =>
-    groupedSessions[stage];
+    groupedSessions[stage].slice(0, 3);
 
   return (
     <div

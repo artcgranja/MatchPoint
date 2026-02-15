@@ -71,6 +71,7 @@ export async function searchCompanies(filters: {
     teamSize: c.teamSize,
     website: c.website,
     ycUrl: c.ycUrl,
+    smallLogoUrl: c.smallLogoUrl,
   }));
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import { usePathname } from "@/i18n/navigation";
 import {
   Home,
@@ -17,6 +18,7 @@ import {
   Inbox,
   Building2,
   Send,
+  Lightbulb,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
@@ -31,12 +33,69 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
 import { useDiscoveryStore } from "@/stores/discovery-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useLoginModalStore } from "@/stores/login-modal-store";
 import { useSidebarStore } from "@/stores/sidebar-store";
 import { useSessionNavigation } from "@/hooks/use-session-navigation";
 import { useNotificationsStore } from "@/stores/notifications-store";
+
+function NavLink({
+  href,
+  onClick,
+  isActive,
+  icon: Icon,
+  label,
+  collapsed,
+  badge,
+}: {
+  href: string;
+  onClick?: (e: React.MouseEvent) => void;
+  isActive: boolean;
+  icon: LucideIcon;
+  label: string;
+  collapsed: boolean;
+  badge?: string;
+}) {
+  const link = (
+    <Link
+      href={href}
+      onClick={onClick}
+      className={cn(
+        "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+        isActive
+          ? "bg-highlight/10 text-highlight font-medium"
+          : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
+      )}
+    >
+      <div className="relative shrink-0">
+        <Icon className="h-4 w-4" />
+        {badge && (
+          <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-highlight px-1 text-[10px] font-bold leading-none text-white">
+            {badge}
+          </span>
+        )}
+      </div>
+      {!collapsed && <span>{label}</span>}
+    </Link>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right">{label}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return link;
+}
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -60,6 +119,7 @@ export function AppSidebar() {
   const isSearchesActive = pathname.startsWith("/searches");
   const isConexoesActive = pathname.startsWith("/conexoes");
   const isCompanyActive = pathname.startsWith("/company");
+  const isInsightsActive = pathname.startsWith("/product-insights");
 
   const handleHomeClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -86,7 +146,7 @@ export function AppSidebar() {
             aria-label={t("expandSidebar")}
             className="rounded-lg p-1 text-foreground-muted transition-colors hover:bg-background-secondary hover:text-foreground"
           >
-            <PanelLeft className="h-5 w-5" />
+            <PanelLeft className="h-4 w-4" />
           </button>
         ) : (
           <>
@@ -107,67 +167,48 @@ export function AppSidebar() {
         {isBuilder ? (
           /* Builder nav */
           <>
-            <Link
+            <NavLink
               href="/"
               onClick={handleHomeClick}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isHomeActive
-                  ? "bg-highlight/10 text-highlight"
-                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
-              )}
-            >
-              <div className="relative shrink-0">
-                <Send className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-highlight px-1 text-[10px] font-bold leading-none text-white">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </div>
-              {!collapsed && <span>{t("connections")}</span>}
-            </Link>
-            <Link
+              isActive={isHomeActive}
+              icon={Send}
+              label={t("connections")}
+              collapsed={collapsed}
+              badge={unreadCount > 0 ? (unreadCount > 9 ? "9+" : String(unreadCount)) : undefined}
+            />
+            <NavLink
               href="/company"
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isCompanyActive
-                  ? "bg-highlight/10 text-highlight"
-                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
-              )}
-            >
-              <Building2 className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{t("companyProfile")}</span>}
-            </Link>
+              isActive={isCompanyActive}
+              icon={Building2}
+              label={t("companyProfile")}
+              collapsed={collapsed}
+            />
+            <NavLink
+              href="/product-insights"
+              isActive={isInsightsActive}
+              icon={Lightbulb}
+              label={t("productInsights")}
+              collapsed={collapsed}
+            />
           </>
         ) : (
           /* Seeker nav */
           <>
-            <Link
+            <NavLink
               href="/"
               onClick={handleHomeClick}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isHomeActive
-                  ? "bg-highlight/10 text-highlight"
-                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
-              )}
-            >
-              <Home className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{t("home")}</span>}
-            </Link>
-            <Link
+              isActive={isHomeActive}
+              icon={Home}
+              label={t("home")}
+              collapsed={collapsed}
+            />
+            <NavLink
               href="/descubra"
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isDescubraActive
-                  ? "bg-highlight/10 text-highlight"
-                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
-              )}
-            >
-              <Compass className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{t("discover")}</span>}
-            </Link>
+              isActive={isDescubraActive}
+              icon={Compass}
+              label={t("discover")}
+              collapsed={collapsed}
+            />
 
             {/* Processes section */}
             {!collapsed && (
@@ -176,42 +217,27 @@ export function AppSidebar() {
               </span>
             )}
             {collapsed && <div className="my-2 mx-3 border-t border-border" />}
-            <Link
+            <NavLink
               href="/salvos"
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isSalvosActive
-                  ? "bg-highlight/10 text-highlight"
-                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
-              )}
-            >
-              <Bookmark className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{t("saved")}</span>}
-            </Link>
-            <Link
+              isActive={isSalvosActive}
+              icon={Bookmark}
+              label={t("saved")}
+              collapsed={collapsed}
+            />
+            <NavLink
               href="/searches"
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isSearchesActive
-                  ? "bg-highlight/10 text-highlight"
-                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
-              )}
-            >
-              <LayoutGrid className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{t("searches")}</span>}
-            </Link>
-            <Link
+              isActive={isSearchesActive}
+              icon={LayoutGrid}
+              label={t("searches")}
+              collapsed={collapsed}
+            />
+            <NavLink
               href="/conexoes"
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isConexoesActive
-                  ? "bg-highlight/10 text-highlight"
-                  : "text-foreground-muted hover:bg-background-secondary hover:text-foreground"
-              )}
-            >
-              <Inbox className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{t("connections")}</span>}
-            </Link>
+              isActive={isConexoesActive}
+              icon={Inbox}
+              label={t("connections")}
+              collapsed={collapsed}
+            />
           </>
         )}
       </nav>
@@ -219,15 +245,15 @@ export function AppSidebar() {
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Footer: avatar + collapse */}
+      {/* Footer: avatar only */}
       <div className="flex flex-col gap-2 border-t border-border p-2">
         {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-background-secondary",
-                  collapsed && "justify-center"
+                  "flex w-full items-center rounded-lg px-2 py-2 transition-colors hover:bg-background-secondary",
+                  collapsed ? "justify-center" : "justify-start"
                 )}
               >
                 <Avatar className="h-7 w-7 shrink-0">
@@ -238,11 +264,6 @@ export function AppSidebar() {
                     {initials}
                   </AvatarFallback>
                 </Avatar>
-                {!collapsed && (
-                  <span className="truncate text-foreground-muted">
-                    {user.name ?? user.email}
-                  </span>
-                )}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-48">
@@ -284,19 +305,25 @@ export function AppSidebar() {
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <button
-            type="button"
-            onClick={() => useLoginModalStore.getState().openLoginModal()}
-            className={cn(
-              "flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-background-secondary text-foreground-muted",
-              collapsed && "justify-center"
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => useLoginModalStore.getState().openLoginModal()}
+                className={cn(
+                  "flex w-full items-center rounded-lg px-2 py-2 text-sm transition-colors hover:bg-background-secondary text-foreground-muted",
+                  collapsed ? "justify-center" : "gap-3"
+                )}
+              >
+                <LogIn className="h-4 w-4 shrink-0 text-highlight" />
+                {!collapsed && <span>{tCommon("login")}</span>}
+              </button>
+            </TooltipTrigger>
+            {collapsed && (
+              <TooltipContent side="right">{tCommon("login")}</TooltipContent>
             )}
-          >
-            <LogIn className="h-4 w-4 shrink-0 text-highlight" />
-            {!collapsed && <span>{tCommon("login")}</span>}
-          </button>
+          </Tooltip>
         )}
-
       </div>
     </aside>
   );
