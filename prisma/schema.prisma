@@ -219,7 +219,7 @@ model ProductConceptExtraction {
   conceptId         String
   concept           ProductConcept  @relation(fields: [conceptId], references: [id])
   searchExecutionId String
-  searchExecution   SearchExecution @relation(fields: [searchExecutionId], references: [id])
+  searchExecution   SearchExecution @relation(fields: [searchExecutionId], references: [id], onDelete: Cascade)
   rawExtraction     Json?
   createdAt         DateTime        @default(now())
 

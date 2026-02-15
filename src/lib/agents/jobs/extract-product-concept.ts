@@ -49,68 +49,72 @@ export async function extractProductConcept(
     // 5. Classify: does this match an existing concept?
     const classification = await agent.classifyConcept(concept, existingNames);
 
-    // 6. Upsert: increment existing or create new
-    let conceptId: string;
+    // 6. Upsert concept + create audit trail atomically
+    const conceptId = await prisma.$transaction(async (tx: typeof prisma) => {
+      let id: string;
 
-    if (
-      classification.matchedConceptName &&
-      classification.confidence >= 0.8
-    ) {
-      // Increment demand counter on existing concept
-      const updated = await prisma.productConcept.update({
-        where: { name: classification.matchedConceptName },
-        data: {
-          demandCount: { increment: 1 },
-          lastSeenAt: new Date(),
-        },
-      });
-      conceptId = updated.id;
-    } else {
-      // Create new concept — handle race condition on unique constraint
-      try {
-        const created = await prisma.productConcept.create({
+      if (
+        classification.matchedConceptName &&
+        classification.confidence >= 0.8
+      ) {
+        // Increment demand counter on existing concept
+        const updated = await tx.productConcept.update({
+          where: { name: classification.matchedConceptName },
           data: {
-            name: concept.name,
-            definition: concept.definition,
-            category: concept.category,
-            demandCount: 1,
+            demandCount: { increment: 1 },
+            lastSeenAt: new Date(),
           },
         });
-        conceptId = created.id;
-      } catch (err: unknown) {
-        // Race condition: another concurrent extraction created the same concept
-        if (
-          err &&
-          typeof err === "object" &&
-          "code" in err &&
-          err.code === "P2002"
-        ) {
-          const updated = await prisma.productConcept.update({
-            where: { name: concept.name },
+        id = updated.id;
+      } else {
+        // Create new concept — handle race condition on unique constraint
+        try {
+          const created = await tx.productConcept.create({
             data: {
-              demandCount: { increment: 1 },
-              lastSeenAt: new Date(),
+              name: concept.name,
+              definition: concept.definition,
+              category: concept.category,
+              demandCount: 1,
             },
           });
-          conceptId = updated.id;
-        } else {
-          throw err;
+          id = created.id;
+        } catch (err: unknown) {
+          // Race condition: another concurrent extraction created the same concept
+          if (
+            err &&
+            typeof err === "object" &&
+            "code" in err &&
+            err.code === "P2002"
+          ) {
+            const updated = await tx.productConcept.update({
+              where: { name: concept.name },
+              data: {
+                demandCount: { increment: 1 },
+                lastSeenAt: new Date(),
+              },
+            });
+            id = updated.id;
+          } else {
+            throw err;
+          }
         }
       }
-    }
 
-    // 7. Create audit trail (unique constraint guards idempotency)
-    await prisma.productConceptExtraction.create({
-      data: {
-        conceptId,
-        searchExecutionId: searchId,
-        rawExtraction: JSON.parse(
-          JSON.stringify({
-            extractedConcept: concept,
-            classification,
-          })
-        ),
-      },
+      // 7. Create audit trail (unique constraint guards idempotency)
+      await tx.productConceptExtraction.create({
+        data: {
+          conceptId: id,
+          searchExecutionId: searchId,
+          rawExtraction: JSON.parse(
+            JSON.stringify({
+              extractedConcept: concept,
+              classification,
+            })
+          ),
+        },
+      });
+
+      return id;
     });
 
     // 8. Log to PipelineStageLog for observability
