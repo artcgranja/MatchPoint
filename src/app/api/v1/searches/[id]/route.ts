@@ -45,6 +45,7 @@ export async function GET(
     location: r.company.allLocations,
     website: r.company.website,
     ycUrl: r.company.ycUrl,
+    smallLogoUrl: r.company.smallLogoUrl,
   }));
 
   return NextResponse.json({

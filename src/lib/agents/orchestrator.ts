@@ -219,9 +219,10 @@ export async function* runScout(searchId: string): AsyncGenerator<SsePayload> {
       const cardIds = scoutResult.cards.map((c) => c.id);
       const existingCompanies = await prisma.company.findMany({
         where: { id: { in: cardIds } },
-        select: { id: true },
+        select: { id: true, smallLogoUrl: true },
       });
       const validIds = new Set(existingCompanies.map((c) => c.id));
+      const logoMap = new Map(existingCompanies.map((c) => [c.id, c.smallLogoUrl]));
       const invalidIds = cardIds.filter((id) => !validIds.has(id));
 
       if (invalidIds.length > 0) {
@@ -234,6 +235,15 @@ export async function* runScout(searchId: string): AsyncGenerator<SsePayload> {
           cards: scoutResult.cards.filter((c) => validIds.has(c.id)),
         };
       }
+
+      // Enrich cards with company logos from DB
+      scoutResult = {
+        ...scoutResult,
+        cards: scoutResult.cards.map((card) => ({
+          ...card,
+          smallLogoUrl: logoMap.get(card.id) ?? undefined,
+        })),
+      };
 
       if (scoutResult.cards.length > 0) {
         await prisma.searchResult.createMany({

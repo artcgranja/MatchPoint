@@ -10,6 +10,7 @@ import {
   Briefcase,
   CheckCircle,
   TrendingUp,
+  Building2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { SaveButton } from "@/components/saved/save-button";
@@ -76,13 +77,17 @@ export function CompanyModal({
       >
         <DialogHeader className="pr-8">
           <div className="flex items-start gap-3">
-            {/* Logo (only in browse mode) */}
-            {isBrowseMode && company.smallLogoUrl && (
+            {/* Logo */}
+            {company.smallLogoUrl ? (
               <img
                 src={company.smallLogoUrl}
                 alt={company.name}
                 className="h-12 w-12 shrink-0 rounded-lg object-contain bg-white/5 border border-border"
               />
+            ) : (
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-surface-elevated border border-border">
+                <Building2 className="h-6 w-6 text-foreground-muted" />
+              </div>
             )}
             <div className="min-w-0 flex-1 space-y-2">
               {/* Title row with action buttons */}

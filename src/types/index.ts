@@ -41,6 +41,7 @@ export interface StartupCard {
   location: string;
   website: string;
   ycUrl: string;
+  smallLogoUrl?: string;
 }
 
 export interface QuestionData {

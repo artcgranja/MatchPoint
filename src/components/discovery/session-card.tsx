@@ -18,7 +18,7 @@ import {
 import { StartupDetailDialog } from "./startup-detail-dialog";
 import { apiGet } from "@/lib/api/client";
 import { STAGE_CONFIG } from "@/lib/stage-config";
-import type { SessionItem, SessionPipelineStage, StartupCard } from "@/types";
+import type { SessionItem, StartupCard } from "@/types";
 
 function DiscoveryPreview({ preview }: { preview: string | null }) {
   if (!preview) return null;
@@ -44,14 +44,12 @@ function ScoutPreview({
   topStartups,
   resultCount,
   moreLabel,
-  searchExecutionId,
   onStartupClick,
 }: {
   topStartups: string[] | null;
   resultCount: number;
-  moreLabel: (count: number) => string;
-  searchExecutionId: string | null;
-  onStartupClick: (name: string) => void;
+  moreLabel?: (count: number) => string;
+  onStartupClick?: (name: string) => void;
 }) {
   if (!topStartups || topStartups.length === 0) return null;
   const remaining = resultCount - topStartups.length;
@@ -63,7 +61,7 @@ function ScoutPreview({
           key={name}
           onClick={(e) => {
             e.stopPropagation();
-            onStartupClick(name);
+            onStartupClick?.(name);
           }}
           className="flex items-center gap-2 text-left hover:bg-surface-hover/50 rounded px-1 py-0.5 -mx-1 transition-colors"
         >
@@ -75,7 +73,7 @@ function ScoutPreview({
           </span>
         </button>
       ))}
-      {remaining > 0 && (
+      {remaining > 0 && moreLabel && (
         <span className="pl-7 text-[10px] text-foreground-muted/40">
           {moreLabel(remaining)}
         </span>
@@ -86,20 +84,21 @@ function ScoutPreview({
 
 interface SessionCardProps {
   session: SessionItem;
-  isActive: boolean;
+  isActive?: boolean;
   onClick: () => void;
-  onDelete: () => void;
-  onRename: () => void;
-  deleteLabel: string;
-  renameLabel: string;
-  resultCountLabel: string;
   relativeTime: string;
-  moreLabel: (count: number) => string;
+  // Optional action props — when omitted, no dropdown menu is shown
+  onDelete?: () => void;
+  onRename?: () => void;
+  deleteLabel?: string;
+  renameLabel?: string;
+  resultCountLabel?: string;
+  moreLabel?: (count: number) => string;
 }
 
 export function SessionCard({
   session,
-  isActive,
+  isActive = false,
   onClick,
   onDelete,
   onRename,
@@ -113,6 +112,8 @@ export function SessionCard({
   const Icon = config.icon;
   const [selectedCard, setSelectedCard] = useState<StartupCard | null>(null);
   const [isLoadingCard, setIsLoadingCard] = useState(false);
+
+  const hasActions = onDelete && onRename;
 
   const handleStartupClick = async (startupName: string) => {
     if (!session.searchExecutionId || isLoadingCard) return;
@@ -150,7 +151,7 @@ export function SessionCard({
           : "border-border/60 hover:border-foreground-muted/20 hover:bg-background-secondary/50"
       )}
     >
-      {/* Header: icon + title + time + delete */}
+      {/* Header: icon + title + time + actions */}
       <div className="flex items-start gap-2.5">
         <div
           className={cn(
@@ -168,38 +169,40 @@ export function SessionCard({
             {relativeTime}
           </span>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              onClick={(e) => e.stopPropagation()}
-              aria-label="Session actions"
-              className="shrink-0 rounded p-0.5 text-foreground-muted/30 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
-            >
-              <MoreVertical className="h-3.5 w-3.5" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                onRename();
-              }}
-            >
-              <Pencil className="h-4 w-4" />
-              {renameLabel}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-              {deleteLabel}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {hasActions && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                onClick={(e) => e.stopPropagation()}
+                aria-label="Session actions"
+                className="shrink-0 rounded p-0.5 text-foreground-muted/30 opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
+              >
+                <MoreVertical className="h-3.5 w-3.5" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRename();
+                }}
+              >
+                <Pencil className="h-4 w-4" />
+                {renameLabel}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+                {deleteLabel}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Stage-specific preview */}
@@ -208,7 +211,6 @@ export function SessionCard({
           topStartups={session.topStartups}
           resultCount={session.resultCount}
           moreLabel={moreLabel}
-          searchExecutionId={session.searchExecutionId}
           onStartupClick={handleStartupClick}
         />
       ) : session.pipelineStage === "analysis" ? (
@@ -218,7 +220,7 @@ export function SessionCard({
       )}
 
       {/* Footer: result count badge (only for scout) */}
-      {session.pipelineStage === "results" && session.resultCount > 0 && (
+      {session.pipelineStage === "results" && session.resultCount > 0 && resultCountLabel && (
         <div className="flex items-center">
           <Badge
             variant="secondary"

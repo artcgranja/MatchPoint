@@ -12,7 +12,7 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { StartupBrowseCard } from "@/components/descubra/startup-browse-card";
+import { CompanyCard } from "@/components/shared/company-card";
 import { StartupFilters } from "@/components/descubra/startup-filters";
 import type { BrowseCompany, PaginatedResponse } from "@/types";
 
@@ -137,7 +137,7 @@ function DescubraContent() {
           className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
         >
           {data.data.map((company) => (
-            <StartupBrowseCard key={company.id} company={company} />
+            <CompanyCard key={company.id} mode="browse" company={company} />
           ))}
         </motion.div>
       )}
