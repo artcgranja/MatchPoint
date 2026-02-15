@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { DiscoveryAgent } from "./navigator";
 import { AdvisorAgent } from "./advisor";
 import { runAnalysis, runScout } from "./orchestrator";
+import { extractProductConcept } from "./jobs/extract-product-concept";
 import { assembleSessionContext } from "./context";
 import type { QuestionAnswer, QuestionData } from "@/types";
 import type { SsePayload } from "@/lib/sse/events";
@@ -127,6 +128,12 @@ export async function* handleMessage(
         }
         yield event;
       }
+
+      // Background: extract product concept for demand tracking (fire-and-forget)
+      extractProductConcept(state.searchId!).catch((err) =>
+        console.error("[StateMachine] Background concept extraction failed:", err)
+      );
+
       // Transition to awaiting_confirmation
       yield {
         type: "done",
@@ -365,6 +372,11 @@ async function* handleDiscoveryMessage(
       }
       yield event;
     }
+
+    // Background: extract product concept for demand tracking (fire-and-forget)
+    extractProductConcept(search.id).catch((err) =>
+      console.error("[StateMachine] Background concept extraction failed:", err)
+    );
 
     // Analysis done → awaiting user confirmation
     yield {

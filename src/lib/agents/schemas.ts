@@ -61,3 +61,46 @@ export const OutreachEmailSchema = z.object({
 });
 
 export type OutreachEmail = z.infer<typeof OutreachEmailSchema>;
+
+// ═══════════════════════════════════════════
+// Product Concept Extraction
+// ═══════════════════════════════════════════
+
+export const ProductConceptSchema = z.object({
+  name: z
+    .string()
+    .describe(
+      "Canonical product concept name, 2-5 words, Title Case, technology-first (e.g., 'AI Contract Analysis', 'Fleet Route Optimization')"
+    ),
+  definition: z
+    .string()
+    .describe(
+      "One-sentence generic definition of this product category, independent of any specific company"
+    ),
+  category: z
+    .string()
+    .describe(
+      "High-level domain: AI/ML, Logistics, Fintech, Healthcare, HR, Marketing, Operations, Security, Analytics, Communication, or Other"
+    ),
+});
+
+export type ProductConcept = z.infer<typeof ProductConceptSchema>;
+
+export const ConceptClassificationSchema = z.object({
+  matchedConceptName: z
+    .string()
+    .nullable()
+    .describe(
+      "The exact name of the existing concept that matches, or null if this is a genuinely new concept"
+    ),
+  confidence: z
+    .number()
+    .describe(
+      "Confidence that this is a match (0.0-1.0). Only meaningful when matchedConceptName is not null"
+    ),
+  reasoning: z
+    .string()
+    .describe("Brief explanation of why this matches or why it is new"),
+});
+
+export type ConceptClassification = z.infer<typeof ConceptClassificationSchema>;

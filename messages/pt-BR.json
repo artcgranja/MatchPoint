@@ -21,6 +21,7 @@
     "settings": "Configurações",
     "connections": "Conexões",
     "companyProfile": "Empresa",
+    "productInsights": "Produtos",
     "expandSidebar": "Expandir barra lateral",
     "collapseSidebar": "Recolher barra lateral",
     "mainNavigation": "Navegação principal"
@@ -365,6 +366,17 @@
     "acceptToChat": "Aceite esta conexão para iniciar a conversa",
     "acceptConnection": "Aceitar Conexão",
     "accepting": "Aceitando..."
+  },
+  "ProductInsights": {
+    "title": "Produtos",
+    "description": "Necessidades de produtos em alta no mercado. Conceitos aparecem quando buscas suficientes identificam necessidades similares.",
+    "empty": "Nenhum conceito em alta ainda",
+    "emptyHint": "Demandas de produtos aparecerão aqui quando buscas suficientes identificarem necessidades similares.",
+    "demandCount": "{count, plural, one {# solicitação} other {# solicitações}}",
+    "category": "Categoria",
+    "firstSeen": "Primeiro registro",
+    "lastSeen": "Última atividade",
+    "searchPlaceholder": "Buscar conceitos..."
   },
   "Metadata": {
     "title": "MatchPoint — Matching de Startups com IA",
