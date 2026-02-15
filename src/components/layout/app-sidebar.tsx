@@ -18,6 +18,7 @@ import {
   Inbox,
   Building2,
   Send,
+  Lightbulb,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
@@ -107,6 +108,7 @@ export function AppSidebar() {
   const isSearchesActive = pathname.startsWith("/searches");
   const isConexoesActive = pathname.startsWith("/conexoes");
   const isCompanyActive = pathname.startsWith("/company");
+  const isInsightsActive = pathname.startsWith("/product-insights");
 
   const handleHomeClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -167,6 +169,13 @@ export function AppSidebar() {
               isActive={isCompanyActive}
               icon={Building2}
               label={t("companyProfile")}
+              collapsed={collapsed}
+            />
+            <NavLink
+              href="/product-insights"
+              isActive={isInsightsActive}
+              icon={Lightbulb}
+              label={t("productInsights")}
               collapsed={collapsed}
             />
           </>

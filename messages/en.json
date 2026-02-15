@@ -21,6 +21,7 @@
     "settings": "Settings",
     "connections": "Connections",
     "companyProfile": "Company",
+    "productInsights": "Product Insights",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar",
     "mainNavigation": "Main navigation"
@@ -365,6 +366,17 @@
     "acceptToChat": "Accept this connection to start a conversation",
     "acceptConnection": "Accept Connection",
     "accepting": "Accepting..."
+  },
+  "ProductInsights": {
+    "title": "Product Insights",
+    "description": "Trending product needs from the market. Concepts appear once enough users independently request similar solutions.",
+    "empty": "No trending concepts yet",
+    "emptyHint": "Product demands will appear here once enough searches identify similar needs.",
+    "demandCount": "{count, plural, one {# request} other {# requests}}",
+    "category": "Category",
+    "firstSeen": "First seen",
+    "lastSeen": "Last active",
+    "searchPlaceholder": "Search concepts..."
   },
   "Metadata": {
     "title": "MatchPoint — Startup Matching with AI",
