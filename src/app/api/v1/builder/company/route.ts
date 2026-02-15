@@ -120,6 +120,7 @@ export async function PUT(request: Request) {
     industry?: string;
     contactEmail?: string;
     location?: string;
+    isHiring?: boolean;
   };
 
   const company = await prisma.company.update({
@@ -132,6 +133,7 @@ export async function PUT(request: Request) {
       ...(body.industry && { industry: body.industry, industries: [body.industry] }),
       ...(body.contactEmail && { contactEmail: body.contactEmail }),
       ...(body.location !== undefined && { allLocations: body.location }),
+      ...(body.isHiring !== undefined && { isHiring: body.isHiring }),
     },
   });
 
