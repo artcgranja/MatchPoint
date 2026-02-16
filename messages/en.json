@@ -22,6 +22,8 @@
     "connections": "Connections",
     "companyProfile": "Company",
     "productInsights": "Product Insights",
+    "projects": "Projects",
+    "build": "Build",
     "expandSidebar": "Expand sidebar",
     "collapseSidebar": "Collapse sidebar",
     "mainNavigation": "Main navigation"
@@ -412,6 +414,51 @@
     "definition": "Definition",
     "demand": "Demand",
     "timeline": "Timeline"
+  },
+  "Builder": {
+    "title": "Projects",
+    "description": "Build web apps, APIs, and AI agents with an AI-powered workspace.",
+    "newProject": "New Project",
+    "noProjects": "No projects yet",
+    "noProjectsHint": "Create your first project to get started",
+    "createProject": "Create Project",
+    "creating": "Creating...",
+    "projectName": "Project name",
+    "chooseTemplate": "Choose a template",
+    "templates": {
+      "nextjs": "Next.js Web App",
+      "nextjsDesc": "Full-stack web app with React, Tailwind, and App Router",
+      "fastapi": "Python FastAPI",
+      "fastapiDesc": "Python backend with FastAPI, uvicorn, and Pydantic",
+      "agent": "AI Agent Workflow",
+      "agentDesc": "Python agent workflow using the Anthropic SDK",
+      "blank": "Blank Project",
+      "blankDesc": "Empty sandbox with Node.js and Python pre-installed"
+    },
+    "workspace": {
+      "files": "Files",
+      "terminal": "Terminal",
+      "chat": "Chat",
+      "preview": "Preview",
+      "noFiles": "No files yet",
+      "connectingSandbox": "Connecting to sandbox...",
+      "openFile": "Open a file from the explorer to start editing",
+      "askAI": "or ask the AI to create files for you",
+      "chatPlaceholder": "Describe what to build...",
+      "noPreview": "No preview available",
+      "startDevServer": "Start a dev server to see a live preview"
+    },
+    "github": {
+      "createRepo": "Create Repository",
+      "pushToGithub": "Push to GitHub",
+      "repoName": "Repository name",
+      "commitMessage": "Commit message",
+      "private": "Private",
+      "public": "Public",
+      "createAndPush": "Create & Push",
+      "push": "Push",
+      "notConnected": "GitHub not connected"
+    }
   },
   "Metadata": {
     "title": "MatchPoint — Startup Matching with AI",

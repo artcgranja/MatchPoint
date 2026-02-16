@@ -18,6 +18,7 @@ import {
   Inbox,
   Building2,
   Lightbulb,
+  Code2,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useTranslations } from "next-intl";
@@ -119,6 +120,7 @@ export function AppSidebar() {
   const isConexoesActive = pathname.startsWith("/conexoes");
   const isCompanyActive = pathname.startsWith("/company");
   const isInsightsActive = pathname.startsWith("/product-insights");
+  const isBuilderActive = pathname.startsWith("/builder");
 
   const handleHomeClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -189,6 +191,13 @@ export function AppSidebar() {
               label={t("productInsights")}
               collapsed={collapsed}
             />
+            <NavLink
+              href="/builder"
+              isActive={isBuilderActive}
+              icon={Code2}
+              label={t("projects")}
+              collapsed={collapsed}
+            />
           </>
         ) : (
           /* Seeker nav */
@@ -235,6 +244,21 @@ export function AppSidebar() {
               isActive={isConexoesActive}
               icon={Inbox}
               label={t("connections")}
+              collapsed={collapsed}
+            />
+
+            {/* Builder section */}
+            {!collapsed && (
+              <span className="mt-4 mb-1 px-3 text-xs font-medium uppercase tracking-wider text-foreground-muted/50">
+                {t("build")}
+              </span>
+            )}
+            {collapsed && <div className="my-2 mx-3 border-t border-border" />}
+            <NavLink
+              href="/builder"
+              isActive={isBuilderActive}
+              icon={Code2}
+              label={t("projects")}
               collapsed={collapsed}
             />
           </>

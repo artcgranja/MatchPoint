@@ -60,6 +60,17 @@ export async function GET(request: Request) {
 
   const accessToken = tokenData.access_token as string;
 
+  // Store encrypted access token for later use (GitHub integration)
+  let encryptedAccessToken: string | null = null;
+  if (process.env.GITHUB_TOKEN_ENCRYPTION_KEY) {
+    try {
+      const { encryptToken } = await import("@/lib/github/crypto");
+      encryptedAccessToken = encryptToken(accessToken);
+    } catch {
+      // Encryption not available — skip storing token
+    }
+  }
+
   // Fetch GitHub user profile
   const userResponse = await fetch("https://api.github.com/user", {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -102,6 +113,7 @@ export async function GET(request: Request) {
           githubId: githubUser.id,
           name: existingByEmail.name ?? githubUser.name ?? githubUser.login,
           avatarUrl: existingByEmail.avatarUrl ?? githubUser.avatar_url,
+          ...(encryptedAccessToken && { githubAccessToken: encryptedAccessToken }),
         },
       });
     } else {
@@ -115,6 +127,7 @@ export async function GET(request: Request) {
           avatarUrl: githubUser.avatar_url,
           role: chosenRole,
           roleChosenAt: new Date(),
+          ...(encryptedAccessToken && { githubAccessToken: encryptedAccessToken }),
         },
       });
     }
@@ -125,6 +138,7 @@ export async function GET(request: Request) {
       data: {
         name: githubUser.name ?? githubUser.login,
         avatarUrl: githubUser.avatar_url,
+        ...(encryptedAccessToken && { githubAccessToken: encryptedAccessToken }),
       },
     });
   }

@@ -3,9 +3,10 @@ import type { Skill, SkillModule } from "./types";
 import { startupDataSkill } from "./startup-data";
 import { discoveryControlSkill } from "./discovery-control";
 import { discoveryQuestionsSkill } from "./discovery-questions";
+import { builderSandboxSkill } from "./builder-sandbox";
 
 /** All registered skills. Add new skills here. */
-const SKILL_MODULES: SkillModule[] = [startupDataSkill, discoveryControlSkill, discoveryQuestionsSkill];
+const SKILL_MODULES: SkillModule[] = [startupDataSkill, discoveryControlSkill, discoveryQuestionsSkill, builderSandboxSkill];
 
 function resolve(mod: SkillModule): Skill {
   return {

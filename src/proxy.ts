@@ -34,7 +34,7 @@ export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Protected routes: redirect to / with login modal if not authenticated
-  const protectedRoutes = ["/settings", "/onboarding", "/company"];
+  const protectedRoutes = ["/settings", "/onboarding", "/company", "/builder"];
   if (protectedRoutes.some((r) => pathname.startsWith(r)) && !isAuthenticated) {
     const url = req.nextUrl.clone();
     url.pathname = "/";

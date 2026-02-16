@@ -22,6 +22,8 @@
     "connections": "Conexões",
     "companyProfile": "Empresa",
     "productInsights": "Produtos",
+    "projects": "Projetos",
+    "build": "Construir",
     "expandSidebar": "Expandir barra lateral",
     "collapseSidebar": "Recolher barra lateral",
     "mainNavigation": "Navegação principal"
@@ -412,6 +414,51 @@
     "definition": "Definição",
     "demand": "Demanda",
     "timeline": "Linha do tempo"
+  },
+  "Builder": {
+    "title": "Projetos",
+    "description": "Construa apps web, APIs e agentes de IA com um workspace com IA.",
+    "newProject": "Novo Projeto",
+    "noProjects": "Nenhum projeto ainda",
+    "noProjectsHint": "Crie seu primeiro projeto para começar",
+    "createProject": "Criar Projeto",
+    "creating": "Criando...",
+    "projectName": "Nome do projeto",
+    "chooseTemplate": "Escolha um template",
+    "templates": {
+      "nextjs": "Next.js Web App",
+      "nextjsDesc": "App web full-stack com React, Tailwind e App Router",
+      "fastapi": "Python FastAPI",
+      "fastapiDesc": "Backend Python com FastAPI, uvicorn e Pydantic",
+      "agent": "Workflow de Agente IA",
+      "agentDesc": "Workflow de agente Python usando o SDK Anthropic",
+      "blank": "Projeto em Branco",
+      "blankDesc": "Sandbox vazio com Node.js e Python pré-instalados"
+    },
+    "workspace": {
+      "files": "Arquivos",
+      "terminal": "Terminal",
+      "chat": "Chat",
+      "preview": "Pré-visualização",
+      "noFiles": "Nenhum arquivo ainda",
+      "connectingSandbox": "Conectando ao sandbox...",
+      "openFile": "Abra um arquivo do explorador para começar a editar",
+      "askAI": "ou peça à IA para criar arquivos para você",
+      "chatPlaceholder": "Descreva o que quer construir...",
+      "noPreview": "Sem pré-visualização disponível",
+      "startDevServer": "Inicie um servidor de desenvolvimento para ver a pré-visualização"
+    },
+    "github": {
+      "createRepo": "Criar Repositório",
+      "pushToGithub": "Push para GitHub",
+      "repoName": "Nome do repositório",
+      "commitMessage": "Mensagem do commit",
+      "private": "Privado",
+      "public": "Público",
+      "createAndPush": "Criar e Enviar",
+      "push": "Enviar",
+      "notConnected": "GitHub não conectado"
+    }
   },
   "Metadata": {
     "title": "MatchPoint — Matching de Startups com IA",

@@ -7,4 +7,5 @@ export const MODELS = {
   analysis: "claude-opus-4-6",
   scout: "claude-haiku-4-5-20251001",
   advisor: "claude-haiku-4-5-20251001",
+  builder: "claude-opus-4-6",
 } as const;

@@ -7,6 +7,8 @@ const envSchema = z.object({
   GITHUB_CLIENT_ID: z.string().min(1),
   GITHUB_CLIENT_SECRET: z.string().min(1),
   NEXT_PUBLIC_APP_URL: z.string().url(),
+  E2B_API_KEY: z.string().min(1).optional(),
+  GITHUB_TOKEN_ENCRYPTION_KEY: z.string().min(32).optional(),
 });
 
 export function validateEnv() {

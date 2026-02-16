@@ -40,6 +40,20 @@ enum NotificationType {
   connection_message
 }
 
+enum ProjectStatus {
+  active
+  paused
+  archived
+  deleted
+}
+
+enum ProjectTemplate {
+  nextjs_webapp
+  python_fastapi
+  agent_workflow
+  blank
+}
+
 model User {
   id                String              @id @default(uuid())
   email             String              @unique
@@ -60,6 +74,8 @@ model User {
   connectionsSent   Connection[]        @relation("ConnectionSeeker")
   connectionMessages ConnectionMessage[] @relation("ConnectionMessageSender")
   notifications     Notification[]
+  builderProjects   BuilderProject[]
+  githubAccessToken String?
 }
 
 model Company {
@@ -289,4 +305,37 @@ model Notification {
 
   @@index([userId, read])
   @@index([userId, createdAt])
+}
+
+model BuilderProject {
+  id            String          @id @default(uuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id])
+  name          String
+  slug          String
+  description   String?
+  template      ProjectTemplate @default(blank)
+  sandboxId     String?
+  githubRepoUrl  String?
+  githubRepoName String?
+  status        ProjectStatus   @default(active)
+  lastOpenedAt  DateTime        @default(now())
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  messages      BuilderMessage[]
+
+  @@unique([userId, slug])
+  @@index([userId, status])
+}
+
+model BuilderMessage {
+  id        String         @id @default(uuid())
+  projectId String
+  project   BuilderProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  role      String
+  content   String
+  metadata  Json?
+  createdAt DateTime       @default(now())
+
+  @@index([projectId, createdAt])
 }
