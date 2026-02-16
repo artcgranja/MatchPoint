@@ -6,6 +6,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { useDefaultLayout } from "react-resizable-panels";
 import { WorkspaceTopbar } from "./workspace-topbar";
 import { FileTreePanel } from "./file-tree-panel";
 import { EditorPanel } from "./editor-panel";
@@ -14,17 +15,30 @@ import { ChatPanel } from "./chat-panel";
 import { PreviewPanel } from "./preview-panel";
 import { useBuilderStore } from "@/stores/builder-store";
 import type { BuilderProject } from "@/types/builder";
-import type { PanelImperativeHandle } from "react-resizable-panels";
+import type { PanelImperativeHandle, PanelSize } from "react-resizable-panels";
 
 interface WorkspaceLayoutProps {
   project: BuilderProject;
 }
 
+const CHAT_COLLAPSED_SIZE = 3;
+
 export function WorkspaceLayout({ project }: WorkspaceLayoutProps) {
-  const chatOpen = useBuilderStore((s) => s.chatOpen);
   const setChatOpen = useBuilderStore((s) => s.setChatOpen);
   const previewUrl = useBuilderStore((s) => s.previewUrl);
   const chatPanelRef = useRef<PanelImperativeHandle>(null);
+
+  // Persist horizontal layout across page loads
+  const horizontalLayout = useDefaultLayout({
+    id: "builder-workspace",
+    panelIds: ["chat", "editor", "filetree"],
+  });
+
+  // Persist vertical editor/terminal layout
+  const verticalLayout = useDefaultLayout({
+    id: "builder-editor-vertical",
+    panelIds: ["editor-main", "terminal"],
+  });
 
   // Hydrate store with project data on mount
   useEffect(() => {
@@ -41,38 +55,65 @@ export function WorkspaceLayout({ project }: WorkspaceLayoutProps) {
   const toggleChat = useCallback(() => {
     const panel = chatPanelRef.current;
     if (!panel) return;
-    if (chatOpen) {
-      panel.collapse();
-      setChatOpen(false);
-    } else {
+    if (panel.isCollapsed()) {
       panel.expand();
-      setChatOpen(true);
+    } else {
+      panel.collapse();
     }
-  }, [chatOpen, setChatOpen]);
+  }, []);
+
+  // Sync chat panel collapse state with store
+  const handleChatResize = useCallback(
+    (size: PanelSize) => {
+      setChatOpen(size.asPercentage > CHAT_COLLAPSED_SIZE);
+    },
+    [setChatOpen]
+  );
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <WorkspaceTopbar project={project} onToggleChat={toggleChat} />
 
-      <ResizablePanelGroup direction="horizontal" className="flex-1">
-        {/* File Tree */}
+      <ResizablePanelGroup
+        direction="horizontal"
+        className="flex-1"
+        defaultLayout={horizontalLayout.defaultLayout}
+        onLayoutChanged={horizontalLayout.onLayoutChanged}
+      >
+        {/* Chat Panel — primary panel (left, Bolt.new pattern) */}
         <ResizablePanel
-          defaultSize={15}
-          minSize={10}
-          maxSize={25}
+          id="chat"
+          panelRef={chatPanelRef}
+          defaultSize={28}
+          minSize={20}
+          maxSize={45}
           collapsible
-          className="bg-background-secondary/30"
+          collapsedSize={CHAT_COLLAPSED_SIZE}
+          onResize={handleChatResize}
         >
-          <FileTreePanel />
+          <ChatPanel projectId={project.id} />
         </ResizablePanel>
 
         <ResizableHandle withHandle />
 
         {/* Center: Editor/Preview + Terminal */}
-        <ResizablePanel defaultSize={60} minSize={40}>
-          <ResizablePanelGroup direction="vertical">
+        <ResizablePanel
+          id="editor"
+          defaultSize={55}
+          minSize={30}
+          maxSize={70}
+        >
+          <ResizablePanelGroup
+            direction="vertical"
+            defaultLayout={verticalLayout.defaultLayout}
+            onLayoutChanged={verticalLayout.onLayoutChanged}
+          >
             {/* Editor or Preview */}
-            <ResizablePanel defaultSize={75} minSize={30}>
+            <ResizablePanel
+              id="editor-main"
+              defaultSize={75}
+              minSize={30}
+            >
               {previewUrl ? <PreviewPanel /> : <EditorPanel />}
             </ResizablePanel>
 
@@ -80,27 +121,31 @@ export function WorkspaceLayout({ project }: WorkspaceLayoutProps) {
 
             {/* Terminal */}
             <ResizablePanel
+              id="terminal"
               defaultSize={25}
               minSize={10}
               maxSize={50}
               collapsible
+              collapsedSize={3}
             >
               <TerminalPanel />
             </ResizablePanel>
           </ResizablePanelGroup>
         </ResizablePanel>
 
-        {/* Chat Panel — always rendered, collapsible */}
         <ResizableHandle withHandle />
+
+        {/* File Tree — secondary panel (right) */}
         <ResizablePanel
-          panelRef={chatPanelRef}
-          defaultSize={25}
-          minSize={15}
-          maxSize={40}
+          id="filetree"
+          defaultSize={17}
+          minSize={12}
+          maxSize={25}
           collapsible
-          collapsedSize={0}
+          collapsedSize={3}
+          className="bg-background-secondary/30"
         >
-          <ChatPanel projectId={project.id} />
+          <FileTreePanel />
         </ResizablePanel>
       </ResizablePanelGroup>
     </div>

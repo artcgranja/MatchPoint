@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
 import {
   File,
   Folder,
-  FolderOpen,
+  FolderOpen as FolderOpenIcon,
   ChevronRight,
   ChevronDown,
   RefreshCw,
+  FolderTree,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useBuilderStore } from "@/stores/builder-store";
@@ -72,7 +73,7 @@ function FileTreeNode({
             <ChevronRight className="h-3 w-3 shrink-0" />
           )}
           {isExpanded ? (
-            <FolderOpen className="h-3.5 w-3.5 shrink-0 text-highlight/70" />
+            <FolderOpenIcon className="h-3.5 w-3.5 shrink-0 text-highlight/70" />
           ) : (
             <Folder className="h-3.5 w-3.5 shrink-0 text-highlight/70" />
           )}
@@ -122,6 +123,20 @@ export function FileTreePanel() {
   const activeFile = useBuilderStore((s) => s.activeFile);
   const openFile = useBuilderStore((s) => s.openFile);
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
+  const [collapsed, setCollapsed] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Detect collapsed state via width
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      setCollapsed(width < 60);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const toggleDir = useCallback((path: string) => {
     setExpandedDirs((prev) => {
@@ -151,8 +166,17 @@ export function FileTreePanel() {
     if (sandboxReady) fetchTree();
   }, [sandboxReady, fetchTree]);
 
+  // Collapsed state — show vertical icon strip
+  if (collapsed) {
+    return (
+      <div ref={containerRef} className="flex h-full flex-col items-center py-3 bg-background-secondary/30">
+        <FolderTree className="h-4 w-4 text-foreground-muted" />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full flex-col">
+    <div ref={containerRef} className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-border px-3 py-1.5">
         <span className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
           Files

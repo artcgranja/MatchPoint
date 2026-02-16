@@ -2,7 +2,7 @@
 
 import { useRef, useEffect, useState, useCallback } from "react";
 import { motion } from "motion/react";
-import { ArrowUp, Loader2, Wrench, FileCode2 } from "lucide-react";
+import { ArrowUp, Loader2, Wrench, FileCode2, MessageSquare } from "lucide-react";
 import { Streamdown } from "streamdown";
 import { code } from "@streamdown/code";
 import { cn } from "@/lib/utils";
@@ -99,6 +99,7 @@ function ChatMessage({ message, isLast, isStreaming }: { message: BuilderChatMes
 
 export function ChatPanel({ projectId }: ChatPanelProps) {
   const chatMessages = useBuilderStore((s) => s.chatMessages);
+  const chatOpen = useBuilderStore((s) => s.chatOpen);
   const isStreaming = useBuilderStore((s) => s.isStreaming);
   const { sendMessage } = useBuilderChat(projectId);
   const [input, setInput] = useState("");
@@ -133,8 +134,25 @@ export function ChatPanel({ projectId }: ChatPanelProps) {
     }
   };
 
+  // Collapsed state — show vertical icon strip
+  if (!chatOpen) {
+    return (
+      <div className="flex h-full flex-col items-center py-3 bg-background">
+        <MessageSquare className="h-4 w-4 text-foreground-muted" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col bg-background">
+      {/* Header */}
+      <div className="flex items-center border-b border-border px-3 py-1.5">
+        <MessageSquare className="mr-1.5 h-3.5 w-3.5 text-highlight" />
+        <span className="text-xs font-medium uppercase tracking-wider text-foreground-muted">
+          Chat
+        </span>
+      </div>
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {chatMessages.length === 0 && (
