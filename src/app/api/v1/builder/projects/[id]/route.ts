@@ -15,7 +15,7 @@ export async function GET(
   const { id } = await params;
 
   const project = await prisma.builderProject.findFirst({
-    where: { id, status: { not: "deleted" } },
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
     include: {
       messages: {
         orderBy: { createdAt: "asc" },
@@ -26,10 +26,6 @@ export async function GET(
 
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
-  }
-
-  if (project.userId !== auth.userId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // Update lastOpenedAt
@@ -52,16 +48,12 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const project = await prisma.builderProject.findUnique({
-    where: { id },
+  const project = await prisma.builderProject.findFirst({
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
   });
 
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
-  }
-
-  if (project.userId !== auth.userId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // Destroy sandbox if active (don't block soft-delete on failure)

@@ -15,18 +15,25 @@ export async function POST(
   }
 
   const { id } = await params;
-  const body = await req.json();
+
+  let body: { repoName?: string; description?: string; isPrivate?: boolean };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
   const { repoName, description = "", isPrivate = true } = body;
 
   if (!repoName) {
     return NextResponse.json({ error: "repoName is required" }, { status: 400 });
   }
 
-  const project = await prisma.builderProject.findUnique({
-    where: { id },
+  const project = await prisma.builderProject.findFirst({
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
   });
 
-  if (!project || project.userId !== auth.userId) {
+  if (!project) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -86,13 +93,9 @@ export async function POST(
       repoName: repo.full_name,
     });
   } catch (error) {
+    console.error("GitHub create repo error:", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Failed to create repository",
-      },
+      { error: "Failed to create repository" },
       { status: 500 }
     );
   }

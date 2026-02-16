@@ -4,6 +4,7 @@ import { getAuthUser } from "@/lib/auth";
 import { connectToSandbox } from "@/lib/e2b/client";
 
 const SANDBOX_ROOT = "/home/user/app";
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
 
 function safePath(input: string): string | null {
   if (/[;&|`$(){}!#]/.test(input)) return null;
@@ -14,7 +15,8 @@ function safePath(input: string): string | null {
     else if (seg !== ".") resolved.push(seg);
   }
   const normalized = "/" + resolved.join("/");
-  if (!normalized.startsWith(SANDBOX_ROOT)) return null;
+  if (normalized !== SANDBOX_ROOT && !normalized.startsWith(SANDBOX_ROOT + "/"))
+    return null;
   return normalized;
 }
 
@@ -41,10 +43,10 @@ export async function GET(
   }
 
   const project = await prisma.builderProject.findFirst({
-    where: { id, status: { not: "deleted" } },
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
   });
 
-  if (!project || project.userId !== auth.userId || !project.sandboxId) {
+  if (!project || !project.sandboxId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -84,16 +86,31 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   }
 
+  // Check content length before reading body
+  const contentLength = req.headers.get("content-length");
+  if (contentLength && parseInt(contentLength) > MAX_FILE_SIZE) {
+    return NextResponse.json(
+      { error: `File too large (max ${MAX_FILE_SIZE / 1024 / 1024}MB)` },
+      { status: 413 }
+    );
+  }
+
   const project = await prisma.builderProject.findFirst({
-    where: { id, status: { not: "deleted" } },
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
   });
 
-  if (!project || project.userId !== auth.userId || !project.sandboxId) {
+  if (!project || !project.sandboxId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
   try {
     const content = await req.text();
+    if (content.length > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: `File too large (max ${MAX_FILE_SIZE / 1024 / 1024}MB)` },
+        { status: 413 }
+      );
+    }
     const sandbox = await connectToSandbox(project.sandboxId);
     await sandbox.files.write(path, content);
     return NextResponse.json({ success: true });

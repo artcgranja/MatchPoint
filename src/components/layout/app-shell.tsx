@@ -18,7 +18,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const isHomePage = pathname === "/";
   const isActiveChat = discoveryState !== "idle";
   const isBuilder = user?.role === "builder";
-  const showSidebar = isBuilder ? !!user : !isActiveChat && (!isHomePage || !!user);
+  const isBuilderWorkspace = pathname.startsWith("/builder/");
+  const showSidebar = isBuilder
+    ? (!!user && !isBuilderWorkspace)
+    : (!isActiveChat && (!isHomePage || !!user));
 
   const sidebarWidth = showSidebar ? (collapsed ? 64 : 240) : 0;
 

@@ -2,6 +2,30 @@ import { z } from "zod";
 import { betaZodTool } from "@anthropic-ai/sdk/helpers/beta/zod";
 import type { Sandbox } from "@e2b/code-interpreter";
 
+const SANDBOX_ROOT = "/home/user/app";
+
+/** Validate that a path is within the sandbox root. */
+function validatePath(path: string): string | null {
+  // Reject shell metacharacters
+  if (/[;&|`$(){}!#]/.test(path)) return null;
+  // Normalize away relative segments
+  const segments = path.split("/").filter(Boolean);
+  const resolved: string[] = [];
+  for (const seg of segments) {
+    if (seg === "..") resolved.pop();
+    else if (seg !== ".") resolved.push(seg);
+  }
+  const normalized = "/" + resolved.join("/");
+  if (normalized !== SANDBOX_ROOT && !normalized.startsWith(SANDBOX_ROOT + "/"))
+    return null;
+  return normalized;
+}
+
+/** Shell-escape a string for safe use inside double quotes. */
+function shellEscape(s: string): string {
+  return s.replace(/["\\$`!]/g, "\\$&");
+}
+
 /**
  * Creates builder sandbox tools bound to a specific sandbox instance.
  * Each tool receives the sandbox via closure (not from agent input).
@@ -34,11 +58,12 @@ export function createBuilderTools(sandbox: Sandbox) {
       }),
       run: async (input) => {
         try {
-          // Ensure parent directory exists
-          const dir = input.path.substring(0, input.path.lastIndexOf("/"));
-          if (dir) await sandbox.commands.run(`mkdir -p "${dir}"`);
-          await sandbox.files.write(input.path, input.content);
-          return `File written: ${input.path}`;
+          const safePath = validatePath(input.path);
+          if (!safePath) return `Error: path must be within ${SANDBOX_ROOT}`;
+          const dir = safePath.substring(0, safePath.lastIndexOf("/"));
+          if (dir) await sandbox.commands.run(`mkdir -p "${shellEscape(dir)}"`);
+          await sandbox.files.write(safePath, input.content);
+          return `File written: ${safePath}`;
         } catch (err) {
           return `Error writing file: ${err instanceof Error ? err.message : String(err)}`;
         }
@@ -48,7 +73,7 @@ export function createBuilderTools(sandbox: Sandbox) {
     betaZodTool({
       name: "edit_file",
       description:
-        "Make surgical edits to an existing file by replacing a specific string with a new string. Preferred over write_file for modifying existing files.",
+        "Make surgical edits to an existing file by replacing all occurrences of a specific string with a new string. Preferred over write_file for modifying existing files.",
       inputSchema: z.object({
         path: z.string().describe("Absolute file path to edit"),
         old_string: z.string().describe("The exact string to find and replace"),
@@ -56,13 +81,15 @@ export function createBuilderTools(sandbox: Sandbox) {
       }),
       run: async (input) => {
         try {
-          const content = await sandbox.files.read(input.path);
+          const safePath = validatePath(input.path);
+          if (!safePath) return `Error: path must be within ${SANDBOX_ROOT}`;
+          const content = await sandbox.files.read(safePath);
           if (!content.includes(input.old_string)) {
-            return `Error: old_string not found in ${input.path}. Read the file first to see its contents.`;
+            return `Error: old_string not found in ${safePath}. Read the file first to see its contents.`;
           }
-          const updated = content.replace(input.old_string, input.new_string);
-          await sandbox.files.write(input.path, updated);
-          return `File edited: ${input.path}`;
+          const updated = content.replaceAll(input.old_string, input.new_string);
+          await sandbox.files.write(safePath, updated);
+          return `File edited: ${safePath}`;
         } catch (err) {
           return `Error editing file: ${err instanceof Error ? err.message : String(err)}`;
         }
@@ -77,8 +104,10 @@ export function createBuilderTools(sandbox: Sandbox) {
       }),
       run: async (input) => {
         try {
-          await sandbox.commands.run(`mkdir -p "${input.path}"`);
-          return `Directory created: ${input.path}`;
+          const safePath = validatePath(input.path);
+          if (!safePath) return `Error: path must be within ${SANDBOX_ROOT}`;
+          await sandbox.commands.run(`mkdir -p "${shellEscape(safePath)}"`);
+          return `Directory created: ${safePath}`;
         } catch (err) {
           return `Error creating directory: ${err instanceof Error ? err.message : String(err)}`;
         }
@@ -111,8 +140,12 @@ export function createBuilderTools(sandbox: Sandbox) {
       }),
       run: async (input) => {
         try {
-          await sandbox.commands.run(`rm -rf "${input.path}"`);
-          return `Deleted: ${input.path}`;
+          const safePath = validatePath(input.path);
+          if (!safePath) return `Error: path must be within ${SANDBOX_ROOT}`;
+          if (safePath === SANDBOX_ROOT)
+            return "Error: cannot delete the project root directory";
+          await sandbox.commands.run(`rm -rf "${shellEscape(safePath)}"`);
+          return `Deleted: ${safePath}`;
         } catch (err) {
           return `Error deleting: ${err instanceof Error ? err.message : String(err)}`;
         }
@@ -159,9 +192,13 @@ export function createBuilderTools(sandbox: Sandbox) {
       }),
       run: async (input) => {
         try {
-          const cwd = input.directory ?? "/home/user/app";
+          const cwd = input.directory ?? SANDBOX_ROOT;
+          const safeCwd = validatePath(cwd);
+          if (!safeCwd) return `Error: directory must be within ${SANDBOX_ROOT}`;
+          // Sanitize pattern: only allow alphanumeric, dots, asterisks, hyphens, underscores
+          const safePattern = input.pattern.replace(/[^a-zA-Z0-9.*_-]/g, "");
           const result = await sandbox.commands.run(
-            `find "${cwd}" -type f -name "${input.pattern}" | head -50`
+            `find "${shellEscape(safeCwd)}" -type f -name "${safePattern}" | head -50`
           );
           return result.stdout || "No files found.";
         } catch (err) {

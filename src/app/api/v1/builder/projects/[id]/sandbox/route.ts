@@ -15,16 +15,12 @@ export async function POST(
 
   const { id } = await params;
 
-  const project = await prisma.builderProject.findUnique({
-    where: { id },
+  const project = await prisma.builderProject.findFirst({
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
   });
 
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
-  }
-
-  if (project.userId !== auth.userId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   // Try to reconnect to existing sandbox

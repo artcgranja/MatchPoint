@@ -81,6 +81,8 @@ export function EditorPanel() {
     return () => {
       cancelled = true;
       controller.abort();
+      // Cancel any pending save debounce to prevent cross-file writes
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
   }, [activeFile, projectId]);
 
@@ -126,7 +128,7 @@ export function EditorPanel() {
   return (
     <div className="flex h-full flex-col">
       <EditorTabs />
-      <div className="flex-1">
+      <div className="min-h-0 flex-1 overflow-hidden">
         {loading ? (
           <div className="flex h-full items-center justify-center text-sm text-foreground-muted">
             Loading...
@@ -136,6 +138,7 @@ export function EditorPanel() {
             <MonacoEditor
               height="100%"
               language={getLanguage(activeFile)}
+              path={activeFile}
               value={content}
               onChange={handleChange}
               theme="vs-dark"

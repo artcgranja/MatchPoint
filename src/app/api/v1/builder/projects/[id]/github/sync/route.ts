@@ -14,14 +14,21 @@ export async function POST(
   }
 
   const { id } = await params;
-  const body = await req.json();
+
+  let body: { commitMessage?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
   const { commitMessage = "Sync from MatchPoint Builder" } = body;
 
-  const project = await prisma.builderProject.findUnique({
-    where: { id },
+  const project = await prisma.builderProject.findFirst({
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
   });
 
-  if (!project || project.userId !== auth.userId) {
+  if (!project) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -66,11 +73,9 @@ export async function POST(
       commitUrl: commit.html_url,
     });
   } catch (error) {
+    console.error("GitHub sync error:", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Failed to sync to GitHub",
-      },
+      { error: "Failed to sync to GitHub" },
       { status: 500 }
     );
   }

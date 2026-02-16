@@ -8,7 +8,7 @@ export default function CompanyProfilePage() {
   const t = useTranslations("CompanyProfile");
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-1 flex-col gap-6 p-6 overflow-y-auto">
       <SectionHeader title={t("title")} description={t("subtitle")} />
       <CompanyProfile />
     </div>

@@ -8,7 +8,7 @@ export default function SettingsPage() {
   const t = useTranslations("Settings");
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-1 flex-col gap-6 p-6 overflow-y-auto">
       <SectionHeader
         title={t("title")}
         description={t("description")}

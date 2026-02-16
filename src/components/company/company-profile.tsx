@@ -162,7 +162,7 @@ export function CompanyProfile() {
       variants={staggerContainer}
       initial="hidden"
       animate="visible"
-      className="max-w-2xl space-y-6"
+      className="mx-auto w-full max-w-2xl space-y-6"
     >
       {/* Status banner */}
       <motion.div variants={cardEntrance}>

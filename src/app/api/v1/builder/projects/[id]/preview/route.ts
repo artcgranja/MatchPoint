@@ -15,11 +15,11 @@ export async function GET(
 
   const { id } = await params;
 
-  const project = await prisma.builderProject.findUnique({
-    where: { id },
+  const project = await prisma.builderProject.findFirst({
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
   });
 
-  if (!project || project.userId !== auth.userId || !project.sandboxId) {
+  if (!project || !project.sandboxId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -54,11 +54,11 @@ export async function POST(
 
   const { id } = await params;
 
-  const project = await prisma.builderProject.findUnique({
-    where: { id },
+  const project = await prisma.builderProject.findFirst({
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
   });
 
-  if (!project || project.userId !== auth.userId || !project.sandboxId) {
+  if (!project || !project.sandboxId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

@@ -14,11 +14,11 @@ export async function GET(
 
   const { id } = await params;
 
-  const project = await prisma.builderProject.findUnique({
-    where: { id },
+  const project = await prisma.builderProject.findFirst({
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
   });
 
-  if (!project || project.userId !== auth.userId) {
+  if (!project) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -110,25 +110,34 @@ export async function POST(
   }
 
   const { id } = await params;
-  const body = await req.json();
+
+  let body: { input?: unknown; pid?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
   const { input, pid } = body;
 
   if (typeof input !== "string") {
     return NextResponse.json({ error: "input is required" }, { status: 400 });
   }
 
-  const project = await prisma.builderProject.findUnique({
-    where: { id },
+  const project = await prisma.builderProject.findFirst({
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
   });
 
-  if (!project || project.userId !== auth.userId || !project.sandboxId) {
+  if (!project || !project.sandboxId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  const ptyPid = typeof pid === "number" && pid > 0 ? pid : 1;
+
   try {
     const sandbox = await connectToSandbox(project.sandboxId);
-    const data = new TextEncoder().encode(input);
-    await sandbox.pty.sendInput(pid ?? 0, data);
+    const data = new TextEncoder().encode(input as string);
+    await sandbox.pty.sendInput(ptyPid, data);
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json(

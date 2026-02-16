@@ -17,7 +17,8 @@ function safePath(input: string): string | null {
     else if (seg !== ".") resolved.push(seg);
   }
   const normalized = "/" + resolved.join("/");
-  if (!normalized.startsWith(SANDBOX_ROOT)) return null;
+  if (normalized !== SANDBOX_ROOT && !normalized.startsWith(SANDBOX_ROOT + "/"))
+    return null;
   return normalized;
 }
 
@@ -39,10 +40,10 @@ export async function GET(
   }
 
   const project = await prisma.builderProject.findFirst({
-    where: { id, status: { not: "deleted" } },
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
   });
 
-  if (!project || project.userId !== auth.userId || !project.sandboxId) {
+  if (!project || !project.sandboxId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -73,7 +74,14 @@ export async function POST(
   }
 
   const { id } = await params;
-  const body = await req.json();
+
+  let body: { path?: string; type?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
   const { path: rawPath, type } = body as { path: string; type: "file" | "directory" };
 
   if (!rawPath) {
@@ -86,10 +94,10 @@ export async function POST(
   }
 
   const project = await prisma.builderProject.findFirst({
-    where: { id, status: { not: "deleted" } },
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
   });
 
-  if (!project || project.userId !== auth.userId || !project.sandboxId) {
+  if (!project || !project.sandboxId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
@@ -133,11 +141,19 @@ export async function DELETE(
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   }
 
+  // Prevent deletion of the project root
+  if (path === SANDBOX_ROOT) {
+    return NextResponse.json(
+      { error: "Cannot delete the project root directory" },
+      { status: 400 }
+    );
+  }
+
   const project = await prisma.builderProject.findFirst({
-    where: { id, status: { not: "deleted" } },
+    where: { id, userId: auth.userId, status: { not: "deleted" } },
   });
 
-  if (!project || project.userId !== auth.userId || !project.sandboxId) {
+  if (!project || !project.sandboxId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 

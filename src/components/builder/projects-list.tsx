@@ -48,8 +48,17 @@ export function ProjectsList() {
     e.stopPropagation();
     if (!confirm("Delete this project? This cannot be undone.")) return;
 
-    await fetch(`/api/v1/builder/projects/${id}`, { method: "DELETE" });
-    setProjects((prev) => prev.filter((p) => p.id !== id));
+    try {
+      const res = await fetch(`/api/v1/builder/projects/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete");
+      setProjects((prev) => prev.filter((p) => p.id !== id));
+    } catch {
+      // Re-fetch to restore accurate state
+      fetch("/api/v1/builder/projects")
+        .then((res) => (res.ok ? res.json() : Promise.reject()))
+        .then(setProjects)
+        .catch(() => {});
+    }
   };
 
   return (

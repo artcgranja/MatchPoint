@@ -1,12 +1,12 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from "crypto";
 
 const ALGORITHM = "aes-256-gcm";
+const SALT = "matchpoint-github-token-v1";
 
 function getKey(): Buffer {
   const key = process.env.GITHUB_TOKEN_ENCRYPTION_KEY;
   if (!key) throw new Error("GITHUB_TOKEN_ENCRYPTION_KEY is not set");
-  // Use first 32 bytes of the key string
-  return Buffer.from(key.slice(0, 32).padEnd(32, "0"));
+  return scryptSync(key, SALT, 32);
 }
 
 export function encryptToken(token: string): string {

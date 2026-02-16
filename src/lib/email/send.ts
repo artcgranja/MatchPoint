@@ -3,6 +3,7 @@ import { ConnectionInviteEmail } from "./templates/connection-invite";
 import { MagicLinkLoginEmail } from "./templates/magic-link-login";
 
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL ?? "MatchPoint <noreply@matchpoint.ai>";
+const REPLY_TO = process.env.FALLBACK_CONTACT_EMAIL;
 
 interface SendConnectionInviteParams {
   to: string;
@@ -22,6 +23,7 @@ export async function sendConnectionInvite(params: SendConnectionInviteParams) {
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
     to: params.to,
+    ...(REPLY_TO && { replyTo: REPLY_TO }),
     subject: params.subject,
     react: ConnectionInviteEmail({
       startupName: params.startupName,
@@ -54,6 +56,7 @@ export async function sendMagicLink(params: SendMagicLinkParams) {
   const { data, error } = await resend.emails.send({
     from: FROM_EMAIL,
     to: params.to,
+    ...(REPLY_TO && { replyTo: REPLY_TO }),
     subject: "Sign in to MatchPoint",
     react: MagicLinkLoginEmail({ loginUrl: params.loginUrl }),
   });

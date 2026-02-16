@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useCallback } from "react";
+import { useRef, useCallback, useEffect } from "react";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -25,6 +25,18 @@ export function WorkspaceLayout({ project }: WorkspaceLayoutProps) {
   const setChatOpen = useBuilderStore((s) => s.setChatOpen);
   const previewUrl = useBuilderStore((s) => s.previewUrl);
   const chatPanelRef = useRef<PanelImperativeHandle>(null);
+
+  // Hydrate store with project data on mount
+  useEffect(() => {
+    const store = useBuilderStore.getState();
+    store.setProjectId(project.id);
+    store.setProjectName(project.name);
+    if (project.sandboxId) {
+      store.setSandboxId(project.sandboxId);
+      store.setSandboxReady(true);
+    }
+    return () => { useBuilderStore.getState().reset(); };
+  }, [project.id, project.name, project.sandboxId]);
 
   const toggleChat = useCallback(() => {
     const panel = chatPanelRef.current;

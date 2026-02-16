@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { getAuthUser } from "@/lib/auth";
 import { handleBuilderMessage } from "@/lib/builder/orchestrator";
 
@@ -13,7 +12,14 @@ export async function POST(
   }
 
   const { id } = await params;
-  const body = await req.json();
+
+  let body: { message?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
   const { message } = body;
 
   if (!message || typeof message !== "string") {
@@ -27,18 +33,7 @@ export async function POST(
     );
   }
 
-  const project = await prisma.builderProject.findUnique({
-    where: { id },
-  });
-
-  if (!project) {
-    return NextResponse.json({ error: "Project not found" }, { status: 404 });
-  }
-
-  if (project.userId !== auth.userId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-
+  // Auth check is done inside handleBuilderMessage (single source of truth)
   const encoder = new TextEncoder();
   const abortController = new AbortController();
   const { signal } = abortController;
@@ -87,8 +82,9 @@ export async function POST(
   return new Response(stream, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-cache, no-transform",
       Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
     },
   });
 }

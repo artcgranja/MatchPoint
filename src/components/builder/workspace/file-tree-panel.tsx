@@ -42,14 +42,16 @@ function FileTreeNode({
   depth = 0,
   expandedDirs,
   toggleDir,
+  activeFile,
+  openFile,
 }: {
   node: FileNode;
   depth?: number;
   expandedDirs: Set<string>;
   toggleDir: (path: string) => void;
+  activeFile: string | null;
+  openFile: (path: string) => void;
 }) {
-  const openFile = useBuilderStore((s) => s.openFile);
-  const activeFile = useBuilderStore((s) => s.activeFile);
   const isExpanded = expandedDirs.has(node.path);
   const isActive = node.path === activeFile;
 
@@ -85,6 +87,8 @@ function FileTreeNode({
                 depth={depth + 1}
                 expandedDirs={expandedDirs}
                 toggleDir={toggleDir}
+                activeFile={activeFile}
+                openFile={openFile}
               />
             ))}
           </div>
@@ -115,6 +119,8 @@ export function FileTreePanel() {
   const projectId = useBuilderStore((s) => s.projectId);
   const sandboxReady = useBuilderStore((s) => s.sandboxReady);
   const setFileTree = useBuilderStore((s) => s.setFileTree);
+  const activeFile = useBuilderStore((s) => s.activeFile);
+  const openFile = useBuilderStore((s) => s.openFile);
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
 
   const toggleDir = useCallback((path: string) => {
@@ -171,6 +177,8 @@ export function FileTreePanel() {
               node={node}
               expandedDirs={expandedDirs}
               toggleDir={toggleDir}
+              activeFile={activeFile}
+              openFile={openFile}
             />
           ))
         )}

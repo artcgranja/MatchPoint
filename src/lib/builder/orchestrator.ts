@@ -12,12 +12,12 @@ export async function* handleBuilderMessage(
   message: string,
   userId: string
 ): AsyncGenerator<BuilderSsePayload> {
-  // 1. Load project
-  const project = await prisma.builderProject.findUnique({
-    where: { id: projectId },
+  // 1. Load project (single auth check — route delegates here)
+  const project = await prisma.builderProject.findFirst({
+    where: { id: projectId, userId, status: { not: "deleted" } },
   });
 
-  if (!project || project.userId !== userId) {
+  if (!project) {
     yield { type: "error", message: "Project not found" };
     return;
   }
@@ -52,13 +52,31 @@ export async function* handleBuilderMessage(
     take: 40,
   });
 
-  const historyMessages: BetaMessageParam[] = dbMessages
+  // Filter to user/assistant roles only and ensure alternation
+  const rawHistory = dbMessages
     .reverse()
-    .filter((m) => m.content.trim().length > 0)
-    .map((m) => ({
-      role: m.role as "user" | "assistant",
-      content: m.content,
-    }));
+    .filter(
+      (m) =>
+        (m.role === "user" || m.role === "assistant") &&
+        m.content.trim().length > 0
+    );
+
+  const historyMessages: BetaMessageParam[] = [];
+  for (const m of rawHistory) {
+    const role = m.role as "user" | "assistant";
+    // Merge consecutive same-role messages
+    const last = historyMessages[historyMessages.length - 1];
+    if (last && last.role === role) {
+      last.content = `${last.content as string}\n${m.content}`;
+    } else {
+      historyMessages.push({ role, content: m.content });
+    }
+  }
+
+  // Ensure conversation starts with user message
+  if (historyMessages.length > 0 && historyMessages[0].role !== "user") {
+    historyMessages.shift();
+  }
 
   // 5. Create tools bound to this sandbox
   const tools = createBuilderTools(sandbox);
@@ -129,10 +147,11 @@ export async function* handleBuilderMessage(
           }
 
           // Check for preview URL (dev server started)
+          // Match common dev server ready patterns across frameworks
           if (
             toolName === "run_command" &&
-            output.includes("ready") &&
-            project.template === "nextjs_webapp"
+            project.template === "nextjs_webapp" &&
+            /ready\s+(started|in|on)|Local:\s*http|localhost:\d+/i.test(output)
           ) {
             try {
               const host = sandbox.getHost(3000);

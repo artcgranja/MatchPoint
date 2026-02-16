@@ -13,7 +13,11 @@ export function EditorTabs() {
   if (openFiles.length === 0) return null;
 
   return (
-    <div className="flex items-center overflow-x-auto border-b border-border bg-background-secondary/30">
+    <div
+      className="flex items-center overflow-x-auto border-b border-border bg-background-secondary/30"
+      role="tablist"
+      aria-label="Open files"
+    >
       {openFiles.map((path) => {
         const name = path.split("/").pop() ?? path;
         const isActive = path === activeFile;
@@ -27,6 +31,9 @@ export function EditorTabs() {
                 ? "bg-background text-foreground"
                 : "text-foreground-muted hover:bg-background-secondary/50 hover:text-foreground"
             )}
+            role="tab"
+            aria-selected={isActive}
+            tabIndex={isActive ? 0 : -1}
           >
             <button
               onClick={() => setActiveFile(path)}
@@ -39,7 +46,8 @@ export function EditorTabs() {
                 e.stopPropagation();
                 closeFile(path);
               }}
-              className="rounded-sm p-0.5 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-background-secondary"
+              className="rounded-sm p-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:bg-background-secondary"
+              aria-label={`Close ${name}`}
             >
               <X className="h-3 w-3" />
             </button>

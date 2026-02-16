@@ -11,7 +11,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json();
+  let body: { name?: string; template?: ProjectTemplate; description?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
   const { name, template = "blank", description } = body as {
     name: string;
     template?: ProjectTemplate;
