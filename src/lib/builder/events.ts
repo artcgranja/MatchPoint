@@ -6,5 +6,6 @@ export type BuilderSsePayload =
   | { type: "file_changed"; path: string; action: "created" | "modified" | "deleted" }
   | { type: "command_output"; output: string; exitCode?: number }
   | { type: "preview_ready"; url: string; port: number }
+  | { type: "status"; message: string }
   | { type: "done" }
   | { type: "error"; message: string };

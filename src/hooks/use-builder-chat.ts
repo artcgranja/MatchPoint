@@ -180,6 +180,15 @@ export function useBuilderChat(projectId: string) {
                   break;
                 }
 
+                case "status": {
+                  addChatMessage({
+                    id: crypto.randomUUID(),
+                    role: "system",
+                    content: payload.message ?? "",
+                  });
+                  break;
+                }
+
                 case "done": {
                   break;
                 }

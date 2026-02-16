@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { connectToSandbox } from "@/lib/e2b/client";
+import { connectToSandbox, createSandbox } from "@/lib/e2b/client";
 import { BuilderAgent } from "@/lib/agents/builder-agent";
 import { createBuilderTools } from "@/lib/agents/skills/builder-sandbox";
 import type { BetaMessageParam } from "@anthropic-ai/sdk/resources/beta";
@@ -22,7 +22,7 @@ export async function* handleBuilderMessage(
     return;
   }
 
-  // 2. Connect to sandbox
+  // 2. Connect to sandbox (auto-recreate if expired)
   if (!project.sandboxId) {
     yield { type: "error", message: "No sandbox available. Please reconnect." };
     return;
@@ -32,8 +32,18 @@ export async function* handleBuilderMessage(
   try {
     sandbox = await connectToSandbox(project.sandboxId);
   } catch {
-    yield { type: "error", message: "Failed to connect to sandbox. It may have expired." };
-    return;
+    // Sandbox expired — create a new one and update the DB
+    try {
+      yield { type: "status", message: "Sandbox expired. Reconnecting..." };
+      sandbox = await createSandbox();
+      await prisma.builderProject.update({
+        where: { id: projectId },
+        data: { sandboxId: sandbox.sandboxId },
+      });
+    } catch {
+      yield { type: "error", message: "Failed to create a new sandbox." };
+      return;
+    }
   }
 
   // 3. Save user message to DB
