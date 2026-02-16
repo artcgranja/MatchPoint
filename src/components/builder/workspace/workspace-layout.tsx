@@ -2,10 +2,10 @@
 
 import { useRef, useCallback, useEffect } from "react";
 import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
+  BuilderHandle,
+  BuilderPanel,
+  BuilderPanelGroup,
+} from "@/components/ui/builder-resizable";
 import { useDefaultLayout } from "react-resizable-panels";
 import { WorkspaceTopbar } from "./workspace-topbar";
 import { FileTreePanel } from "./file-tree-panel";
@@ -74,14 +74,14 @@ export function WorkspaceLayout({ project }: WorkspaceLayoutProps) {
     <div className="flex h-screen flex-col overflow-hidden bg-background">
       <WorkspaceTopbar project={project} onToggleChat={toggleChat} />
 
-      <ResizablePanelGroup
+      <BuilderPanelGroup
         direction="horizontal"
         className="flex-1"
         defaultLayout={horizontalLayout.defaultLayout}
         onLayoutChanged={horizontalLayout.onLayoutChanged}
       >
         {/* Chat Panel — primary panel (left, Bolt.new pattern) */}
-        <ResizablePanel
+        <BuilderPanel
           id="chat"
           panelRef={chatPanelRef}
           defaultSize={28}
@@ -92,35 +92,35 @@ export function WorkspaceLayout({ project }: WorkspaceLayoutProps) {
           onResize={handleChatResize}
         >
           <ChatPanel projectId={project.id} />
-        </ResizablePanel>
+        </BuilderPanel>
 
-        <ResizableHandle withHandle />
+        <BuilderHandle withHandle />
 
         {/* Center: Editor/Preview + Terminal */}
-        <ResizablePanel
+        <BuilderPanel
           id="editor"
           defaultSize={55}
           minSize={30}
           maxSize={70}
         >
-          <ResizablePanelGroup
+          <BuilderPanelGroup
             direction="vertical"
             defaultLayout={verticalLayout.defaultLayout}
             onLayoutChanged={verticalLayout.onLayoutChanged}
           >
             {/* Editor or Preview */}
-            <ResizablePanel
+            <BuilderPanel
               id="editor-main"
               defaultSize={75}
               minSize={30}
             >
               {previewUrl ? <PreviewPanel /> : <EditorPanel />}
-            </ResizablePanel>
+            </BuilderPanel>
 
-            <ResizableHandle withHandle />
+            <BuilderHandle withHandle />
 
             {/* Terminal */}
-            <ResizablePanel
+            <BuilderPanel
               id="terminal"
               defaultSize={25}
               minSize={10}
@@ -129,14 +129,14 @@ export function WorkspaceLayout({ project }: WorkspaceLayoutProps) {
               collapsedSize={3}
             >
               <TerminalPanel />
-            </ResizablePanel>
-          </ResizablePanelGroup>
-        </ResizablePanel>
+            </BuilderPanel>
+          </BuilderPanelGroup>
+        </BuilderPanel>
 
-        <ResizableHandle withHandle />
+        <BuilderHandle withHandle />
 
         {/* File Tree — secondary panel (right) */}
-        <ResizablePanel
+        <BuilderPanel
           id="filetree"
           defaultSize={17}
           minSize={12}
@@ -146,8 +146,8 @@ export function WorkspaceLayout({ project }: WorkspaceLayoutProps) {
           className="bg-background-secondary/30"
         >
           <FileTreePanel />
-        </ResizablePanel>
-      </ResizablePanelGroup>
+        </BuilderPanel>
+      </BuilderPanelGroup>
     </div>
   );
 }

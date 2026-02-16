@@ -7,10 +7,10 @@ import { useRouter } from "@/i18n/navigation";
 import { Loader2 } from "lucide-react";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from "@/components/ui/resizable";
+  DiscoveryPanelGroup,
+  DiscoveryPanel,
+  DiscoveryHandle,
+} from "@/components/ui/discovery-resizable";
 import { HeroChatSection } from "@/components/home/hero-chat-section";
 import { BuilderHomePage } from "@/components/builder/builder-home-page";
 import { ChatWelcome } from "@/components/search/chat-welcome";
@@ -201,9 +201,9 @@ export default function HomePage() {
           transition={{ duration: 0.4, ease: EASE_OUT_EXPO }}
           className="h-full"
         >
-          <ResizablePanelGroup direction="horizontal" className="h-full">
+          <DiscoveryPanelGroup direction="horizontal" className="h-full">
             {/* Chat panel */}
-            <ResizablePanel defaultSize={65} minSize={40}>
+            <DiscoveryPanel defaultSize={65} minSize={40}>
               <div className="flex h-full flex-col">
                 {/* Header */}
                 <ChatNavbar
@@ -228,13 +228,13 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-            </ResizablePanel>
+            </DiscoveryPanel>
 
             {/* Resize handle + Agent Work Panel */}
             {showPanel && (
               <>
-                <ResizableHandle withHandle />
-                <ResizablePanel
+                <DiscoveryHandle withHandle />
+                <DiscoveryPanel
                   panelRef={agentPanelRef}
                   defaultSize={35}
                   minSize={15}
@@ -248,10 +248,10 @@ export default function HomePage() {
                   }}
                 >
                   <AgentWorkPanel onConfirm={confirmPlan} />
-                </ResizablePanel>
+                </DiscoveryPanel>
               </>
             )}
-          </ResizablePanelGroup>
+          </DiscoveryPanelGroup>
         </motion.div>
       )}
     </AnimatePresence>
